@@ -18,7 +18,7 @@ type jsonRPCRequest struct {
 	Version string          `json:"jsonrpc"`
 	ID      *string         `json:"id"`
 	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params,omitempty"`
+	Params  json.RawMessage `json:"params,omitempty"` // json.RawMessage is used to defer JSON unmarshaling for params
 }
 
 type jsonRPCResponse struct {
@@ -56,6 +56,13 @@ func NewServer() *WSServer {
 		methods: make(map[string]methodHandler),
 		wsAcceptOptions: &websocket.AcceptOptions{
 			CompressionMode: websocket.CompressionContextTakeover,
+			OnPingReceived: func(ctx context.Context, p []byte) bool {
+				log.Printf("ping received: %s", string(p))
+				return true
+			},
+			OnPongReceived: func(ctx context.Context, p []byte) {
+				log.Printf("pong received: %s", string(p))
+			},
 		},
 	}
 }
