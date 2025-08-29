@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"sync"
 
@@ -47,9 +48,14 @@ func (h *typedHandler[T]) handle(ctx context.Context, params json.RawMessage) (a
 	return h.handlerFunc(ctx, typedParams)
 }
 
+type connectionInfo struct {
+	remoteAddr net.Addr
+}
 type WSServer struct {
 	methodsMutex    sync.RWMutex
 	methods         map[string]methodHandler
+	connsMutex      sync.RWMutex
+	conns           map[*websocket.Conn]connectionInfo
 	wsAcceptOptions *websocket.AcceptOptions
 	maxMessageSize  int64
 }
@@ -100,7 +106,29 @@ func (s *WSServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "connection closed")
 
+	// Get the underlying conn
+	netConn := websocket.NetConn(r.Context(), conn, websocket.MessageText)
+	c := connectionInfo{
+		remoteAddr: netConn.RemoteAddr(),
+	}
+
+	s.connsMutex.Lock()
+	s.conns[conn] = c
+	s.connsMutex.Unlock()
+
 	s.handleConnection(r.Context(), conn)
+}
+
+func (s *WSServer) Shutdown(ctx context.Context) error {
+	s.methodsMutex.RLock()
+	defer s.methodsMutex.RUnlock()
+
+	// Close all active connections
+	for conn := range s.conns {
+		go conn.Close(websocket.StatusNormalClosure, "server shutting down")
+	}
+
+	return nil
 }
 
 // handleConnection loops on messages from the connection until it is closed

@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"ws-json-rpc/pkg/ws"
 )
 
@@ -23,13 +25,29 @@ func addHandler(ctx context.Context, params AddRequest) (any, error) {
 }
 
 func main() {
+	ctx, sig := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer sig()
+
 	server := ws.NewServer()
 
 	// Type-safe handlers - params are automatically unmarshaled to correct type
 	ws.Register(server, "add", addHandler)
 	ws.Register(server, "getUser", getUserHandler)
 
-	http.Handle("/ws", server)
+	mux := http.NewServeMux()
+	mux.Handle("/ws", server)
+
+	s := &http.Server{
+		Handler: mux,
+		Addr:    ":8080",
+	}
+
 	log.Println("WebSocket JSON-RPC server starting on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	go s.ListenAndServe()
+
+	<-ctx.Done()
+
+	log.Println("Shutting down server...")
+
+	server.Shutdown(context.Background())
 }
