@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/coder/websocket"
 )
@@ -47,6 +48,7 @@ func (h *typedHandler[T]) handle(ctx context.Context, params json.RawMessage) (a
 }
 
 type WSServer struct {
+	methodsMutex    sync.RWMutex
 	methods         map[string]methodHandler
 	wsAcceptOptions *websocket.AcceptOptions
 	maxMessageSize  int64
@@ -79,6 +81,9 @@ func (s *WSServer) SetOnPongReceived(handler func(ctx context.Context, p []byte)
 
 // Generic registration function - type safe handlers, no reflection
 func Register[T any](s *WSServer, methodName string, handler WSHandlerFunc[T]) {
+	s.methodsMutex.Lock()
+	defer s.methodsMutex.Unlock()
+
 	if _, exists := s.methods[methodName]; exists {
 		panic(fmt.Sprintf("method %s already registered", methodName))
 	}
@@ -150,10 +155,12 @@ func (s *WSServer) handleMessage(ctx context.Context, conn *websocket.Conn) erro
 	}
 
 	// Find method handler
+	s.methodsMutex.RLock()
 	handler, exists := s.methods[req.Method]
 	if !exists {
 		return s.sendResponse(ctx, conn, req.ID, nil, &jsonRPCError{Code: CodeMethodNotFound, Message: "Method not found"})
 	}
+	s.methodsMutex.RUnlock()
 
 	result, err := handler.handle(ctx, req.Params)
 	if req.ID != nil {
