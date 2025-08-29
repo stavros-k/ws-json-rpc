@@ -49,22 +49,32 @@ func (h *typedHandler[T]) handle(ctx context.Context, params json.RawMessage) (a
 type WSServer struct {
 	methods         map[string]methodHandler
 	wsAcceptOptions *websocket.AcceptOptions
+	maxMessageSize  int64
 }
 
 func NewServer() *WSServer {
 	return &WSServer{
-		methods: make(map[string]methodHandler),
+		methods:        make(map[string]methodHandler),
+		maxMessageSize: 1024 * 1024, // 1MB default limit
 		wsAcceptOptions: &websocket.AcceptOptions{
 			CompressionMode: websocket.CompressionContextTakeover,
-			OnPingReceived: func(ctx context.Context, p []byte) bool {
-				log.Printf("ping received: %s", string(p))
-				return true
-			},
-			OnPongReceived: func(ctx context.Context, p []byte) {
-				log.Printf("pong received: %s", string(p))
-			},
 		},
 	}
+}
+
+// SetMaxMessageSize sets the maximum message size limit
+func (s *WSServer) SetMaxMessageSize(size int64) {
+	s.maxMessageSize = size
+}
+
+// SetOnPingReceived sets the handler for ping messages
+func (s *WSServer) SetOnPingReceived(handler func(ctx context.Context, p []byte) bool) {
+	s.wsAcceptOptions.OnPingReceived = handler
+}
+
+// SetOnPongReceived sets the handler for pong messages
+func (s *WSServer) SetOnPongReceived(handler func(ctx context.Context, p []byte)) {
+	s.wsAcceptOptions.OnPongReceived = handler
 }
 
 // Generic registration function - type safe handlers, no reflection
@@ -115,6 +125,9 @@ func (s *WSServer) handleConnection(ctx context.Context, conn *websocket.Conn) {
 }
 
 func (s *WSServer) handleMessage(ctx context.Context, conn *websocket.Conn) error {
+	// Set read limit to prevent large message attacks
+	conn.SetReadLimit(s.maxMessageSize)
+
 	// Read message
 	msgType, data, err := conn.Read(ctx)
 	if err != nil {
