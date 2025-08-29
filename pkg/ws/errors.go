@@ -1,11 +1,16 @@
 package ws
 
+import "fmt"
+
 const (
-	codeParseError     = -32700
-	codeInvalidRequest = -32600
-	codeMethodNotFound = -32601
-	codeInvalidParams  = -32602
-	codeInternalError  = -32603
+	CodeParseError     = -32700
+	CodeInvalidRequest = -32600
+	CodeMethodNotFound = -32601
+	CodeInvalidParams  = -32602
+	CodeInternalError  = -32603
+
+	MinCustomErrorCode = -32099
+	MaxCustomErrorCode = -32000
 )
 
 type HandlerError interface {
@@ -23,10 +28,16 @@ func toRPCError(err error) *jsonRPCError {
 	}
 
 	if handlerErr, ok := err.(HandlerError); ok {
-		return &jsonRPCError{Code: handlerErr.Code(), Message: handlerErr.Error()}
+		code := handlerErr.Code()
+		message := handlerErr.Error()
+		if code < MinCustomErrorCode || code > MaxCustomErrorCode {
+			code = CodeInternalError
+			message = fmt.Errorf("invalid error code: %d :%w", handlerErr.Code(), handlerErr).Error()
+		}
+		return &jsonRPCError{Code: code, Message: message}
 	}
 
-	return &jsonRPCError{Code: codeInternalError, Message: err.Error()}
+	return &jsonRPCError{Code: CodeInternalError, Message: err.Error()}
 }
 
 type jsonRPCError struct {

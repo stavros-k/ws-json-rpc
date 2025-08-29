@@ -40,7 +40,7 @@ type typedHandler[T any] struct {
 func (h *typedHandler[T]) handle(ctx context.Context, params json.RawMessage) (any, error) {
 	typedParams, err := fromJSON[T](bytes.NewReader(params))
 	if err != nil {
-		return nil, newJSONRPCError(codeInvalidParams, "Invalid parameters: "+err.Error())
+		return nil, newJSONRPCError(CodeInvalidParams, "Invalid parameters: "+err.Error())
 	}
 
 	return h.handlerFunc(ctx, typedParams)
@@ -128,22 +128,26 @@ func (s *WSServer) handleMessage(ctx context.Context, conn *websocket.Conn) erro
 
 	req, err := fromJSON[jsonRPCRequest](bytes.NewReader(data))
 	if err != nil {
-		return s.sendResponse(ctx, conn, req.ID, nil, &jsonRPCError{Code: codeParseError, Message: "Parse error"})
+		return s.sendResponse(ctx, conn, req.ID, nil, &jsonRPCError{Code: CodeParseError, Message: "Parse error"})
 	}
 
 	// Validate JSON-RPC request
 	if req.Version != "2.0" {
-		return s.sendResponse(ctx, conn, req.ID, nil, &jsonRPCError{Code: codeInvalidRequest, Message: "Invalid Request"})
+		return s.sendResponse(ctx, conn, req.ID, nil, &jsonRPCError{Code: CodeInvalidRequest, Message: "Invalid Request"})
 	}
 
 	// Find method handler
 	handler, exists := s.methods[req.Method]
 	if !exists {
-		return s.sendResponse(ctx, conn, req.ID, nil, &jsonRPCError{Code: codeMethodNotFound, Message: "Method not found"})
+		return s.sendResponse(ctx, conn, req.ID, nil, &jsonRPCError{Code: CodeMethodNotFound, Message: "Method not found"})
 	}
 
 	result, err := handler.handle(ctx, req.Params)
-	return s.sendResponse(ctx, conn, req.ID, result, toRPCError(err))
+	if req.ID != nil {
+		return s.sendResponse(ctx, conn, req.ID, result, toRPCError(err))
+	}
+	// If there is no ID, we don't send a response, it is a notification
+	return nil
 }
 
 // sendResponse sends a JSON-RPC response to the connection

@@ -1,7 +1,7 @@
 package main
 
 const (
-	CodeBadRequest = -32700
+	CodeBadRequest = -32099
 )
 
 type APIError struct {
