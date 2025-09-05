@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 	"ws-json-rpc/pkg/ws"
 )
 
@@ -12,7 +13,7 @@ func main() {
 		Level: slog.LevelDebug,
 	}))
 
-	hub := ws.New(logger)
+	hub := ws.NewHub(logger)
 	hub.RegisterEvent(EventKindUserUpdate)
 	hub.RegisterEvent(EventKindUserLogin)
 
@@ -30,9 +31,12 @@ func main() {
 
 	go hub.Run()
 	go func() {
-		eventChan := hub.GetEventChannel()
-		// Simulate sending events
-		eventChan <- ws.Event{Name: EventKindUserUpdate, Data: map[string]string{"id": "123", "name": "John"}}
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			hub.PublishEvent(ws.NewEvent(EventKindUserLogin, map[string]string{"id": "456", "name": "Alice"}))
+		}
 	}()
 
 	http.HandleFunc("/ws", hub.ServeWS())

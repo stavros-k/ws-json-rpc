@@ -3,6 +3,7 @@ package ws
 import (
 	"context"
 	"log/slog"
+	"net"
 	"time"
 
 	"github.com/coder/websocket"
@@ -15,6 +16,7 @@ type clientContextKey struct{}
 type Client struct {
 	hub         *Hub
 	conn        *websocket.Conn
+	netConn     net.Conn
 	ctx         context.Context
 	cancel      context.CancelFunc
 	sendChannel chan []byte
@@ -43,6 +45,7 @@ func ClientID(ctx context.Context) string {
 
 func (c *Client) readPump() {
 	defer func() {
+		c.logger.Error("client read pump exited", slog.String("remote_addr", c.netConn.RemoteAddr().String()))
 		c.cancel()
 		c.hub.unregister <- c
 	}()
@@ -50,6 +53,7 @@ func (c *Client) readPump() {
 	for {
 		msgType, message, err := c.conn.Read(c.ctx)
 		if err != nil {
+			c.logger.Error("read error", slog.String("error", err.Error()))
 			if websocket.CloseStatus(err) != websocket.StatusNormalClosure {
 				c.logger.Error("websocket error", slog.String("error", err.Error()))
 			}
@@ -68,7 +72,7 @@ func (c *Client) readPump() {
 		}
 
 		c.logger.Debug("request received",
-			slog.String("method", req.Method.String()),
+			slog.String("method", req.Method),
 			slog.Any("id", req.ID))
 
 		// Handle the request
@@ -123,7 +127,7 @@ func (c *Client) handleRequest(req Request) {
 	result, err := wrapper.handle(ctx, req.Params)
 	if err != nil {
 		c.logger.Error("handler error",
-			slog.String("method", req.Method.String()),
+			slog.String("method", req.Method),
 			slog.String("error", err.Error()))
 		c.sendError(req.ID, -32603, err.Error())
 		return
