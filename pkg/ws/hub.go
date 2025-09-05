@@ -51,7 +51,7 @@ type notification struct {
 }
 
 // HandlerFunc with generics
-type HandlerFunc[TParams any] func(ctx context.Context, params TParams) (any, error)
+type HandlerFunc[TParams any, TResult any] func(ctx context.Context, params TParams) (TResult, error)
 
 // HandlerWrapper wraps typed handlers for storage
 type HandlerWrapper struct {
@@ -109,13 +109,13 @@ func (h *Hub) RegisterEvent(eventName EventKinder) {
 }
 
 // RegisterHandler registers a generic typed handler
-func RegisterHandler[T any](h *Hub, method MethodKinder, handler HandlerFunc[T]) {
+func RegisterHandler[TParams any, TResult any](h *Hub, method MethodKinder, handler HandlerFunc[TParams, TResult]) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	wrapper := HandlerWrapper{
 		handle: func(ctx context.Context, rawParams json.RawMessage) (any, error) {
-			params, err := FromJSON[T](rawParams)
+			params, err := FromJSON[TParams](rawParams)
 			if err != nil {
 				return nil, fmt.Errorf("invalid params: %w", err)
 			}
