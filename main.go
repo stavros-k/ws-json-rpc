@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"ws-json-rpc/internal/consts"
+	"ws-json-rpc/internal/handlers"
 	"ws-json-rpc/pkg/ws"
 )
 
@@ -14,20 +16,18 @@ func main() {
 	}))
 
 	hub := ws.NewHub(logger)
-	hub.RegisterEvent(EventKindUserUpdate)
-	hub.RegisterEvent(EventKindUserLogin)
+	hub.RegisterEvent(consts.EventKindUserUpdate)
+	hub.RegisterEvent(consts.EventKindUserLogin)
 
-	handlers := &Handlers{
-		hub: hub,
-	}
+	handlers := handlers.NewHandlers(hub)
 
 	// Register handlers
-	ws.RegisterHandler(hub, MethodKindEcho, handlers.Echo)
-	ws.RegisterHandler(hub, MethodKindAdd, handlers.Add)
-	ws.RegisterHandler(hub, MethodKindDouble, handlers.Double)
-	ws.RegisterHandler(hub, MethodKindSubscribe, handlers.Subscribe)
-	ws.RegisterHandler(hub, MethodKindUnsubscribe, handlers.Unsubscribe)
-	ws.RegisterHandler(hub, MethodKindPing, handlers.Ping)
+	ws.RegisterHandler(hub, consts.MethodKindEcho, handlers.Echo)
+	ws.RegisterHandler(hub, consts.MethodKindAdd, handlers.Add)
+	ws.RegisterHandler(hub, consts.MethodKindDouble, handlers.Double)
+	ws.RegisterHandler(hub, consts.MethodKindSubscribe, handlers.Subscribe)
+	ws.RegisterHandler(hub, consts.MethodKindUnsubscribe, handlers.Unsubscribe)
+	ws.RegisterHandler(hub, consts.MethodKindPing, handlers.Ping)
 
 	go hub.Run()
 	go func() {
@@ -35,7 +35,7 @@ func main() {
 		defer ticker.Stop()
 
 		for range ticker.C {
-			hub.PublishEvent(ws.NewEvent(EventKindUserLogin, map[string]string{"id": "456", "name": "Alice"}))
+			hub.PublishEvent(ws.NewEvent(consts.EventKindUserLogin, map[string]string{"id": "456", "name": "Alice"}))
 		}
 	}()
 
