@@ -1,4 +1,4 @@
-package wshub
+package ws
 
 import (
 	"context"
@@ -7,43 +7,47 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/coder/websocket"
 )
 
-// Message types for JSON-RPC-like protocol
+// Request represents an object from the client
+// Method is required
+// Params is optional
+// ID is optional for notifications only
 type Request struct {
 	Method MethodKinder    `json:"method"`
 	Params json.RawMessage `json:"params,omitempty"`
 	ID     *int            `json:"id,omitempty"` // nil for notifications
 }
 
+func (r *Request) IsNotification() bool {
+	return r.ID == nil
+}
+
+// Response represents a response from the server
 type Response struct {
 	Result json.RawMessage `json:"result,omitempty"`
 	Error  *ErrorObj       `json:"error,omitempty"`
 	ID     *int            `json:"id"`
 }
 
+// ErrorObj represents an error on a response
 type ErrorObj struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
-type Notification struct {
-	Event EventKinder     `json:"event"`
-	Data  json.RawMessage `json:"data"`
+func NewNotification(event EventKinder, data json.RawMessage) notification {
+	return notification{
+		Event: event,
+		Data:  data,
+	}
 }
 
-// Client represents a connected WebSocket client
-type Client struct {
-	hub    *Hub
-	conn   *websocket.Conn
-	ctx    context.Context
-	cancel context.CancelFunc
-	send   chan []byte
-	id     string
-	logger *slog.Logger
+type notification struct {
+	Event EventKinder     `json:"event"`
+	Data  json.RawMessage `json:"data"`
 }
 
 // HandlerFunc with generics
@@ -51,7 +55,7 @@ type HandlerFunc[TParams any, TResult any] func(ctx context.Context, params TPar
 
 // HandlerWrapper wraps typed handlers for storage
 type HandlerWrapper struct {
-	handler func(context.Context, json.RawMessage) (any, error)
+	handle func(context.Context, json.RawMessage) (any, error)
 }
 
 // Event represents an event that can be broadcast to subscribers
@@ -62,7 +66,7 @@ type Event struct {
 
 // Hub maintains active clients and broadcasts messages
 type Hub struct {
-	clients       map[*Client]bool
+	clients       map[*Client]struct{}
 	register      chan *Client
 	unregister    chan *Client
 	handlers      map[MethodKinder]HandlerWrapper
@@ -78,7 +82,7 @@ func New(l *slog.Logger) *Hub {
 	logger := l.With(slog.String("component", "hub"))
 
 	return &Hub{
-		clients:       make(map[*Client]bool),
+		clients:       make(map[*Client]struct{}),
 		register:      make(chan *Client),
 		unregister:    make(chan *Client),
 		handlers:      make(map[MethodKinder]HandlerWrapper),
@@ -103,7 +107,7 @@ func RegisterHandler[TParams any, TResult any](h *Hub, method MethodKinder, hand
 	defer h.mu.Unlock()
 
 	wrapper := HandlerWrapper{
-		handler: func(ctx context.Context, rawParams json.RawMessage) (interface{}, error) {
+		handle: func(ctx context.Context, rawParams json.RawMessage) (any, error) {
 			params, err := FromJSON[TParams](rawParams)
 			if err != nil {
 				return nil, fmt.Errorf("invalid params: %w", err)
@@ -123,9 +127,9 @@ func RegisterHandler[TParams any, TResult any](h *Hub, method MethodKinder, hand
 }
 
 // Call allows handlers to call other handlers
-func (h *Hub) Call(ctx context.Context, method MethodKinder, params interface{}) (interface{}, error) {
+func (h *Hub) Call(ctx context.Context, method MethodKinder, params any) (any, error) {
 	h.mu.RLock()
-	wrapper, exists := h.handlers[method]
+	handler, exists := h.handlers[method]
 	h.mu.RUnlock()
 
 	if !exists {
@@ -137,7 +141,7 @@ func (h *Hub) Call(ctx context.Context, method MethodKinder, params interface{})
 		return nil, fmt.Errorf("failed to marshal params: %w", err)
 	}
 
-	return wrapper.handler(ctx, paramsJSON)
+	return handler.handle(ctx, paramsJSON)
 }
 
 // Subscribe adds a client to an event subscription
@@ -189,7 +193,7 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.mu.Lock()
-			h.clients[client] = true
+			h.clients[client] = struct{}{}
 			h.mu.Unlock()
 			h.logger.Info("client connected", slog.String("client_id", client.id))
 
@@ -198,7 +202,7 @@ func (h *Hub) Run() {
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				h.removeClientSubscriptions(client)
-				close(client.send)
+				close(client.sendChannel)
 			}
 			h.mu.Unlock()
 			h.logger.Info("client disconnected", slog.String("client_id", client.id))
@@ -233,10 +237,7 @@ func (h *Hub) broadcastEvent(event Event) {
 		return
 	}
 
-	notification := Notification{
-		Event: event.Name,
-		Data:  data,
-	}
+	notification := NewNotification(event.Name, data)
 
 	msg, err := ToJSON(notification)
 	if err != nil {
@@ -252,7 +253,7 @@ func (h *Hub) broadcastEvent(event Event) {
 	count := 0
 	for client := range subscribers {
 		select {
-		case client.send <- msg:
+		case client.sendChannel <- msg:
 			count++
 		default:
 			client.logger.Warn("send channel full, skipping notification",
@@ -263,141 +264,6 @@ func (h *Hub) broadcastEvent(event Event) {
 	h.logger.Debug("event broadcast",
 		slog.String("event", event.Name.String()),
 		slog.Int("recipients", count))
-}
-
-func (c *Client) readPump() {
-	defer func() {
-		c.cancel()
-		c.hub.unregister <- c
-	}()
-
-	for {
-		_, message, err := c.conn.Read(c.ctx)
-		if err != nil {
-			if websocket.CloseStatus(err) != websocket.StatusNormalClosure {
-				c.logger.Error("websocket error", slog.String("error", err.Error()))
-			}
-			break
-		}
-
-		req, err := FromJSON[Request](message)
-		if err != nil {
-			c.logger.Warn("parse error", slog.String("error", err.Error()))
-			c.sendError(nil, -32700, "Parse error")
-			continue
-		}
-
-		c.logger.Debug("request received",
-			slog.String("method", req.Method.String()),
-			slog.Any("id", req.ID))
-
-		// Handle the request
-		go c.handleRequest(req)
-	}
-}
-
-func (c *Client) writePump() {
-	defer c.cancel()
-
-	for {
-		select {
-		case <-c.ctx.Done():
-			return
-		case message, ok := <-c.send:
-			if !ok {
-				c.conn.Close(websocket.StatusNormalClosure, "")
-				return
-			}
-
-			ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
-			err := c.conn.Write(ctx, websocket.MessageText, message)
-			cancel()
-
-			if err != nil {
-				c.logger.Error("write error", slog.String("error", err.Error()))
-				return
-			}
-		}
-	}
-}
-
-func (c *Client) handleRequest(req Request) {
-	ctx := context.WithValue(c.ctx, "client", c)
-
-	// Handle regular method calls
-	c.hub.mu.RLock()
-	wrapper, exists := c.hub.handlers[req.Method]
-	c.hub.mu.RUnlock()
-
-	if !exists {
-		if req.ID != nil {
-			c.sendError(req.ID, -32601, "Method not found")
-		}
-		return
-	}
-
-	// If it's a notification (no ID), we don't send a response
-	if req.ID == nil {
-		wrapper.handler(ctx, req.Params)
-		return
-	}
-
-	// Call the handler with context
-	result, err := wrapper.handler(ctx, req.Params)
-	if err != nil {
-		c.logger.Error("handler error",
-			slog.String("method", req.Method.String()),
-			slog.String("error", err.Error()))
-		c.sendError(req.ID, -32603, err.Error())
-		return
-	}
-
-	c.sendResult(req.ID, result)
-}
-
-func (c *Client) sendResult(id *int, result any) {
-	data, err := ToJSON(result)
-	if err != nil {
-		c.sendError(id, -32603, "Internal error")
-		return
-	}
-
-	resp := Response{
-		Result: data,
-		ID:     id,
-	}
-
-	msg, err := ToJSON(resp)
-	if err != nil {
-		c.logger.Error("failed to encode response", slog.String("error", err.Error()))
-		return
-	}
-
-	select {
-	case c.send <- msg:
-	case <-c.ctx.Done():
-	}
-}
-
-func (c *Client) sendError(id *int, code int, message string) {
-	resp := Response{
-		Error: &ErrorObj{
-			Code:    code,
-			Message: message,
-		},
-		ID: id,
-	}
-
-	msg, err := ToJSON(resp)
-	if err != nil {
-		c.logger.Error("failed to encode error response", slog.String("error", err.Error()))
-		return
-	}
-
-	select {
-	case c.send <- msg:
-	case <-c.ctx.Done():
-	}
 }
 
 // ServeWS handles websocket requests from clients
@@ -413,20 +279,20 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 		}
 
 		ctx, cancel := context.WithCancel(r.Context())
-
-		clientID := r.Header.Get("X-Client-Id")
+		netConn := websocket.NetConn(ctx, conn, websocket.MessageText)
+		clientID := r.Header.Get("X-Client-ID")
 		if clientID == "" {
 			clientID = fmt.Sprintf("client-%p", conn)
 		}
 
 		client := &Client{
-			hub:    h,
-			conn:   conn,
-			ctx:    ctx,
-			cancel: cancel,
-			send:   make(chan []byte, 256),
-			id:     clientID,
-			logger: h.logger.With(slog.String("client_id", clientID)),
+			hub:         h,
+			conn:        conn,
+			ctx:         ctx,
+			cancel:      cancel,
+			sendChannel: make(chan []byte, 256),
+			id:          clientID,
+			logger:      h.logger.With(slog.String("client_id", clientID), slog.String("remote_addr", netConn.RemoteAddr().String())),
 		}
 
 		h.register <- client

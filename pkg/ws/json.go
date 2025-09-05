@@ -1,4 +1,4 @@
-package wshub
+package ws
 
 import (
 	"bytes"

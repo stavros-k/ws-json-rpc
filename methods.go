@@ -8,11 +8,10 @@ func (mk MethodKind) String() string {
 }
 
 const (
-	MethodKindEcho      MethodKind = "echo"
-	MethodKindAdd       MethodKind = "add"
-	MethodKindDouble    MethodKind = "double"
-	MethodKindComplex   MethodKind = "complex"
-	MethodKindPing      MethodKind = "ping"
-	MethodKindGetUser   MethodKind = "get.user"
-	MethodKindSubscribe MethodKind = "subscribe"
+	MethodKindEcho        MethodKind = "echo"
+	MethodKindAdd         MethodKind = "add"
+	MethodKindDouble      MethodKind = "double"
+	MethodKindPing        MethodKind = "ping"
+	MethodKindSubscribe   MethodKind = "subscribe"
+	MethodKindUnsubscribe MethodKind = "unsubscribe"
 )
