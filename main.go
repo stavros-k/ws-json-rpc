@@ -11,9 +11,19 @@ import (
 	mw "ws-json-rpc/pkg/ws/middleware"
 )
 
+func slogReplacer(groups []string, a slog.Attr) slog.Attr {
+	switch a.Key {
+	case slog.TimeKey:
+		a.Value = slog.StringValue(time.Now().Format("2006-01-02 15:04:05"))
+	}
+
+	return a
+}
+
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
+		Level:       slog.LevelDebug,
+		ReplaceAttr: slogReplacer,
 	}))
 
 	hub := ws.NewHub(logger)
@@ -42,6 +52,6 @@ func simulate(h *ws.Hub) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		h.PublishEvent(ws.NewEvent(consts.EventKindUserLogin.String(), map[string]string{"id": "456", "name": "Alice"}))
+		h.PublishEvent(ws.NewEvent(consts.EventKindUserUpdate.String(), map[string]string{"id": "456", "name": "Alice"}))
 	}
 }
