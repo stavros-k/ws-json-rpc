@@ -2,10 +2,7 @@ package consts
 
 type EventKind string
 
-func (EventKind) IsEventKind() {}
-func (e EventKind) String() string {
-	return string(e)
-}
+func (e EventKind) String() string { return string(e) }
 
 const (
 	EventKindUserUpdate    EventKind = "user.update"

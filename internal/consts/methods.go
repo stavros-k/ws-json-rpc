@@ -2,10 +2,7 @@ package consts
 
 type MethodKind string
 
-func (MethodKind) IsMethodKind() {}
-func (mk MethodKind) String() string {
-	return string(mk)
-}
+func (m MethodKind) String() string { return string(m) }
 
 const (
 	MethodKindEcho        MethodKind = "echo"

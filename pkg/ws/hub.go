@@ -5,57 +5,49 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"sync"
 
 	"github.com/coder/websocket"
 )
 
-// Request represents an object from the client
-// Method is required
-// Params is optional
-// ID is optional for notifications only
-type Request struct {
+// wsRequest represents an object from the client
+type wsRequest struct {
 	Method string          `json:"method"`
 	Params json.RawMessage `json:"params,omitempty"`
 	ID     *int            `json:"id,omitempty"` // nil for notifications
 }
 
-func (r *Request) IsNotification() bool {
+func (r *wsRequest) IsNotification() bool {
 	return r.ID == nil
 }
 
-// Response represents a response from the server
-type Response struct {
+// wsResponse represents a response from the server
+type wsResponse struct {
 	Result json.RawMessage `json:"result,omitempty"`
-	Error  *ErrorObj       `json:"error,omitempty"`
+	Error  *wsErrorObj     `json:"error,omitempty"`
 	ID     *int            `json:"id"`
 }
 
-// ErrorObj represents an error on a response
-type ErrorObj struct {
+// wsErrorObj represents an error on a response
+type wsErrorObj struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
-func newNotification(event string, data json.RawMessage) notification {
-	return notification{
-		Event: event,
-		Data:  data,
-	}
-}
-
-type notification struct {
+type wsNotification struct {
 	Event string          `json:"event"`
 	Data  json.RawMessage `json:"data"`
 }
 
-// HandlerFunc with generics
-type HandlerFunc[TParams any, TResult any] func(ctx context.Context, params TParams) (TResult, error)
-
-// HandlerWrapper wraps typed handlers for storage
-type HandlerWrapper struct {
-	handle func(context.Context, json.RawMessage) (any, error)
+type HandlerFunc func(ctx context.Context, params any) (any, error)
+type TypedHandlerFunc[TParams any, TResult any] func(ctx context.Context, params TParams) (TResult, error)
+type MethodInfo struct {
+	// The actual handler function
+	handler HandlerFunc
+	// Parses the params into the appropriate type
+	parser func(json.RawMessage) (any, error)
 }
 
 // Event represents an event that can be broadcast to subscribers
@@ -64,24 +56,44 @@ type Event struct {
 	Data any
 }
 
-func NewEvent(event EventKinder, data any) Event {
-	return Event{
-		Name: event.String(),
-		Data: data,
+func NewEvent(event string, data any) Event {
+	return Event{Name: event, Data: data}
+}
+
+func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler TypedHandlerFunc[TParams, TResult], middlewares ...MiddlewareFunc) {
+	wrapped := func(ctx context.Context, params any) (any, error) {
+		return handler(ctx, params.(TParams))
 	}
+	parser := func(rawParams json.RawMessage) (any, error) {
+		return FromJSON[TParams](rawParams)
+	}
+
+	h.registerHandler(method, MethodInfo{
+		handler: applyMiddleware(wrapped, middlewares...),
+		parser:  parser,
+	})
 }
 
 // Hub maintains active clients and broadcasts messages
 type Hub struct {
-	clients       map[*Client]struct{}
-	register      chan *Client
-	unregister    chan *Client
-	handlers      map[string]HandlerWrapper
-	events        map[string]struct{} // Registered events
-	subscriptions map[string]map[*Client]struct{}
-	mu            sync.RWMutex
-	eventChan     chan Event
-	logger        *slog.Logger
+	logger *slog.Logger
+
+	clientCount int
+	clients     map[*Client]struct{}
+	clientMutex sync.RWMutex
+
+	register   chan *Client
+	unregister chan *Client
+	eventChan  chan Event
+
+	methods     map[string]MethodInfo
+	methodMutex sync.RWMutex
+
+	knownEvents     map[string]struct{}
+	knownEventMutex sync.RWMutex
+
+	subscriptions     map[string]map[*Client]struct{}
+	subscriptionMutex sync.RWMutex
 }
 
 // NewHub creates a new Hub instance
@@ -89,11 +101,12 @@ func NewHub(l *slog.Logger) *Hub {
 	logger := l.With(slog.String("component", "hub"))
 
 	return &Hub{
+		clientCount:   0,
 		clients:       make(map[*Client]struct{}),
 		register:      make(chan *Client),
 		unregister:    make(chan *Client),
-		handlers:      make(map[string]HandlerWrapper),
-		events:        make(map[string]struct{}),
+		methods:       make(map[string]MethodInfo),
+		knownEvents:   make(map[string]struct{}),
 		subscriptions: make(map[string]map[*Client]struct{}),
 		eventChan:     make(chan Event, 100),
 		logger:        logger,
@@ -101,90 +114,81 @@ func NewHub(l *slog.Logger) *Hub {
 }
 
 // RegisterEvent registers an event that clients can subscribe to
-func (h *Hub) RegisterEvent(eventName EventKinder) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.events[eventName.String()] = struct{}{}
-	h.logger.Debug("event registered", slog.String("event", eventName.String()))
+func (h *Hub) RegisterEvent(eventName string) {
+	h.knownEventMutex.Lock()
+	defer h.knownEventMutex.Unlock()
+	h.knownEvents[eventName] = struct{}{}
+	h.logger.Debug("event registered", slog.String("event", eventName))
 }
 
-// RegisterHandler registers a generic typed handler
-func RegisterHandler[TParams any, TResult any](h *Hub, method MethodKinder, handler HandlerFunc[TParams, TResult]) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	wrapper := HandlerWrapper{
-		handle: func(ctx context.Context, rawParams json.RawMessage) (any, error) {
-			params, err := FromJSON[TParams](rawParams)
-			if err != nil {
-				return nil, fmt.Errorf("invalid params: %w", err)
-			}
-
-			result, err := handler(ctx, params)
-			if err != nil {
-				return nil, err
-			}
-
-			return result, nil
-		},
-	}
-
-	h.handlers[method.String()] = wrapper
-	h.logger.Debug("handler registered", slog.String("method", method.String()))
-}
-
-// Call allows handlers to call other handlers
-func (h *Hub) Call(ctx context.Context, method MethodKinder, params any) (any, error) {
-	h.mu.RLock()
-	handler, exists := h.handlers[method.String()]
-	h.mu.RUnlock()
-
-	if !exists {
-		return nil, fmt.Errorf("method not found: %s", method)
-	}
-
-	paramsJSON, err := ToJSON(params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal params: %w", err)
-	}
-
-	return handler.handle(ctx, paramsJSON)
+func (h *Hub) registerHandler(methodName string, handler MethodInfo) {
+	h.methodMutex.Lock()
+	defer h.methodMutex.Unlock()
+	h.methods[methodName] = handler
+	h.logger.Debug("method registered", slog.String("method", methodName))
 }
 
 // Subscribe adds a client to an event subscription
-func (h *Hub) Subscribe(client *Client, event EventKinder) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+func (h *Hub) Subscribe(client *Client, event string) error {
+	h.knownEventMutex.RLock()
+	defer h.knownEventMutex.RUnlock()
+
+	h.subscriptionMutex.Lock()
+	defer h.subscriptionMutex.Unlock()
 
 	// Check if event is registered
-	if _, ok := h.events[event.String()]; !ok {
+	if _, ok := h.knownEvents[event]; !ok {
 		return fmt.Errorf("unknown event: %s", event)
 	}
 
-	if h.subscriptions[event.String()] == nil {
-		h.subscriptions[event.String()] = make(map[*Client]struct{})
+	if h.subscriptions[event] == nil {
+		h.subscriptions[event] = make(map[*Client]struct{})
 	}
-	h.subscriptions[event.String()][client] = struct{}{}
+	h.subscriptions[event][client] = struct{}{}
 
-	client.logger.Info("subscribed to event", slog.String("event", event.String()))
+	client.logger.Info("subscribed to event", slog.String("event", event))
 	return nil
 }
 
 // Unsubscribe removes a client from an event subscription
-func (h *Hub) Unsubscribe(client *Client, event EventKinder) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+func (h *Hub) Unsubscribe(client *Client, event string) {
+	h.subscriptionMutex.Lock()
+	defer h.subscriptionMutex.Unlock()
 
-	if subscribers, ok := h.subscriptions[event.String()]; ok {
+	if subscribers, ok := h.subscriptions[event]; ok {
 		delete(subscribers, client)
 	}
 
-	client.logger.Info("unsubscribed from event", slog.String("event", event.String()))
+	client.logger.Info("unsubscribed from event", slog.String("event", event))
 }
 
 // PublishEvent sends an event to all subscribed clients
 func (h *Hub) PublishEvent(event Event) {
 	h.eventChan <- event
+}
+
+func (h *Hub) handleRegister(client *Client) {
+	h.subscriptionMutex.Lock()
+	defer h.subscriptionMutex.Unlock()
+
+	h.clients[client] = struct{}{}
+	h.clientCount++
+	h.logger.Info("client registered", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
+}
+
+func (h *Hub) handleUnregister(client *Client) {
+	h.subscriptionMutex.Lock()
+	defer h.subscriptionMutex.Unlock()
+
+	if _, ok := h.clients[client]; ok {
+		delete(h.clients, client)
+		h.clientCount--
+		for _, subscribers := range h.subscriptions {
+			delete(subscribers, client)
+		}
+		close(client.sendChannel)
+	}
+	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
 }
 
 // Run starts the hub's main loop
@@ -194,20 +198,10 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.mu.Lock()
-			h.clients[client] = struct{}{}
-			h.mu.Unlock()
-			h.logger.Info("client connected", slog.String("client_id", client.id), slog.String("remote_addr", client.netConn.RemoteAddr().String()))
+			h.handleRegister(client)
 
 		case client := <-h.unregister:
-			h.mu.Lock()
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				h.removeClientSubscriptions(client)
-				close(client.sendChannel)
-			}
-			h.mu.Unlock()
-			h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_addr", client.netConn.RemoteAddr().String()))
+			h.handleUnregister(client)
 
 		case event := <-h.eventChan:
 			h.broadcastEvent(event)
@@ -215,17 +209,10 @@ func (h *Hub) Run() {
 	}
 }
 
-func (h *Hub) removeClientSubscriptions(client *Client) {
-	// Already under write lock from unregister
-	for _, subscribers := range h.subscriptions {
-		delete(subscribers, client)
-	}
-}
-
 func (h *Hub) broadcastEvent(event Event) {
-	h.mu.RLock()
+	h.subscriptionMutex.RLock()
 	subscribers := h.subscriptions[event.Name]
-	h.mu.RUnlock()
+	h.subscriptionMutex.RUnlock()
 
 	if len(subscribers) == 0 {
 		return
@@ -239,7 +226,7 @@ func (h *Hub) broadcastEvent(event Event) {
 		return
 	}
 
-	notification := newNotification(event.Name, data)
+	notification := wsNotification{Event: event.Name, Data: data}
 
 	msg, err := ToJSON(notification)
 	if err != nil {
@@ -248,9 +235,6 @@ func (h *Hub) broadcastEvent(event Event) {
 			slog.String("error", err.Error()))
 		return
 	}
-
-	h.mu.RLock()
-	defer h.mu.RUnlock()
 
 	count := 0
 	for client := range subscribers {
@@ -277,22 +261,26 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			return
 		}
 
+		remoteHost, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			h.logger.Error("failed to parse remote address", slog.String("error", err.Error()))
+			return
+		}
 		ctx, cancel := context.WithCancel(context.Background())
-		netConn := websocket.NetConn(ctx, conn, websocket.MessageText)
 		clientID := r.Header.Get("X-Client-ID")
 		if clientID == "" {
-			clientID = fmt.Sprintf("client-%p", conn)
+			clientID = fmt.Sprintf("client-%d-%s", h.clientCount, remoteHost)
 		}
 
 		client := &Client{
 			hub:         h,
 			conn:        conn,
-			netConn:     netConn,
+			remoteAddr:  remoteHost,
 			ctx:         ctx,
 			cancel:      cancel,
 			sendChannel: make(chan []byte, 256),
 			id:          clientID,
-			logger:      h.logger.With(slog.String("client_id", clientID), slog.String("remote_addr", netConn.RemoteAddr().String())),
+			logger:      h.logger.With(slog.String("client_id", clientID), slog.String("remote_addr", remoteHost)),
 		}
 
 		h.register <- client

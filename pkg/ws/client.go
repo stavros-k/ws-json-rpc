@@ -3,7 +3,6 @@ package ws
 import (
 	"context"
 	"log/slog"
-	"net"
 	"time"
 
 	"github.com/coder/websocket"
@@ -16,7 +15,7 @@ type clientContextKey struct{}
 type Client struct {
 	hub         *Hub
 	conn        *websocket.Conn
-	netConn     net.Conn
+	remoteAddr  string
 	ctx         context.Context
 	cancel      context.CancelFunc
 	sendChannel chan []byte
@@ -45,7 +44,7 @@ func ClientID(ctx context.Context) string {
 
 func (c *Client) readPump() {
 	defer func() {
-		c.logger.Error("client read pump exited", slog.String("remote_addr", c.netConn.RemoteAddr().String()))
+		c.logger.Error("client read pump exited")
 		c.cancel()
 		c.hub.unregister <- c
 	}()
@@ -64,7 +63,7 @@ func (c *Client) readPump() {
 			continue
 		}
 
-		req, err := FromJSON[Request](message)
+		req, err := FromJSON[wsRequest](message)
 		if err != nil {
 			c.logger.Warn("parse error", slog.String("error", err.Error()))
 			c.sendError(nil, -32700, "Parse error")
@@ -105,13 +104,13 @@ func (c *Client) writePump() {
 	}
 }
 
-func (c *Client) handleRequest(req Request) {
+func (c *Client) handleRequest(req wsRequest) {
 	// Add client to the context
 	ctx := withClient(c.ctx, c)
 
 	// Fetch the handler
 	c.hub.mu.RLock()
-	wrapper, exists := c.hub.handlers[req.Method]
+	method, exists := c.hub.methods[req.Method]
 	c.hub.mu.RUnlock()
 
 	if !exists {
@@ -123,8 +122,17 @@ func (c *Client) handleRequest(req Request) {
 		return
 	}
 
+	typedParams, err := method.parser(req.Params)
+	if err != nil {
+		c.logger.Error("unmarshal error",
+			slog.String("method", req.Method),
+			slog.String("error", err.Error()))
+		c.sendError(req.ID, -32603, "Internal error")
+		return
+	}
+
 	// Call the handler
-	result, err := wrapper.handle(ctx, req.Params)
+	result, err := method.handler(ctx, typedParams)
 	if err != nil {
 		c.logger.Error("handler error",
 			slog.String("method", req.Method),
@@ -148,19 +156,19 @@ func (c *Client) sendResult(id *int, result any) {
 		return
 	}
 
-	resp := Response{ID: id, Result: data}
+	resp := wsResponse{ID: id, Result: data}
 	c.sendData(resp)
 }
 
 func (c *Client) sendError(id *int, code int, message string) {
-	resp := Response{
+	resp := wsResponse{
 		ID:    id,
-		Error: &ErrorObj{Code: code, Message: message},
+		Error: &wsErrorObj{Code: code, Message: message},
 	}
 	c.sendData(resp)
 }
 
-func (c *Client) sendData(r Response) {
+func (c *Client) sendData(r wsResponse) {
 	msg, err := ToJSON(r)
 	if err != nil {
 		c.logger.Error("failed to encode response", slog.String("error", err.Error()))

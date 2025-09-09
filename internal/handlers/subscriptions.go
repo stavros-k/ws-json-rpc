@@ -17,7 +17,7 @@ func (h *Handlers) Unsubscribe(ctx context.Context, params UnsubscriptionParams)
 		return nil, fmt.Errorf("no client found")
 	}
 
-	h.hub.Unsubscribe(client, params.Event)
+	h.hub.Unsubscribe(client, string(params.Event))
 	return map[string]bool{"unsubscribed": true}, nil
 }
 
@@ -32,7 +32,7 @@ func (h *Handlers) Subscribe(ctx context.Context, params SubscriptionParams) (ma
 	}
 
 	// Handler that needs hub access
-	if err := h.hub.Subscribe(client, params.Event); err != nil {
+	if err := h.hub.Subscribe(client, string(params.Event)); err != nil {
 		return nil, err
 	}
 
