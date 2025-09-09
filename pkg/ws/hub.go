@@ -11,7 +11,7 @@ import (
 	"github.com/coder/websocket"
 )
 
-const MAX_QUEUED_EVENTS = 2048
+const MAX_QUEUED_EVENTS_PER_CLIENT = 256
 
 // wsRequest represents an object from the client
 type wsRequest struct {
@@ -252,7 +252,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			remoteAddr:  remoteHost,
 			ctx:         ctx,
 			cancel:      cancel,
-			sendChannel: make(chan []byte, MAX_QUEUED_EVENTS),
+			sendChannel: make(chan []byte, MAX_QUEUED_EVENTS_PER_CLIENT),
 			id:          clientID,
 			logger:      h.logger.With(slog.String("client_id", clientID), slog.String("remote_addr", remoteHost)),
 		}
