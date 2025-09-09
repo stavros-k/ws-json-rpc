@@ -109,9 +109,9 @@ func (c *Client) handleRequest(req wsRequest) {
 	ctx := withClient(c.ctx, c)
 
 	// Fetch the handler
-	c.hub.mu.RLock()
+	c.hub.methodMutex.RLock()
 	method, exists := c.hub.methods[req.Method]
-	c.hub.mu.RUnlock()
+	c.hub.methodMutex.RUnlock()
 
 	if !exists {
 		// If its a notification, do nothing
