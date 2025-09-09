@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"sync"
 
 	"github.com/coder/websocket"
 )
@@ -80,22 +79,15 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 type Hub struct {
 	logger *slog.Logger
 
-	clientCount int
-	clients     map[*Client]struct{}
-	clientMutex sync.RWMutex
+	clientCount   SafeInt
+	clients       SafeMap[*Client, struct{}]
+	methods       SafeMap[string, MethodInfo]
+	knownEvents   SafeMap[string, struct{}]
+	subscriptions SafeMap[string, SafeMap[*Client, struct{}]]
 
 	register   chan *Client
 	unregister chan *Client
 	eventChan  chan Event
-
-	methods     map[string]MethodInfo
-	methodMutex sync.RWMutex
-
-	knownEvents     map[string]struct{}
-	knownEventMutex sync.RWMutex
-
-	subscriptions     map[string]map[*Client]struct{}
-	subscriptionMutex sync.RWMutex
 }
 
 // NewHub creates a new Hub instance
@@ -103,13 +95,13 @@ func NewHub(l *slog.Logger) *Hub {
 	logger := l.With(slog.String("component", "hub"))
 
 	return &Hub{
-		clientCount:   0,
-		clients:       make(map[*Client]struct{}),
+		clientCount:   NewSafeInt(0),
+		clients:       NewSafeMap[*Client, struct{}](),
 		register:      make(chan *Client),
 		unregister:    make(chan *Client),
-		methods:       make(map[string]MethodInfo),
-		knownEvents:   make(map[string]struct{}),
-		subscriptions: make(map[string]map[*Client]struct{}),
+		methods:       NewSafeMap[string, MethodInfo](),
+		knownEvents:   NewSafeMap[string, struct{}](),
+		subscriptions: NewSafeMap[string, SafeMap[*Client, struct{}]](),
 		eventChan:     make(chan Event, 100),
 		logger:        logger,
 	}
@@ -117,36 +109,24 @@ func NewHub(l *slog.Logger) *Hub {
 
 // RegisterEvent registers an event that clients can subscribe to
 func (h *Hub) RegisterEvent(eventName string) {
-	h.knownEventMutex.Lock()
-	defer h.knownEventMutex.Unlock()
-	h.knownEvents[eventName] = struct{}{}
+	h.knownEvents.Set(eventName, struct{}{})
 	h.logger.Debug("event registered", slog.String("event", eventName))
 }
 
 func (h *Hub) registerHandler(methodName string, handler MethodInfo) {
-	h.methodMutex.Lock()
-	defer h.methodMutex.Unlock()
-	h.methods[methodName] = handler
+	h.methods.Set(methodName, handler)
 	h.logger.Debug("method registered", slog.String("method", methodName))
 }
 
 // Subscribe adds a client to an event subscription
 func (h *Hub) Subscribe(client *Client, event string) error {
-	h.knownEventMutex.RLock()
-	defer h.knownEventMutex.RUnlock()
-
-	h.subscriptionMutex.Lock()
-	defer h.subscriptionMutex.Unlock()
-
 	// Check if event is registered
-	if _, ok := h.knownEvents[event]; !ok {
+	if _, ok := h.knownEvents.Get(event); !ok {
 		return fmt.Errorf("unknown event: %s", event)
 	}
 
-	if h.subscriptions[event] == nil {
-		h.subscriptions[event] = make(map[*Client]struct{})
-	}
-	h.subscriptions[event][client] = struct{}{}
+	subscribers := h.subscriptions.GetOrCreate(event, NewSafeMap[*Client, struct{}])
+	subscribers.Set(client, struct{}{})
 
 	client.logger.Info("subscribed to event", slog.String("event", event))
 	return nil
@@ -154,11 +134,8 @@ func (h *Hub) Subscribe(client *Client, event string) error {
 
 // Unsubscribe removes a client from an event subscription
 func (h *Hub) Unsubscribe(client *Client, event string) {
-	h.subscriptionMutex.Lock()
-	defer h.subscriptionMutex.Unlock()
-
-	if subscribers, ok := h.subscriptions[event]; ok {
-		delete(subscribers, client)
+	if subscribers, ok := h.subscriptions.Get(event); ok {
+		subscribers.Delete(client)
 	}
 
 	client.logger.Info("unsubscribed from event", slog.String("event", event))
@@ -170,25 +147,18 @@ func (h *Hub) PublishEvent(event Event) {
 }
 
 func (h *Hub) handleRegister(client *Client) {
-	h.subscriptionMutex.Lock()
-	defer h.subscriptionMutex.Unlock()
-
-	h.clients[client] = struct{}{}
-	h.clientCount++
+	h.clients.Set(client, struct{}{})
+	h.clientCount.Inc()
 	h.logger.Info("client registered", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
 }
 
 func (h *Hub) handleUnregister(client *Client) {
-	h.subscriptionMutex.Lock()
-	defer h.subscriptionMutex.Unlock()
-
-	if _, ok := h.clients[client]; ok {
-		delete(h.clients, client)
-		h.clientCount--
-		for _, subscribers := range h.subscriptions {
-			delete(subscribers, client)
-		}
-		close(client.sendChannel)
+	if _, ok := h.clients.Get(client); ok {
+		h.clients.Delete(client)
+		h.clientCount.Dec()
+		h.subscriptions.ForEach(func(eventName string, subscribers *SafeMap[*Client, struct{}]) {
+			subscribers.Delete(client)
+		})
 	}
 	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
 }
@@ -212,11 +182,12 @@ func (h *Hub) Run() {
 }
 
 func (h *Hub) broadcastEvent(event Event) {
-	h.subscriptionMutex.RLock()
-	subscribers := h.subscriptions[event.Name]
-	h.subscriptionMutex.RUnlock()
+	subscribers, ok := h.subscriptions.Get(event.Name)
+	if !ok {
+		return
+	}
 
-	if len(subscribers) == 0 {
+	if subscribers.Size() == 0 {
 		return
 	}
 
@@ -239,7 +210,7 @@ func (h *Hub) broadcastEvent(event Event) {
 	}
 
 	count := 0
-	for client := range subscribers {
+	for client := range subscribers.GetAll() {
 		select {
 		case client.sendChannel <- msg:
 			count++
@@ -271,7 +242,8 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 		ctx, cancel := context.WithCancel(context.Background())
 		clientID := r.Header.Get("X-Client-ID")
 		if clientID == "" {
-			clientID = fmt.Sprintf("client-%d-%s", h.clientCount, remoteHost)
+			h.logger.Warn("no client ID provided, generating one", slog.String("remote_addr", remoteHost))
+			clientID = fmt.Sprintf("client-%s-%p", remoteHost, conn)
 		}
 
 		client := &Client{

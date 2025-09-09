@@ -80,7 +80,10 @@ func (c *Client) readPump() {
 }
 
 func (c *Client) writePump() {
-	defer c.cancel()
+	defer func() {
+		c.cancel()
+		close(c.sendChannel)
+	}()
 
 	for {
 		select {
@@ -109,10 +112,7 @@ func (c *Client) handleRequest(req wsRequest) {
 	ctx := withClient(c.ctx, c)
 
 	// Fetch the handler
-	c.hub.methodMutex.RLock()
-	method, exists := c.hub.methods[req.Method]
-	c.hub.methodMutex.RUnlock()
-
+	method, exists := c.hub.methods.Get(req.Method)
 	if !exists {
 		// If its a notification, do nothing
 		if req.IsNotification() {
