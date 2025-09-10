@@ -75,14 +75,14 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 		return FromJSON[TParams](rawParams)
 	}
 
-	// Apply method-specific middlewares first
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		wrapped = middlewares[i](wrapped)
-	}
-
-	// Then apply global middlewares
+	// Apply global middlewares first (will be outermost)
 	for i := len(h.middlewares) - 1; i >= 0; i-- {
 		wrapped = h.middlewares[i](wrapped)
+	}
+
+	// Apply method-specific middlewares second (will be innermost)
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		wrapped = middlewares[i](wrapped)
 	}
 
 	h.registerHandler(method, Method{
