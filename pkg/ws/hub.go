@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/coder/websocket"
 )
@@ -81,11 +82,17 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 type Hub struct {
 	logger *slog.Logger
 
-	clientCount   SafeInt
-	clients       SafeMap[*Client, struct{}]
-	methods       SafeMap[string, Method]
-	knownEvents   SafeMap[string, struct{}]
-	subscriptions SafeMap[string, SafeMap[*Client, struct{}]]
+	clientCount      int
+	clientCountMutex sync.RWMutex
+
+	clients      map[*Client]struct{}
+	clientsMutex sync.RWMutex
+
+	methods      map[string]Method
+	methodsMutex sync.RWMutex
+
+	subscriptions      map[string]map[*Client]struct{}
+	subscriptionsMutex sync.RWMutex
 
 	register   chan *Client
 	unregister chan *Client
@@ -97,33 +104,47 @@ func NewHub(l *slog.Logger) *Hub {
 	logger := l.With(slog.String("component", "hub"))
 
 	return &Hub{
-		clientCount:   NewSafeInt(0),
-		clients:       NewSafeMap[*Client, struct{}](),
-		register:      make(chan *Client),
-		unregister:    make(chan *Client),
-		methods:       NewSafeMap[string, Method](),
-		knownEvents:   NewSafeMap[string, struct{}](),
-		subscriptions: NewSafeMap[string, SafeMap[*Client, struct{}]](),
-		eventChan:     make(chan event, 100),
-		logger:        logger,
+		logger:     logger,
+		register:   make(chan *Client),
+		unregister: make(chan *Client),
+		eventChan:  make(chan event, 100),
+
+		clientCount:      0,
+		clientCountMutex: sync.RWMutex{},
+
+		clients:      make(map[*Client]struct{}),
+		clientsMutex: sync.RWMutex{},
+
+		methods:      make(map[string]Method),
+		methodsMutex: sync.RWMutex{},
+
+		subscriptions:      make(map[string]map[*Client]struct{}),
+		subscriptionsMutex: sync.RWMutex{},
 	}
 }
 
 // RegisterEvent registers an event that clients can subscribe to
 func (h *Hub) RegisterEvent(eventName string) {
-	h.knownEvents.Set(eventName, struct{}{})
+	h.subscriptionsMutex.Lock()
+	defer h.subscriptionsMutex.Unlock()
+	if _, exists := h.subscriptions[eventName]; exists {
+		h.logger.Warn("event already registered", slog.String("event", eventName))
+		return
+	}
+	h.subscriptions[eventName] = make(map[*Client]struct{})
 	h.logger.Debug("event registered", slog.String("event", eventName))
 }
 
 // Subscribe adds a client to an event subscription
 func (h *Hub) Subscribe(client *Client, event string) error {
+	h.subscriptionsMutex.Lock()
 	// Check if event is registered
-	if _, ok := h.knownEvents.Get(event); !ok {
+	if _, ok := h.subscriptions[event]; !ok {
 		return fmt.Errorf("unknown event: %s", event)
 	}
 
-	subscribers := h.subscriptions.GetOrCreate(event, NewSafeMap[*Client, struct{}])
-	subscribers.Set(client, struct{}{})
+	h.subscriptions[event][client] = struct{}{}
+	h.subscriptionsMutex.Unlock()
 
 	client.logger.Info("subscribed to event", slog.String("event", event))
 	return nil
@@ -131,9 +152,11 @@ func (h *Hub) Subscribe(client *Client, event string) error {
 
 // Unsubscribe removes a client from an event subscription
 func (h *Hub) Unsubscribe(client *Client, event string) {
-	if subscribers, ok := h.subscriptions.Get(event); ok {
-		subscribers.Delete(client)
+	h.subscriptionsMutex.Lock()
+	if subscribers, ok := h.subscriptions[event]; ok {
+		delete(subscribers, client)
 	}
+	h.subscriptionsMutex.Unlock()
 
 	client.logger.Info("unsubscribed from event", slog.String("event", event))
 }
@@ -204,36 +227,54 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 
 // registerHandler registers a method handler
 func (h *Hub) registerHandler(methodName string, handler Method) {
-	h.methods.Set(methodName, handler)
+	h.methodsMutex.Lock()
+	h.methods[methodName] = handler
+	h.methodsMutex.Unlock()
 	h.logger.Debug("method registered", slog.String("method", methodName))
 }
 
 // clientRegister adds a new client to the hub
 func (h *Hub) clientRegister(client *Client) {
-	h.clients.Set(client, struct{}{})
-	h.clientCount.Inc()
+	h.clientsMutex.Lock()
+	h.clients[client] = struct{}{}
+	h.clientsMutex.Unlock()
+
+	h.clientCountMutex.Lock()
+	h.clientCount++
+	h.clientCountMutex.Unlock()
+
 	h.logger.Info("client registered", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
 }
 
 // clientUnregister removes a client from the hub
 func (h *Hub) clientUnregister(client *Client) {
-	if _, ok := h.clients.Get(client); ok {
-		h.clients.Delete(client)
-		h.clientCount.Dec()
-		h.subscriptions.ForEach(func(eventName string, subscribers *SafeMap[*Client, struct{}]) {
-			subscribers.Delete(client)
-		})
+	h.clientsMutex.Lock()
+	if _, ok := h.clients[client]; ok {
+		delete(h.clients, client)
+
+		h.clientCountMutex.Lock()
+		h.clientCount--
+		h.clientCountMutex.Unlock()
+
+		h.subscriptionsMutex.Lock()
+		for _, subscribers := range h.subscriptions {
+			delete(subscribers, client)
+		}
+		h.subscriptionsMutex.Unlock()
 	}
+	h.clientsMutex.Unlock()
 	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
 }
 
 func (h *Hub) broadcastEvent(event event) {
-	subscribers, ok := h.subscriptions.Get(event.Name)
+	h.subscriptionsMutex.RLock()
+	defer h.subscriptionsMutex.RUnlock()
+	subscribers, ok := h.subscriptions[event.Name]
 	if !ok {
 		return
 	}
 
-	if subscribers.Size() == 0 {
+	if len(subscribers) == 0 {
 		return
 	}
 
@@ -254,7 +295,7 @@ func (h *Hub) broadcastEvent(event event) {
 	}
 
 	count := 0
-	for client := range subscribers.GetAll() {
+	for client := range subscribers {
 		select {
 		case client.sendChannel <- msg:
 			count++
