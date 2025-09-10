@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"maps"
 	"sync"
 )
 
@@ -58,11 +57,13 @@ func (p *SafeMap[K, V]) Get(key K) (V, bool) {
 	return v, ok
 }
 
-func (p *SafeMap[K, V]) GetAll() map[K]V {
+func (p *SafeMap[K, V]) GetAll() map[K]*V {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	copy := make(map[K]V)
-	maps.Copy(copy, p.m)
+	copy := make(map[K]*V)
+	for k, v := range p.m {
+		copy[k] = &v
+	}
 	return copy
 }
 

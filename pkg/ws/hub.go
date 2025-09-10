@@ -37,30 +37,32 @@ type wsErrorObj struct {
 	Message string `json:"message"`
 }
 
-type wsNotification struct {
-	Event string          `json:"event"`
-	Data  json.RawMessage `json:"data"`
-}
-
+// HandlerFunc is a function that handles a method call
 type HandlerFunc func(ctx context.Context, params any) (any, error)
+
+// TypedHandlerFunc is a function that handles a method call with typed parameters
 type TypedHandlerFunc[TParams any, TResult any] func(ctx context.Context, params TParams) (TResult, error)
-type MethodInfo struct {
+
+// Method represents a registered method in the hub
+type Method struct {
 	// The actual handler function
 	handler HandlerFunc
 	// Parses the params into the appropriate type
 	parser func(json.RawMessage) (any, error)
 }
 
-// Event represents an event that can be broadcast to subscribers
-type Event struct {
+// event represents an event that can be broadcast to subscribers
+type event struct {
 	Name string
 	Data any
 }
 
-func NewEvent(event string, data any) Event {
-	return Event{Name: event, Data: data}
+// NewEvent creates a new event
+func NewEvent(eventName string, data any) event {
+	return event{Name: eventName, Data: data}
 }
 
+// RegisterMethod registers a method with the hub
 func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler TypedHandlerFunc[TParams, TResult], middlewares ...MiddlewareFunc) {
 	wrapped := func(ctx context.Context, params any) (any, error) {
 		return handler(ctx, params.(TParams))
@@ -69,7 +71,7 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 		return FromJSON[TParams](rawParams)
 	}
 
-	h.registerHandler(method, MethodInfo{
+	h.registerHandler(method, Method{
 		handler: applyMiddleware(wrapped, middlewares...),
 		parser:  parser,
 	})
@@ -81,13 +83,13 @@ type Hub struct {
 
 	clientCount   SafeInt
 	clients       SafeMap[*Client, struct{}]
-	methods       SafeMap[string, MethodInfo]
+	methods       SafeMap[string, Method]
 	knownEvents   SafeMap[string, struct{}]
 	subscriptions SafeMap[string, SafeMap[*Client, struct{}]]
 
 	register   chan *Client
 	unregister chan *Client
-	eventChan  chan Event
+	eventChan  chan event
 }
 
 // NewHub creates a new Hub instance
@@ -99,10 +101,10 @@ func NewHub(l *slog.Logger) *Hub {
 		clients:       NewSafeMap[*Client, struct{}](),
 		register:      make(chan *Client),
 		unregister:    make(chan *Client),
-		methods:       NewSafeMap[string, MethodInfo](),
+		methods:       NewSafeMap[string, Method](),
 		knownEvents:   NewSafeMap[string, struct{}](),
 		subscriptions: NewSafeMap[string, SafeMap[*Client, struct{}]](),
-		eventChan:     make(chan Event, 100),
+		eventChan:     make(chan event, 100),
 		logger:        logger,
 	}
 }
@@ -111,11 +113,6 @@ func NewHub(l *slog.Logger) *Hub {
 func (h *Hub) RegisterEvent(eventName string) {
 	h.knownEvents.Set(eventName, struct{}{})
 	h.logger.Debug("event registered", slog.String("event", eventName))
-}
-
-func (h *Hub) registerHandler(methodName string, handler MethodInfo) {
-	h.methods.Set(methodName, handler)
-	h.logger.Debug("method registered", slog.String("method", methodName))
 }
 
 // Subscribe adds a client to an event subscription
@@ -142,25 +139,8 @@ func (h *Hub) Unsubscribe(client *Client, event string) {
 }
 
 // PublishEvent sends an event to all subscribed clients
-func (h *Hub) PublishEvent(event Event) {
+func (h *Hub) PublishEvent(event event) {
 	h.eventChan <- event
-}
-
-func (h *Hub) handleRegister(client *Client) {
-	h.clients.Set(client, struct{}{})
-	h.clientCount.Inc()
-	h.logger.Info("client registered", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
-}
-
-func (h *Hub) handleUnregister(client *Client) {
-	if _, ok := h.clients.Get(client); ok {
-		h.clients.Delete(client)
-		h.clientCount.Dec()
-		h.subscriptions.ForEach(func(eventName string, subscribers *SafeMap[*Client, struct{}]) {
-			subscribers.Delete(client)
-		})
-	}
-	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
 }
 
 // Run starts the hub's main loop
@@ -170,10 +150,10 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.handleRegister(client)
+			h.clientRegister(client)
 
 		case client := <-h.unregister:
-			h.handleUnregister(client)
+			h.clientUnregister(client)
 
 		case event := <-h.eventChan:
 			h.broadcastEvent(event)
@@ -181,51 +161,8 @@ func (h *Hub) Run() {
 	}
 }
 
-func (h *Hub) broadcastEvent(event Event) {
-	subscribers, ok := h.subscriptions.Get(event.Name)
-	if !ok {
-		return
-	}
-
-	if subscribers.Size() == 0 {
-		return
-	}
-
-	data, err := ToJSON(event.Data)
-	if err != nil {
-		h.logger.Error("failed to marshal event data",
-			slog.String("event", event.Name),
-			slog.String("error", err.Error()))
-		return
-	}
-
-	notification := wsNotification{Event: event.Name, Data: data}
-
-	msg, err := ToJSON(notification)
-	if err != nil {
-		h.logger.Error("failed to marshal notification",
-			slog.String("event", event.Name),
-			slog.String("error", err.Error()))
-		return
-	}
-
-	count := 0
-	for client := range subscribers.GetAll() {
-		select {
-		case client.sendChannel <- msg:
-			count++
-		default:
-			client.logger.Warn("send channel full, skipping notification",
-				slog.String("event", event.Name))
-		}
-	}
-
-	h.logger.Debug("event broadcast",
-		slog.String("event", event.Name),
-		slog.Int("recipients", count))
-}
-
 // ServeWS handles websocket requests from clients
+// This is called for every new connection
 func (h *Hub) ServeWS() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{})
@@ -239,6 +176,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			h.logger.Error("failed to parse remote address", slog.String("error", err.Error()))
 			return
 		}
+
 		ctx, cancel := context.WithCancel(context.Background())
 		clientID := r.Header.Get("X-Client-ID")
 		if clientID == "" {
@@ -262,4 +200,72 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 		go client.writePump()
 		go client.readPump()
 	}
+}
+
+// registerHandler registers a method handler
+func (h *Hub) registerHandler(methodName string, handler Method) {
+	h.methods.Set(methodName, handler)
+	h.logger.Debug("method registered", slog.String("method", methodName))
+}
+
+// clientRegister adds a new client to the hub
+func (h *Hub) clientRegister(client *Client) {
+	h.clients.Set(client, struct{}{})
+	h.clientCount.Inc()
+	h.logger.Info("client registered", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
+}
+
+// clientUnregister removes a client from the hub
+func (h *Hub) clientUnregister(client *Client) {
+	if _, ok := h.clients.Get(client); ok {
+		h.clients.Delete(client)
+		h.clientCount.Dec()
+		h.subscriptions.ForEach(func(eventName string, subscribers *SafeMap[*Client, struct{}]) {
+			subscribers.Delete(client)
+		})
+	}
+	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
+}
+
+func (h *Hub) broadcastEvent(event event) {
+	subscribers, ok := h.subscriptions.Get(event.Name)
+	if !ok {
+		return
+	}
+
+	if subscribers.Size() == 0 {
+		return
+	}
+
+	result, err := ToJSON(event)
+	if err != nil {
+		h.logger.Error("failed to marshal event",
+			slog.String("event", event.Name),
+			slog.String("error", err.Error()))
+		return
+	}
+
+	msg, err := ToJSON(wsResponse{Result: result})
+	if err != nil {
+		h.logger.Error("failed to marshal notification",
+			slog.String("event", event.Name),
+			slog.String("error", err.Error()))
+		return
+	}
+
+	count := 0
+	for client := range subscribers.GetAll() {
+		select {
+		case client.sendChannel <- msg:
+			count++
+		default:
+			client.logger.Warn("send channel full, skipping notification",
+				slog.String("event", event.Name))
+		}
+	}
+
+	h.logger.Debug("event broadcast",
+		slog.String("event", event.Name),
+		slog.Int("recipients", count),
+	)
 }
