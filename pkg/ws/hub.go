@@ -44,6 +44,9 @@ type HandlerFunc func(ctx context.Context, params any) (any, error)
 // TypedHandlerFunc is a function that handles a method call with typed parameters
 type TypedHandlerFunc[TParams any, TResult any] func(ctx context.Context, params TParams) (TResult, error)
 
+// MiddlewareFunc is a function that wraps a HandlerFunc with additional behavior
+type MiddlewareFunc func(HandlerFunc) HandlerFunc
+
 // Method represents a registered method in the hub
 type Method struct {
 	// The actual handler function
@@ -72,8 +75,18 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 		return FromJSON[TParams](rawParams)
 	}
 
+	// Apply method-specific middlewares first
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		wrapped = middlewares[i](wrapped)
+	}
+
+	// Then apply global middlewares
+	for i := len(h.middlewares) - 1; i >= 0; i-- {
+		wrapped = h.middlewares[i](wrapped)
+	}
+
 	h.registerHandler(method, Method{
-		handler: applyMiddleware(wrapped, middlewares...),
+		handler: wrapped,
 		parser:  parser,
 	})
 }
@@ -81,6 +94,8 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 // Hub maintains active clients and broadcasts messages
 type Hub struct {
 	logger *slog.Logger
+
+	middlewares []MiddlewareFunc
 
 	clientCount      int
 	clientCountMutex sync.RWMutex
@@ -121,6 +136,12 @@ func NewHub(l *slog.Logger) *Hub {
 		subscriptions:      make(map[string]map[*Client]struct{}),
 		subscriptionsMutex: sync.RWMutex{},
 	}
+}
+
+// WithMiddleware adds middleware to the hub that will be applied to all registered methods
+func (h *Hub) WithMiddleware(middlewares ...MiddlewareFunc) *Hub {
+	h.middlewares = append(h.middlewares, middlewares...)
+	return h
 }
 
 // RegisterEvent registers an event that clients can subscribe to

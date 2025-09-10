@@ -31,10 +31,11 @@ func main() {
 	hub.RegisterEvent(consts.EventKindUserLogin.String())
 
 	handlers := handlers.NewHandlers(hub)
+	hub.WithMiddleware(mw.LoggingMiddleware)
 	ws.RegisterMethod(hub, consts.MethodKindSubscribe.String(), handlers.Subscribe)
 	ws.RegisterMethod(hub, consts.MethodKindUnsubscribe.String(), handlers.Unsubscribe)
 	ws.RegisterMethod(hub, consts.MethodKindPing.String(), handlers.Ping)
-	ws.RegisterMethod(hub, consts.MethodKindEcho.String(), handlers.Echo, mw.LoggingMiddleware(logger))
+	ws.RegisterMethod(hub, consts.MethodKindEcho.String(), handlers.Echo)
 	ws.RegisterMethod(hub, consts.MethodKindAdd.String(), handlers.Add)
 	ws.RegisterMethod(hub, consts.MethodKindDouble.String(), handlers.Double)
 	go hub.Run()
