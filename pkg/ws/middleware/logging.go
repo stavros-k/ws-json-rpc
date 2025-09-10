@@ -2,27 +2,31 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 	"ws-json-rpc/pkg/ws"
 )
 
-func LoggingMiddleware(logger *slog.Logger) func(ws.HandlerFunc) ws.HandlerFunc {
+func LoggingMiddleware() func(ws.HandlerFunc) ws.HandlerFunc {
 	return func(next ws.HandlerFunc) ws.HandlerFunc {
 		return func(ctx context.Context, params any) (any, error) {
-			start := time.Now()
-			clientID := ws.ClientID(ctx)
+			cc, ok := ws.ClientContextFromContext(ctx)
+			if !ok {
+				return nil, fmt.Errorf("no client found")
+			}
 
-			logger.Debug("handler started",
-				slog.String("client_id", clientID),
-				slog.Time("timestamp", start))
+			start := time.Now()
+			cc.Logger.Debug("request started",
+				slog.Time("timestamp", start),
+			)
 
 			result, err := next(ctx, params)
 
-			logger.Debug("handler completed",
-				slog.String("client_id", clientID),
+			cc.Logger.Debug("request completed",
 				slog.Duration("duration", time.Since(start)),
-				slog.Bool("success", err == nil))
+				slog.Bool("success", err == nil),
+			)
 
 			return result, err
 		}

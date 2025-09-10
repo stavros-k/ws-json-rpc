@@ -7,34 +7,40 @@ import (
 	"ws-json-rpc/pkg/ws"
 )
 
-type UnsubscriptionParams struct {
+type UnsubscribeParams struct {
 	Event consts.EventKind `json:"event"`
 }
+type UnsubscribeResult struct {
+	Unsubscribed bool `json:"unsubscribed"`
+}
 
-func (h *Handlers) Unsubscribe(ctx context.Context, params UnsubscriptionParams) (map[string]bool, error) {
-	client, ok := ws.ClientFromContext(ctx)
+func (h *Handlers) Unsubscribe(ctx context.Context, params UnsubscribeParams) (UnsubscribeResult, error) {
+	clientContext, ok := ws.ClientContextFromContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("no client found")
+		return UnsubscribeResult{}, fmt.Errorf("no client found")
 	}
 
-	h.hub.Unsubscribe(client, string(params.Event))
-	return map[string]bool{"unsubscribed": true}, nil
+	h.hub.Unsubscribe(clientContext.Client, string(params.Event))
+	return UnsubscribeResult{Unsubscribed: true}, nil
 }
 
-type SubscriptionParams struct {
+type SubscribeParams struct {
 	Event consts.EventKind `json:"event"`
 }
+type SubscribeResult struct {
+	Subscribed bool `json:"subscribed"`
+}
 
-func (h *Handlers) Subscribe(ctx context.Context, params SubscriptionParams) (map[string]bool, error) {
-	client, ok := ws.ClientFromContext(ctx)
+func (h *Handlers) Subscribe(ctx context.Context, params SubscribeParams) (SubscribeResult, error) {
+	clientContext, ok := ws.ClientContextFromContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("no client found")
+		return SubscribeResult{}, fmt.Errorf("no client found")
 	}
 
 	// Handler that needs hub access
-	if err := h.hub.Subscribe(client, string(params.Event)); err != nil {
-		return nil, err
+	if err := h.hub.Subscribe(clientContext.Client, string(params.Event)); err != nil {
+		return SubscribeResult{}, err
 	}
 
-	return map[string]bool{"subscribed": true}, nil
+	return SubscribeResult{Subscribed: true}, nil
 }

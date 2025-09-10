@@ -280,17 +280,13 @@ func (h *Hub) broadcastEvent(event event) {
 
 	result, err := ToJSON(event)
 	if err != nil {
-		h.logger.Error("failed to marshal event",
-			slog.String("event", event.Name),
-			slog.String("error", err.Error()))
+		h.logger.Error("failed to marshal event", slog.String("event", event.Name), slog.String("error", err.Error()))
 		return
 	}
 
 	msg, err := ToJSON(wsResponse{Result: result})
 	if err != nil {
-		h.logger.Error("failed to marshal notification",
-			slog.String("event", event.Name),
-			slog.String("error", err.Error()))
+		h.logger.Error("failed to marshal notification", slog.String("event", event.Name), slog.String("error", err.Error()))
 		return
 	}
 
@@ -300,13 +296,9 @@ func (h *Hub) broadcastEvent(event event) {
 		case client.sendChannel <- msg:
 			count++
 		default:
-			client.logger.Warn("send channel full, skipping notification",
-				slog.String("event", event.Name))
+			client.logger.Warn("send channel full, skipping notification", slog.String("event", event.Name))
 		}
 	}
 
-	h.logger.Debug("event broadcast",
-		slog.String("event", event.Name),
-		slog.Int("recipients", count),
-	)
+	h.logger.Debug("event broadcast", slog.String("event", event.Name), slog.Int("recipients", count))
 }
