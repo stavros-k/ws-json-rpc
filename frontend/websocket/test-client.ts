@@ -63,15 +63,8 @@ async function testClient() {
     await client.connect();
 
     // Test ping (no params)
-    try {
-      const pong = await client.call("ping");
-      console.log("Raw response:", JSON.stringify(pong));
-      console.log("Pong received:", pong);
-      console.log("Message:", pong?.message);
-      console.log("Status:", pong?.status);
-    } catch (error) {
-      console.error("Ping failed:", error);
-    }
+    const pong = await client.call("ping");
+    console.log("Pong received:", pong);
 
     // Keep connection alive to receive events
     console.log("👂 Listening for events... (Press Ctrl+C to exit)");
