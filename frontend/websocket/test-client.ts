@@ -2,7 +2,7 @@
 import WebSocket from "ws";
 (global as any).WebSocket = WebSocket;
 
-import { JsonRpcWebSocketClient } from "./client"; // Adjust path as needed
+import { WebSocketClient } from "./client"; // Adjust path as needed
 
 // Define your API types
 type MyMethods = {
@@ -26,7 +26,7 @@ type MyEvents = {
 
 async function testClient() {
   // Create client
-  const client = new JsonRpcWebSocketClient<MyMethods, MyEvents>({
+  const client = new WebSocketClient<MyMethods, MyEvents>({
     url: "ws://localhost:8080/ws", // Your WebSocket server URL
     clientId: "test-client-123",
     reconnectDelay: 1000,
@@ -61,7 +61,6 @@ async function testClient() {
     console.log("🔌 Connecting to WebSocket server...");
 
     await client.connect();
-
     // Test ping (no params)
     const res = await client.call("ping");
     // console.log(res.result.message); // 'res.result' is possibly 'undefined'.ts(18048)

@@ -1,57 +1,69 @@
-export type Methods = {
-  [method: string]: {
-    req: any;
-    res: any;
-  };
-};
+// Some basic types for readability
+type PayloadType = any;
+type EventName = string;
+type MethodName = string;
+type UUID = ReturnType<typeof crypto.randomUUID>;
 
-export type Events = {
-  [event: string]: any;
-};
+// Base constraint types
+type MethodsRecord = Record<MethodName, { req: PayloadType; res: PayloadType }>;
+type EventsRecord = Record<EventName, PayloadType>;
 
-type MethodNames = keyof Methods;
-type EventNames = keyof Events;
+type MethodParameters<
+  Methods extends MethodsRecord,
+  MethodKey extends keyof Methods
+> = Methods[MethodKey]["req"] extends undefined
+  ? [] // No parameters if req is undefined
+  : [params: Methods[MethodKey]["req"]]; // 1 parameter if req is defined
 
-// Internal message types (without jsonrpc field)
-type RequestMessage<T = any> = {
+type RequestMessage<
+  Methods extends MethodsRecord,
+  MethodKey extends keyof Methods
+> = {
   id: ReturnType<typeof crypto.randomUUID>;
-  method: MethodNames;
-  params: T;
+  method: MethodKey;
+  params: Methods[MethodKey]["req"];
 };
 
-type SuccessResult<T> = {
-  result: T;
-  error?: never;
+type SuccessResult<ResponseType> = {
+  result: ResponseType;
+  error?: never; // Success has no error
 };
 
 type ErrorResult = {
-  result?: never;
+  result?: never; // Error has no result
   error: {
     code: number;
     message: string;
-    // Can be anything, Only used for logging/debugging
-    data?: any;
+    data?: any; // Can be anything, Only used for logging/debugging
   };
 };
 
-type ResponseMessage<T = any> = {
-  id: ReturnType<typeof crypto.randomUUID>;
-} & (SuccessResult<T> | ErrorResult);
+// Response message is an object containing the message ID and its result or error from a method call
+type ResponseMessage<ResponseType = any> = {
+  id: UUID;
+} & (SuccessResult<ResponseType> | ErrorResult);
 
-type EventMessage<T = any> = {
-  event: EventNames;
-  data: T;
+// Event message is an object containing the event name and its data
+type EventMessage<
+  Events extends EventsRecord,
+  EventKey extends keyof Events
+> = {
+  event: EventKey;
+  data: Events[EventKey];
 };
 
-type IncomingMessage = ResponseMessage | EventMessage;
+// Incoming message is either a response from a method or a payload from an event
+type IncomingMessage<Events extends EventsRecord> =
+  | ResponseMessage
+  | EventMessage<Events, keyof Events>;
 
-// Event handlers type
-type EventHandlers<E extends Events> = {
-  [K in keyof E]?: (data: E[K]) => void;
+// Event handlers is a map of event names to their handlers
+type EventHandlers<Events extends EventsRecord> = {
+  [EventKey in keyof Events]?: (data: Events[EventKey]) => void;
 };
 
 // Client options
-export interface JsonRpcClientOptions {
+export interface WebSocketClientOptions {
   url: string;
   clientId: string;
   reconnectDelay?: number;
@@ -59,9 +71,10 @@ export interface JsonRpcClientOptions {
   requestTimeout?: number;
 }
 
-export class JsonRpcWebSocketClient<
-  M extends Methods = Methods,
-  E extends Events = Events
+// Client
+export class WebSocketClient<
+  Methods extends MethodsRecord = MethodsRecord,
+  Events extends EventsRecord = EventsRecord
 > {
   private ws: WebSocket | null = null;
   private url: string;
@@ -84,7 +97,7 @@ export class JsonRpcWebSocketClient<
   >();
 
   // Event handlers
-  private eventHandlers: EventHandlers<E> = {};
+  private eventHandlers: EventHandlers<Events> = {};
   private connectionHandlers: {
     onConnect?: () => void;
     onDisconnect?: () => void;
@@ -92,7 +105,7 @@ export class JsonRpcWebSocketClient<
     onReconnectAttempt?: (attempt: number) => void;
   } = {};
 
-  constructor(options: JsonRpcClientOptions) {
+  constructor(options: WebSocketClientOptions) {
     this.url = options.url;
     this.clientId = options.clientId;
     this.reconnectDelay = options.reconnectDelay ?? 1000;
@@ -200,10 +213,10 @@ export class JsonRpcWebSocketClient<
     }, delay);
   }
 
-  private handleEvent(message: EventMessage) {
+  private handleEvent(message: EventMessage<Events, keyof Events>) {
     const handler = this.eventHandlers[message.event];
     if (!handler) {
-      console.warn(`No handler registered for event: ${message.event}`);
+      console.warn(`No handler registered for event: ${String(message.event)}`);
       return;
     }
     handler(message.data);
@@ -224,7 +237,7 @@ export class JsonRpcWebSocketClient<
   // Message handling
   private handleMessage(data: string): void {
     try {
-      const message: IncomingMessage = JSON.parse(data);
+      const message: IncomingMessage<Events> = JSON.parse(data);
 
       // Handle response
       if ("id" in message) {
@@ -251,23 +264,15 @@ export class JsonRpcWebSocketClient<
   }
 
   // Public API methods
-  async call<K extends keyof M>(
-    method: K,
-    ...args: M[K]["res"] extends undefined
-      ? [params: M[K]["req"]]
-      : M[K]["req"] extends undefined
-      ? []
-      : [params: M[K]["req"]]
-  ): Promise<ResponseMessage<M[K]["res"]>> {
+  async call<MethodKey extends keyof Methods>(
+    method: MethodKey,
+    ...args: MethodParameters<Methods, MethodKey>
+  ): Promise<ResponseMessage<Methods[MethodKey]["res"]>> {
     const params = args[0];
 
     // Handle regular method calls
     const id = crypto.randomUUID();
-    const message: RequestMessage = {
-      id,
-      method: method as MethodNames,
-      params,
-    };
+    const message: RequestMessage<Methods, MethodKey> = { id, method, params };
 
     function newRejectObj(msg: string): ResponseMessage<any> {
       return {
@@ -303,11 +308,14 @@ export class JsonRpcWebSocketClient<
   }
 
   // Event subscription
-  on<K extends keyof E>(event: K, handler: (data: E[K]) => void): void {
+  on<EventKey extends keyof Events>(
+    event: EventKey,
+    handler: (data: Events[EventKey]) => void
+  ): void {
     this.eventHandlers[event] = handler;
   }
 
-  off<K extends keyof E>(event: K): void {
+  off<EventKey extends keyof Events>(event: EventKey): void {
     delete this.eventHandlers[event];
   }
 
