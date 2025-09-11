@@ -84,6 +84,7 @@ func RegisterMethod[TParams any, TResult any](h *Hub, docs generate.HandlerDocs,
 	wrapped := func(ctx context.Context, hctx *HandlerContext, params any) (any, error) {
 		return handler(ctx, hctx, params.(TParams))
 	}
+
 	parser := func(rawParams json.RawMessage) (any, error) {
 		return FromJSON[TParams](rawParams)
 	}
@@ -137,7 +138,7 @@ type Hub struct {
 	unregister chan *Client
 	eventChan  chan event
 
-	generator *generate.Generator
+	generator generate.Generator
 }
 
 // NewHub creates a new Hub instance

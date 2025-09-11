@@ -1,6 +1,14 @@
 package generate
 
-import "reflect"
+import (
+	"os"
+	"reflect"
+)
+
+type Generator interface {
+	AddEventType(name string, resp any, docs EventDocs)
+	AddHandlerType(name string, req any, resp any, docs HandlerDocs)
+}
 
 type handlerInfo struct {
 	reqType  any
@@ -19,24 +27,17 @@ type eventType struct {
 type EventDocs struct {
 }
 
-type Generator struct {
-	typeCache    map[reflect.Type]string
-	eventTypes   map[string]eventType
-	handlerTypes map[string]handlerInfo
-}
+func NewGenerator() Generator {
+	// Return a no-op generator if GENERATE is not set
+	// So production does not waste resources on code generation
+	isGen := os.Getenv("GENERATE") == "true"
+	if !isGen {
+		return &fakeGenerator{}
+	}
 
-func NewGenerator() *Generator {
-	return &Generator{
+	return &realGenerator{
 		typeCache:    make(map[reflect.Type]string),
 		eventTypes:   make(map[string]eventType),
 		handlerTypes: make(map[string]handlerInfo),
 	}
-}
-
-func (g *Generator) AddEventType(name string, resp any, docs EventDocs) {
-	g.eventTypes[name] = eventType{respType: resp, docs: docs}
-}
-
-func (g *Generator) AddHandlerType(name string, req any, resp any, docs HandlerDocs) {
-	g.handlerTypes[name] = handlerInfo{reqType: req, respType: resp, docs: docs}
 }
