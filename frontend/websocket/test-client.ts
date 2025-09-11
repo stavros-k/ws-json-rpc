@@ -65,8 +65,11 @@ async function testClient() {
     // Test ping (no params)
     const res = await client.call("ping");
     // console.log(res.result.message); // 'res.result' is possibly 'undefined'.ts(18048)
-    if (res.error) throw new Error(res.error.message);
-    console.log("Pong received:", res.result.message); // Here the result is defined
+    if (res.error) {
+      console.error("Ping failed:", res.error);
+    } else {
+      console.log("Pong received:", res.result.message); // Here the result is defined
+    }
 
     // Keep connection alive to receive events
     console.log("👂 Listening for events... (Press Ctrl+C to exit)");
