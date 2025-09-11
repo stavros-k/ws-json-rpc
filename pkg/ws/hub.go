@@ -12,6 +12,7 @@ import (
 	"ws-json-rpc/pkg/ws/generate"
 
 	"github.com/coder/websocket"
+	"github.com/google/uuid"
 )
 
 const (
@@ -25,11 +26,7 @@ const (
 type wsRequest struct {
 	Method string          `json:"method"`
 	Params json.RawMessage `json:"params,omitempty"`
-	ID     *int            `json:"id,omitempty"` // nil for notifications
-}
-
-func (r *wsRequest) IsNotification() bool {
-	return r.ID == nil
+	ID     uuid.UUID       `json:"id"`
 }
 
 // wsEvent represents an wsEvent that can be broadcast to subscribers
@@ -42,7 +39,7 @@ type wsEvent struct {
 type wsResponse struct {
 	Result json.RawMessage `json:"result,omitempty"`
 	Error  *wsErrorObj     `json:"error,omitempty"`
-	ID     *int            `json:"id"`
+	ID     uuid.UUID       `json:"id"`
 }
 
 // wsErrorObj represents an error on a response
@@ -344,7 +341,7 @@ func (h *Hub) broadcastEvent(event wsEvent) {
 		case client.sendChannel <- result:
 			count++
 		default:
-			client.logger.Warn("send channel full, skipping notification", slog.String("event", event.EventName))
+			client.logger.Error("send channel full, skipping event broadcast", slog.String("event", event.EventName))
 		}
 	}
 

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/coder/websocket"
+	"github.com/google/uuid"
 )
 
 const (
@@ -63,7 +64,7 @@ func (c *Client) readPump() {
 		}
 		// Only support text based messages
 		if msgType != websocket.MessageText {
-			if err := c.sendError(nil, ErrCodeInvalid, "Invalid message type. Only text messages are supported."); err != nil {
+			if err := c.sendError(uuid.Nil, ErrCodeInvalid, "Invalid message type. Only text messages are supported."); err != nil {
 				c.logger.Error("failed to send error response", slog.String("error", err.Error()))
 			}
 			continue
@@ -73,7 +74,7 @@ func (c *Client) readPump() {
 		req, err := FromJSON[wsRequest](message)
 		if err != nil {
 			c.logger.Warn("parse error", slog.String("error", err.Error()))
-			if err := c.sendError(nil, ErrCodeParse, err.Error()); err != nil {
+			if err := c.sendError(uuid.Nil, ErrCodeParse, err.Error()); err != nil {
 				c.logger.Error("failed to send error response", slog.String("error", err.Error()))
 			}
 			continue
@@ -123,9 +124,7 @@ func (c *Client) writePump() {
 func (c *Client) handleRequest(req wsRequest) {
 	// Derive a logger from the original for this request
 	reqLogger := c.logger.With(slog.String("method", req.Method))
-	if req.ID != nil {
-		reqLogger = reqLogger.With(slog.Int("id", *req.ID))
-	}
+	reqLogger = reqLogger.With(slog.String("id", req.ID.String()))
 
 	reqLogger.Debug("handling request")
 
@@ -134,10 +133,6 @@ func (c *Client) handleRequest(req wsRequest) {
 	method, exists := c.hub.methods[req.Method]
 	c.hub.methodsMutex.RUnlock()
 	if !exists {
-		// If its a notification, do nothing
-		if req.IsNotification() {
-			return
-		}
 		if err := c.sendError(req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method)); err != nil {
 			reqLogger.Error("failed to send error response", slog.String("error", err.Error()))
 		}
@@ -171,17 +166,12 @@ func (c *Client) handleRequest(req wsRequest) {
 		return
 	}
 
-	// If it's notification don't send a response
-	if req.IsNotification() {
-		return
-	}
-
 	if err := c.sendSuccess(req.ID, result); err != nil {
 		reqLogger.Error("failed to send success response", slog.String("error", err.Error()))
 	}
 }
 
-func (c *Client) sendSuccess(id *int, result any) error {
+func (c *Client) sendSuccess(id uuid.UUID, result any) error {
 	data, err := ToJSON(result)
 	if err != nil {
 		return err
@@ -191,7 +181,7 @@ func (c *Client) sendSuccess(id *int, result any) error {
 	return c.sendData(resp)
 }
 
-func (c *Client) sendError(id *int, code int, message string) error {
+func (c *Client) sendError(id uuid.UUID, code int, message string) error {
 	resp := wsResponse{
 		ID:    id,
 		Error: &wsErrorObj{Code: code, Message: message},
