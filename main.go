@@ -10,6 +10,8 @@ import (
 	"ws-json-rpc/pkg/ws"
 	"ws-json-rpc/pkg/ws/generate"
 	mw "ws-json-rpc/pkg/ws/middleware"
+
+	"github.com/google/uuid"
 )
 
 func slogReplacer(groups []string, a slog.Attr) slog.Attr {
@@ -55,7 +57,7 @@ func simulate(h *ws.Hub) {
 
 	for range ticker.C {
 		h.PublishEvent(ws.NewEvent(consts.EventKindUserUpdate.String(), handlers.UserUpdateEventResponse{
-			ID:   "456",
+			ID:   uuid.New().String(),
 			Name: "Alice",
 		}))
 	}
