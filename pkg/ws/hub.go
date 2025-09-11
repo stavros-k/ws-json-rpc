@@ -323,10 +323,12 @@ func (h *Hub) broadcastEvent(event wsEvent) {
 	defer h.subscriptionsMutex.RUnlock()
 	subscribers, ok := h.subscriptions[event.EventName]
 	if !ok {
+		h.logger.Warn("attempted to publish to unregistered event", slog.String("event", event.EventName))
 		return
 	}
 
 	if len(subscribers) == 0 {
+		h.logger.Debug("no subscribers for event", slog.String("event", event.EventName))
 		return
 	}
 

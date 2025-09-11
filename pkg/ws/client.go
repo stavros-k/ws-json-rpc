@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 
 	"github.com/coder/websocket"
@@ -39,7 +40,7 @@ func (c *Client) RemoteAddr() string {
 func (c *Client) readPump() {
 	// When readPump exits, cancel the context and unregister the client
 	defer func() {
-		c.logger.Error("client read pump exited")
+		c.logger.Info("client read pump exited")
 		c.cancel()
 		c.hub.unregister <- c
 	}()
@@ -50,11 +51,15 @@ func (c *Client) readPump() {
 		if err != nil {
 			// In case of a ws close error, stop the loop
 			var ce websocket.CloseError
-			if errors.As(err, &ce) {
-				c.logger.Info("websocket closed", slog.Int("code", int(ce.Code)), slog.String("text", ce.Reason))
-				break
+			switch {
+			case errors.As(err, &ce):
+				c.logger.Info("websocket closed normally", slog.Int("code", int(ce.Code)), slog.String("text", ce.Reason))
+			case errors.Is(err, io.EOF):
+				c.logger.Info("websocket closed abruptly", slog.String("error", err.Error()))
+			default:
+				c.logger.Error("unknown websocket error", slog.String("error", err.Error()))
 			}
-			c.logger.Error("websocket error", slog.String("error", err.Error()))
+			break
 		}
 		// Only support text based messages
 		if msgType != websocket.MessageText {
@@ -82,7 +87,7 @@ func (c *Client) readPump() {
 func (c *Client) writePump() {
 	// When writePump exits, cancel the context and close the send channel
 	defer func() {
-		c.logger.Error("client write pump exited")
+		c.logger.Info("client write pump exited")
 		c.cancel()
 		close(c.sendChannel)
 	}()

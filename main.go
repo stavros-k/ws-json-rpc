@@ -54,6 +54,9 @@ func simulate(h *ws.Hub) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		h.PublishEvent(ws.NewEvent(consts.EventKindUserUpdate.String(), map[string]string{"id": "456", "name": "Alice"}))
+		h.PublishEvent(ws.NewEvent(consts.EventKindUserUpdate.String(), handlers.UserUpdateEventResponse{
+			ID:   "456",
+			Name: "Alice",
+		}))
 	}
 }
