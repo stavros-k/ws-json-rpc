@@ -1,21 +1,26 @@
-import type { Methods, Events } from "./types";
+export type Methods = {
+  [method: string]: {
+    req: any;
+    res: any;
+  };
+};
+
+export type Events = {
+  [event: string]: any;
+};
+
 type MethodNames = keyof Methods;
 type EventNames = keyof Events;
 
 // Internal message types (without jsonrpc field)
 type RequestMessage<T = any> = {
-  id: string | number;
-  method: MethodNames;
-  params: T;
-};
-
-type NotificationMessage<T = any> = {
+  id: string;
   method: MethodNames;
   params: T;
 };
 
 type ResponseMessage<T = any> = {
-  id: string | number;
+  id: string;
   result?: T;
   error?: {
     code: number;
@@ -62,14 +67,13 @@ export class JsonRpcWebSocketClient<
 
   // Request tracking
   private pendingRequests = new Map<
-    string | number,
+    string,
     {
       resolve: (value: any) => void;
       reject: (error: any) => void;
-      timeout: NodeJS.Timeout;
+      timeout: ReturnType<typeof setTimeout>;
     }
   >();
-  private requestId = 0;
 
   // Event handlers
   private eventHandlers: EventHandlers<E> = {};
@@ -236,25 +240,11 @@ export class JsonRpcWebSocketClient<
   ): M[K]["res"] extends undefined ? void : Promise<M[K]["res"]> {
     const params = args[0];
 
-    // Handle notifications (no response expected)
-    if (
-      !("res" in (this as any).constructor.prototype) ||
-      !(method as string).includes(".")
-    ) {
-      const message: NotificationMessage = {
-        method: method as string,
-        params,
-      };
-
-      this.send(message);
-      return undefined as any;
-    }
-
     // Handle regular method calls
-    const id = ++this.requestId;
+    const id = crypto.randomUUID();
     const message: RequestMessage = {
       id,
-      method: method as string,
+      method: method as MethodNames,
       params,
     };
 
@@ -267,23 +257,6 @@ export class JsonRpcWebSocketClient<
       this.pendingRequests.set(id, { resolve, reject, timeout });
       this.send(message);
     }) as any;
-  }
-
-  // Type-safe method for notifications only
-  notify<K extends keyof M>(
-    method: K extends keyof M
-      ? M[K]["res"] extends undefined
-        ? K
-        : never
-      : never,
-    params: M[K]["req"]
-  ): void {
-    const message: NotificationMessage = {
-      method: method as string,
-      params,
-    };
-
-    this.send(message);
   }
 
   // Event subscription
@@ -330,58 +303,3 @@ export class JsonRpcWebSocketClient<
     }
   }
 }
-
-// Usage example:
-/*
-// Define your types
-type MyMethods = {
-  "user.get": {
-    req: { id: string };
-    res: { id: string; name: string; email: string };
-  };
-  "user.delete": {
-    req: { id: string };
-    // No res - this is a notification
-  };
-  "ping": {
-    req: undefined;
-    res: { timestamp: number };
-  };
-};
-
-type MyEvents = {
-  "user.created": { id: string; name: string };
-  "user.updated": { id: string; changes: Record<string, any> };
-};
-
-// Create client
-const client = new JsonRpcWebSocketClient<MyMethods, MyEvents>({
-  url: 'ws://localhost:8080',
-  clientId: 'my-client-123',
-  reconnectDelay: 1000,
-  maxReconnectAttempts: 5,
-  timeout: 30000
-});
-
-// Connect and use
-await client.connect();
-
-// Method call (returns promise)
-const user = await client.call("user.get", { id: "123" });
-
-// Notification (no response)
-client.notify("user.delete", { id: "123" });
-
-// Ping (no params)
-const pong = await client.call("ping");
-
-// Event handling
-client.on("user.created", (data) => {
-  console.log("User created:", data);
-});
-
-// Connection events
-client.onConnect(() => console.log("Connected"));
-client.onDisconnect(() => console.log("Disconnected"));
-client.onError((error) => console.error("Error:", error));
-*/
