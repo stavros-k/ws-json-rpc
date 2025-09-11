@@ -27,7 +27,9 @@ type Generator struct {
 
 func NewGenerator() *Generator {
 	return &Generator{
-		typeCache: make(map[reflect.Type]string),
+		typeCache:    make(map[reflect.Type]string),
+		eventTypes:   make(map[string]eventType),
+		handlerTypes: make(map[string]handlerInfo),
 	}
 }
 
