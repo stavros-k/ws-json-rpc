@@ -20,5 +20,6 @@ type PingResult struct {
 
 func (h *Handlers) Ping(ctx context.Context, hctx *ws.HandlerContext, params struct{}) (PingResult, error) {
 	hctx.Logger.Info("Ping received")
-	return PingResult{Message: "pong", Status: StatusOK}, nil
+	return PingResult{}, &HandlerError{code: HandlerErrorCodeNotImplemented, message: "not implemented"}
+	// return PingResult{Message: "pong", Status: StatusOK}, nil
 }

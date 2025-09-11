@@ -160,6 +160,15 @@ func (c *Client) handleRequest(req wsRequest) {
 	result, err := method.handler(ctx, hctx, typedParams)
 	if err != nil {
 		reqLogger.Error("handler error", slog.String("error", err.Error()))
+		// If its a handler error, let handler specify code/message
+		if err, ok := err.(HandlerError); ok {
+			if err := c.sendError(req.ID, err.Code(), err.Error()); err != nil {
+				reqLogger.Error("failed to send error response", slog.String("error", err.Error()))
+			}
+			return
+		}
+
+		// Unknown errors, send internal error
 		if err := c.sendError(req.ID, ErrCodeInternal, fmt.Sprintf("Failed to handle request on method %q: %s", req.Method, err.Error())); err != nil {
 			reqLogger.Error("failed to send error response", slog.String("error", err.Error()))
 		}

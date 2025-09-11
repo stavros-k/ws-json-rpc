@@ -49,6 +49,11 @@ type wsErrorObj struct {
 	Data    any    `json:"data,omitempty"`
 }
 
+type HandlerError interface {
+	Error() string
+	Code() int
+}
+
 // HandlerFunc is a function that handles a method call
 type HandlerFunc func(ctx context.Context, hctx *HandlerContext, params any) (any, error)
 
