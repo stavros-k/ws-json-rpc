@@ -32,6 +32,12 @@ func (r *wsRequest) IsNotification() bool {
 	return r.ID == nil
 }
 
+// wsEvent represents an wsEvent that can be broadcast to subscribers
+type wsEvent struct {
+	EventName string `json:"event"`
+	Data      any    `json:"data"`
+}
+
 // wsResponse represents a response from the server
 type wsResponse struct {
 	Result json.RawMessage `json:"result,omitempty"`
@@ -43,6 +49,7 @@ type wsResponse struct {
 type wsErrorObj struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
 }
 
 // HandlerFunc is a function that handles a method call
@@ -68,15 +75,9 @@ type HandlerContext struct {
 	Logger *slog.Logger
 }
 
-// event represents an event that can be broadcast to subscribers
-type event struct {
-	Name string
-	Data any
-}
-
 // NewEvent creates a new event
-func NewEvent(eventName string, data any) event {
-	return event{Name: eventName, Data: data}
+func NewEvent(eventName string, data any) wsEvent {
+	return wsEvent{EventName: eventName, Data: data}
 }
 
 // RegisterMethod registers a method with the hub
@@ -136,7 +137,7 @@ type Hub struct {
 
 	register   chan *Client
 	unregister chan *Client
-	eventChan  chan event
+	eventChan  chan wsEvent
 
 	generator generate.Generator
 }
@@ -149,7 +150,7 @@ func NewHub(l *slog.Logger) *Hub {
 		logger:     logger,
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		eventChan:  make(chan event, 100),
+		eventChan:  make(chan wsEvent, 100),
 
 		clientCount:      0,
 		clientCountMutex: sync.RWMutex{},
@@ -212,7 +213,7 @@ func (h *Hub) Unsubscribe(client *Client, event string) {
 }
 
 // PublishEvent sends an event to all subscribed clients
-func (h *Hub) PublishEvent(event event) {
+func (h *Hub) PublishEvent(event wsEvent) {
 	h.eventChan <- event
 }
 
@@ -252,7 +253,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
-		clientID := r.Header.Get("X-Client-ID")
+		clientID := r.URL.Query().Get("clientID")
 		if clientID == "" {
 			h.logger.Warn("no client ID provided, generating one", slog.String("remote_addr", remoteHost))
 			clientID = fmt.Sprintf("client-%s-%p", remoteHost, conn)
@@ -317,10 +318,10 @@ func (h *Hub) clientUnregister(client *Client) {
 	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
 }
 
-func (h *Hub) broadcastEvent(event event) {
+func (h *Hub) broadcastEvent(event wsEvent) {
 	h.subscriptionsMutex.RLock()
 	defer h.subscriptionsMutex.RUnlock()
-	subscribers, ok := h.subscriptions[event.Name]
+	subscribers, ok := h.subscriptions[event.EventName]
 	if !ok {
 		return
 	}
@@ -331,25 +332,19 @@ func (h *Hub) broadcastEvent(event event) {
 
 	result, err := ToJSON(event)
 	if err != nil {
-		h.logger.Error("failed to marshal event", slog.String("event", event.Name), slog.String("error", err.Error()))
-		return
-	}
-
-	msg, err := ToJSON(wsResponse{Result: result})
-	if err != nil {
-		h.logger.Error("failed to marshal notification", slog.String("event", event.Name), slog.String("error", err.Error()))
+		h.logger.Error("failed to marshal event", slog.String("event", event.EventName), slog.String("error", err.Error()))
 		return
 	}
 
 	count := 0
 	for client := range subscribers {
 		select {
-		case client.sendChannel <- msg:
+		case client.sendChannel <- result:
 			count++
 		default:
-			client.logger.Warn("send channel full, skipping notification", slog.String("event", event.Name))
+			client.logger.Warn("send channel full, skipping notification", slog.String("event", event.EventName))
 		}
 	}
 
-	h.logger.Debug("event broadcast", slog.String("event", event.Name), slog.Int("recipients", count))
+	h.logger.Debug("event broadcast", slog.String("event", event.EventName), slog.Int("recipients", count))
 }
