@@ -7,6 +7,9 @@ import (
 
 func FromJSON[T any](data []byte) (T, error) {
 	var result T
+	if data == nil {
+		return result, nil
+	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(&result)
