@@ -15,6 +15,7 @@ type MethodParameters<
   ? [] // No parameters if req is undefined
   : [params: Methods[MethodKey]["req"]]; // 1 parameter if req is defined
 
+// Request message sent to the server
 type RequestMessage<
   Methods extends MethodsRecord,
   MethodKey extends keyof Methods
@@ -23,6 +24,11 @@ type RequestMessage<
   method: MethodKey;
   params: Methods[MethodKey]["req"];
 };
+
+// Response message is an object containing the message ID and its result or error from a method call
+type ResponseMessage<ResponseType = any> = {
+  id: UUID;
+} & (SuccessResult<ResponseType> | ErrorResult);
 
 type SuccessResult<ResponseType> = {
   result: ResponseType;
@@ -37,11 +43,6 @@ type ErrorResult = {
     data?: any; // Can be anything, Only used for logging/debugging
   };
 };
-
-// Response message is an object containing the message ID and its result or error from a method call
-type ResponseMessage<ResponseType = any> = {
-  id: UUID;
-} & (SuccessResult<ResponseType> | ErrorResult);
 
 // Event message is an object containing the event name and its data
 type EventMessage<

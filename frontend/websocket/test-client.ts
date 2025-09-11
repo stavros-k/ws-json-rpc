@@ -39,7 +39,12 @@ async function testClient() {
   client.onConnect(async () => {
     console.log("✅ Connected to WebSocket server");
     for (const event of events) {
-      await client.call("subscribe", { event });
+      const r = await client.call("subscribe", { event });
+      if (r.error) {
+        console.error(`Failed to subscribe to ${event}:`, r.error);
+      } else {
+        console.log(`Subscribed to ${event}:`, r.result);
+      }
     }
   });
 
