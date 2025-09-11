@@ -30,8 +30,8 @@ async function testClient() {
     url: "ws://localhost:8080/ws", // Your WebSocket server URL
     clientId: "test-client-123",
     reconnectDelay: 1000,
-    maxReconnectAttempts: 5,
-    timeout: 30000,
+    maxReconnectAttempts: Number.MAX_SAFE_INTEGER,
+    requestTimeout: 30000,
   });
 
   const events = ["user.update"];

@@ -37,19 +37,19 @@ type EventMessage<T = any> = {
 
 type IncomingMessage = ResponseMessage | EventMessage;
 
+// Event handlers type
+type EventHandlers<E extends Events> = {
+  [K in keyof E]?: (data: E[K]) => void;
+};
+
 // Client options
 export interface JsonRpcClientOptions {
   url: string;
   clientId: string;
   reconnectDelay?: number;
   maxReconnectAttempts?: number;
-  timeout?: number;
+  requestTimeout?: number;
 }
-
-// Event handlers type
-type EventHandlers<E extends Events> = {
-  [K in keyof E]?: (data: E[K]) => void;
-};
 
 export class JsonRpcWebSocketClient<
   M extends Methods = Methods,
@@ -60,7 +60,7 @@ export class JsonRpcWebSocketClient<
   private clientId: string;
   private reconnectDelay: number;
   private maxReconnectAttempts: number;
-  private timeout: number;
+  private requestTimeout: number;
   private reconnectAttempts = 0;
   private isConnecting = false;
   private isManualClose = false;
@@ -81,6 +81,7 @@ export class JsonRpcWebSocketClient<
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: Event) => void;
+    onReconnectAttempt?: (attempt: number) => void; // New callback for reconnect attempts
   } = {};
 
   constructor(options: JsonRpcClientOptions) {
@@ -88,7 +89,7 @@ export class JsonRpcWebSocketClient<
     this.clientId = options.clientId;
     this.reconnectDelay = options.reconnectDelay ?? 1000;
     this.maxReconnectAttempts = options.maxReconnectAttempts ?? 5;
-    this.timeout = options.timeout ?? 30000;
+    this.requestTimeout = options.requestTimeout ?? 30000;
   }
 
   // Connection management
@@ -160,16 +161,32 @@ export class JsonRpcWebSocketClient<
 
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.warn(
+        `Max reconnect attempts (${this.maxReconnectAttempts}) reached. Giving up.`
+      );
       return;
     }
 
     this.reconnectAttempts++;
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
+
+    // Run user-defined reconnect attempt handler
+    this.connectionHandlers.onReconnectAttempt?.(this.reconnectAttempts);
+
+    // Calculate delay with exponential backoff, but cap it at a reasonable maximum
+    const maxDelay = 30000; // Cap at 30 seconds
+    const baseDelayMultiplier = Math.min(this.reconnectAttempts - 1, 10);
+    const baseDelay = this.reconnectDelay * Math.pow(2, baseDelayMultiplier);
+    const delay = Math.min(baseDelay, maxDelay);
+
+    console.log(
+      `Scheduling reconnect attempt ${this.reconnectAttempts} in ${delay}ms`
+    );
 
     setTimeout(() => {
       if (!this.isManualClose) {
         this.connect().catch(() => {
           // Reconnection failed, will retry if attempts remaining
+          console.warn(`Reconnect attempt ${this.reconnectAttempts} failed`);
         });
       }
     }, delay);
@@ -252,7 +269,7 @@ export class JsonRpcWebSocketClient<
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(id);
         reject(new Error(`Request timeout for method: ${method as string}`));
-      }, this.timeout);
+      }, this.requestTimeout);
 
       this.pendingRequests.set(id, { resolve, reject, timeout });
       this.send(message);
@@ -279,6 +296,10 @@ export class JsonRpcWebSocketClient<
 
   onError(handler: (error: Event) => void): void {
     this.connectionHandlers.onError = handler;
+  }
+
+  onReconnectAttempt(handler: (attempt: number) => void): void {
+    this.connectionHandlers.onReconnectAttempt = handler;
   }
 
   // Utility methods
