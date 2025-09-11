@@ -14,21 +14,29 @@ type EventNames = keyof Events;
 
 // Internal message types (without jsonrpc field)
 type RequestMessage<T = any> = {
-  id: string;
+  id: ReturnType<typeof crypto.randomUUID>;
   method: MethodNames;
   params: T;
 };
 
-type ResponseMessage<T = any> = {
-  id: string;
-  result?: T;
-  error?: {
+type SuccessResult<T> = {
+  result: T;
+  error?: never;
+};
+
+type ErrorResult = {
+  result?: never;
+  error: {
     code: number;
     message: string;
     // Can be anything, Only used for logging/debugging
     data?: any;
   };
 };
+
+type ResponseMessage<T = any> = {
+  id: ReturnType<typeof crypto.randomUUID>;
+} & (SuccessResult<T> | ErrorResult);
 
 type EventMessage<T = any> = {
   event: EventNames;
@@ -69,7 +77,7 @@ export class JsonRpcWebSocketClient<
   private pendingRequests = new Map<
     string,
     {
-      resolve: (value: any) => void;
+      resolve: (value: ResponseMessage<any>) => void;
       reject: (error: any) => void;
       timeout: ReturnType<typeof setTimeout>;
     }
@@ -81,7 +89,7 @@ export class JsonRpcWebSocketClient<
     onConnect?: () => void;
     onDisconnect?: () => void;
     onError?: (error: Event) => void;
-    onReconnectAttempt?: (attempt: number) => void; // New callback for reconnect attempts
+    onReconnectAttempt?: (attempt: number) => void;
   } = {};
 
   constructor(options: JsonRpcClientOptions) {
@@ -210,11 +218,7 @@ export class JsonRpcWebSocketClient<
     this.pendingRequests.delete(message.id);
     clearTimeout(pending.timeout);
 
-    if (message.error) {
-      pending.reject(new Error(message.error.message));
-    } else {
-      pending.resolve(message.result);
-    }
+    pending.resolve(message);
   }
 
   // Message handling
@@ -247,14 +251,14 @@ export class JsonRpcWebSocketClient<
   }
 
   // Public API methods
-  call<K extends keyof M>(
+  async call<K extends keyof M>(
     method: K,
     ...args: M[K]["res"] extends undefined
       ? [params: M[K]["req"]]
       : M[K]["req"] extends undefined
       ? []
       : [params: M[K]["req"]]
-  ): M[K]["res"] extends undefined ? void : Promise<M[K]["res"]> {
+  ): Promise<ResponseMessage<M[K]["res"]>> {
     const params = args[0];
 
     // Handle regular method calls
@@ -265,15 +269,37 @@ export class JsonRpcWebSocketClient<
       params,
     };
 
-    return new Promise((resolve, reject) => {
+    function newRejectObj(msg: string): ResponseMessage<any> {
+      return {
+        id,
+        error: { code: 32603, message: `[${String(method)}] ${msg}` },
+      };
+    }
+
+    return new Promise((resolve) => {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(id);
-        reject(new Error(`Request timeout for method: ${method as string}`));
+        resolve(newRejectObj("Request timeout for method"));
       }, this.requestTimeout);
 
-      this.pendingRequests.set(id, { resolve, reject, timeout });
-      this.send(message);
-    }) as any;
+      this.pendingRequests.set(id, {
+        resolve,
+        reject: () => {
+          resolve(newRejectObj("Connection closed"));
+        },
+        timeout,
+      });
+
+      try {
+        this.send(message);
+      } catch (error) {
+        clearTimeout(timeout);
+        this.pendingRequests.delete(id);
+        const msg =
+          error instanceof Error ? error.message : "Failed to send message";
+        resolve(newRejectObj(msg));
+      }
+    });
   }
 
   // Event subscription
