@@ -16,9 +16,9 @@ func FromJSON[T any](data []byte) (T, error) {
 func ToJSON(v any) ([]byte, error) {
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
-	encoder.SetEscapeHTML(true)
+	encoder.SetEscapeHTML(false)
 	if err := encoder.Encode(v); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	return bytes.TrimSpace(buf.Bytes()), nil
 }

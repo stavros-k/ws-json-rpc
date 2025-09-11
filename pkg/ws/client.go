@@ -5,14 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/coder/websocket"
-)
-
-const (
-	MAX_REQUEST_TIMEOUT  = 30 * time.Second
-	MAX_RESPONSE_TIMEOUT = 30 * time.Second
 )
 
 const (
@@ -21,14 +15,6 @@ const (
 	ErrCodeNotFound = -32601 // "The method does not exist / is not available."}
 	ErrCodeInternal = -32603 // "Internal JSON-RPC error."}
 )
-
-// clientContextKey is a key used for storing the client in the context
-type clientContextKey struct{}
-
-type ClientContext struct {
-	Logger *slog.Logger
-	Client *Client
-}
 
 // Client represents a connected WebSocket client
 type Client struct {
@@ -42,19 +28,12 @@ type Client struct {
 	logger      *slog.Logger
 }
 
-func withClientContext(ctx context.Context, client *Client, logger *slog.Logger) context.Context {
-	return context.WithValue(ctx, clientContextKey{}, &ClientContext{
-		Logger: logger,
-		Client: client,
-	})
+func (c *Client) ID() string {
+	return c.id
 }
 
-func ClientContextFromContext(ctx context.Context) (*ClientContext, bool) {
-	clientContext, ok := ctx.Value(clientContextKey{}).(*ClientContext)
-	if !ok {
-		return nil, false
-	}
-	return clientContext, true
+func (c *Client) RemoteAddr() string {
+	return c.remoteAddr
 }
 
 func (c *Client) readPump() {
@@ -110,13 +89,14 @@ func (c *Client) writePump() {
 
 	for {
 		select {
+		// Exit if context is cancelled
 		case <-c.ctx.Done():
 			// Close connection on context cancellation
 			c.conn.Close(websocket.StatusNormalClosure, "")
 			return
+		// Exit if channel is closed otherwise send the message
 		case message, ok := <-c.sendChannel:
 			// If the send channel is closed, close the connection
-			// Shouldn't happen, but just in case
 			if !ok {
 				c.conn.Close(websocket.StatusNormalClosure, "")
 				return
@@ -136,14 +116,15 @@ func (c *Client) writePump() {
 }
 
 func (c *Client) handleRequest(req wsRequest) {
+	// Derive a logger from the original for this request
 	reqLogger := c.logger.With(slog.String("method", req.Method))
 	if req.ID != nil {
 		reqLogger = reqLogger.With(slog.Int("id", *req.ID))
 	}
-	ctx := withClientContext(c.ctx, c, reqLogger)
+
 	reqLogger.Debug("handling request")
 
-	// Fetch the handler
+	// Get the handler
 	c.hub.methodsMutex.RLock()
 	method, exists := c.hub.methods[req.Method]
 	c.hub.methodsMutex.RUnlock()
@@ -158,6 +139,7 @@ func (c *Client) handleRequest(req wsRequest) {
 		return
 	}
 
+	// Parse json into the structured params
 	typedParams, err := method.parser(req.Params)
 	if err != nil {
 		reqLogger.Error("unmarshal error", slog.String("error", err.Error()))
@@ -167,10 +149,15 @@ func (c *Client) handleRequest(req wsRequest) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, MAX_REQUEST_TIMEOUT)
+	// Set a timeout for the request
+	ctx, cancel := context.WithTimeout(c.ctx, MAX_REQUEST_TIMEOUT)
 	defer cancel()
+
+	// Create a new HandlerContext
+	hctx := &HandlerContext{Client: c, Logger: reqLogger}
+
 	// Call the handler
-	result, err := method.handler(ctx, typedParams)
+	result, err := method.handler(ctx, hctx, typedParams)
 	if err != nil {
 		reqLogger.Error("handler error", slog.String("error", err.Error()))
 		if err := c.sendError(req.ID, ErrCodeInternal, fmt.Sprintf("Failed to handle request on method %q: %s", req.Method, err.Error())); err != nil {

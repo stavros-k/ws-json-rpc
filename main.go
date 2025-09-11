@@ -8,6 +8,7 @@ import (
 	"ws-json-rpc/internal/consts"
 	"ws-json-rpc/internal/handlers"
 	"ws-json-rpc/pkg/ws"
+	"ws-json-rpc/pkg/ws/generate"
 	mw "ws-json-rpc/pkg/ws/middleware"
 )
 
@@ -27,17 +28,17 @@ func main() {
 	}))
 
 	hub := ws.NewHub(logger)
-	hub.RegisterEvent(consts.EventKindUserUpdate.String())
-	hub.RegisterEvent(consts.EventKindUserLogin.String())
+	ws.RegisterEvent[handlers.UserUpdateEventResponse](hub, generate.EventDocs{}, consts.EventKindUserUpdate.String())
+	ws.RegisterEvent[handlers.UserLoginEventResponse](hub, generate.EventDocs{}, consts.EventKindUserLogin.String())
 
 	handlers := handlers.NewHandlers(hub)
 	hub.WithMiddleware(mw.LoggingMiddleware)
-	ws.RegisterMethod(hub, consts.MethodKindSubscribe.String(), handlers.Subscribe)
-	ws.RegisterMethod(hub, consts.MethodKindUnsubscribe.String(), handlers.Unsubscribe)
-	ws.RegisterMethod(hub, consts.MethodKindPing.String(), handlers.Ping)
-	ws.RegisterMethod(hub, consts.MethodKindEcho.String(), handlers.Echo)
-	ws.RegisterMethod(hub, consts.MethodKindAdd.String(), handlers.Add)
-	ws.RegisterMethod(hub, consts.MethodKindDouble.String(), handlers.Double)
+	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindSubscribe.String(), handlers.Subscribe)
+	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindUnsubscribe.String(), handlers.Unsubscribe)
+	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindPing.String(), handlers.Ping)
+	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindEcho.String(), handlers.Echo)
+	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindAdd.String(), handlers.Add)
+	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindDouble.String(), handlers.Double)
 	go hub.Run()
 	go simulate(hub)
 

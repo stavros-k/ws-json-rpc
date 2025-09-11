@@ -1,11 +1,23 @@
 package handlers
 
-import "context"
+import (
+	"context"
+	"ws-json-rpc/pkg/ws"
+)
+
+type Status string
+
+const (
+	StatusOK       Status = "ok"
+	StatusNotFound Status = "not_found"
+	StatusError    Status = "error"
+)
 
 type PingResult struct {
 	Message string `json:"message"`
+	Status  Status `json:"status"`
 }
 
-func (h *Handlers) Ping(ctx context.Context, params struct{}) (PingResult, error) {
-	return PingResult{Message: "pong"}, nil
+func (h *Handlers) Ping(ctx context.Context, hctx *ws.HandlerContext, params struct{}) (PingResult, error) {
+	return PingResult{Message: "pong", Status: StatusOK}, nil
 }

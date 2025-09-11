@@ -8,11 +8,18 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"time"
+	"ws-json-rpc/pkg/ws/generate"
 
 	"github.com/coder/websocket"
 )
 
-const MAX_QUEUED_EVENTS_PER_CLIENT = 256
+const (
+	MAX_QUEUED_EVENTS_PER_CLIENT = 256
+	MAX_REQUEST_TIMEOUT          = 30 * time.Second
+	MAX_RESPONSE_TIMEOUT         = 30 * time.Second
+	MAX_MESSAGE_SIZE             = 1024 * 1024 // 1 MB
+)
 
 // wsRequest represents an object from the client
 type wsRequest struct {
@@ -39,10 +46,10 @@ type wsErrorObj struct {
 }
 
 // HandlerFunc is a function that handles a method call
-type HandlerFunc func(ctx context.Context, params any) (any, error)
+type HandlerFunc func(ctx context.Context, hctx *HandlerContext, params any) (any, error)
 
 // TypedHandlerFunc is a function that handles a method call with typed parameters
-type TypedHandlerFunc[TParams any, TResult any] func(ctx context.Context, params TParams) (TResult, error)
+type TypedHandlerFunc[TParams any, TResult any] func(ctx context.Context, hctx *HandlerContext, params TParams) (TResult, error)
 
 // MiddlewareFunc is a function that wraps a HandlerFunc with additional behavior
 type MiddlewareFunc func(HandlerFunc) HandlerFunc
@@ -53,6 +60,12 @@ type Method struct {
 	handler HandlerFunc
 	// Parses the params into the appropriate type
 	parser func(json.RawMessage) (any, error)
+}
+
+// HandlerContext contains data that a handler might need
+type HandlerContext struct {
+	Client *Client
+	Logger *slog.Logger
 }
 
 // event represents an event that can be broadcast to subscribers
@@ -67,9 +80,9 @@ func NewEvent(eventName string, data any) event {
 }
 
 // RegisterMethod registers a method with the hub
-func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler TypedHandlerFunc[TParams, TResult], middlewares ...MiddlewareFunc) {
-	wrapped := func(ctx context.Context, params any) (any, error) {
-		return handler(ctx, params.(TParams))
+func RegisterMethod[TParams any, TResult any](h *Hub, docs generate.HandlerDocs, method string, handler TypedHandlerFunc[TParams, TResult], middlewares ...MiddlewareFunc) {
+	wrapped := func(ctx context.Context, hctx *HandlerContext, params any) (any, error) {
+		return handler(ctx, hctx, params.(TParams))
 	}
 	parser := func(rawParams json.RawMessage) (any, error) {
 		return FromJSON[TParams](rawParams)
@@ -85,10 +98,21 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 		wrapped = middlewares[i](wrapped)
 	}
 
+	var reqZero TParams
+	var respZero TResult
+	h.generator.AddHandlerType(method, reqZero, respZero, docs)
+
 	h.registerHandler(method, Method{
 		handler: wrapped,
 		parser:  parser,
 	})
+}
+
+// RegisterEvent registers an event with the hub
+func RegisterEvent[TResult any](h *Hub, docs generate.EventDocs, eventName string) {
+	var eventZero TResult
+	h.generator.AddEventType(eventName, eventZero, docs)
+	h.registerEvent(eventName)
 }
 
 // Hub maintains active clients and broadcasts messages
@@ -112,6 +136,8 @@ type Hub struct {
 	register   chan *Client
 	unregister chan *Client
 	eventChan  chan event
+
+	generator *generate.Generator
 }
 
 // NewHub creates a new Hub instance
@@ -135,6 +161,8 @@ func NewHub(l *slog.Logger) *Hub {
 
 		subscriptions:      make(map[string]map[*Client]struct{}),
 		subscriptionsMutex: sync.RWMutex{},
+
+		generator: generate.NewGenerator(),
 	}
 }
 
@@ -144,8 +172,8 @@ func (h *Hub) WithMiddleware(middlewares ...MiddlewareFunc) *Hub {
 	return h
 }
 
-// RegisterEvent registers an event that clients can subscribe to
-func (h *Hub) RegisterEvent(eventName string) {
+// registerEvent registers an event that clients can subscribe to
+func (h *Hub) registerEvent(eventName string) {
 	h.subscriptionsMutex.Lock()
 	defer h.subscriptionsMutex.Unlock()
 	if _, exists := h.subscriptions[eventName]; exists {
@@ -214,6 +242,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			h.logger.Error("upgrade failed", slog.String("error", err.Error()))
 			return
 		}
+		conn.SetReadLimit(MAX_MESSAGE_SIZE)
 
 		remoteHost, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
@@ -231,11 +260,11 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 		client := &Client{
 			hub:         h,
 			conn:        conn,
+			id:          clientID,
 			remoteAddr:  remoteHost,
 			ctx:         ctx,
 			cancel:      cancel,
 			sendChannel: make(chan []byte, MAX_QUEUED_EVENTS_PER_CLIENT),
-			id:          clientID,
 			logger:      h.logger.With(slog.String("client_id", clientID), slog.String("remote_addr", remoteHost)),
 		}
 
