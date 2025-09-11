@@ -6,6 +6,7 @@ ws.onopen = () => {
   ws.send(
     JSON.stringify({ method: "echo", params: { message: "hello" }, id: 1 })
   );
+  ws.send(JSON.stringify({ method: "ping", id: 1 }));
 
   ws.send(
     JSON.stringify({
