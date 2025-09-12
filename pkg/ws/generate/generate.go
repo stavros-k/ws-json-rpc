@@ -2,7 +2,6 @@ package generate
 
 import (
 	"os"
-	"reflect"
 )
 
 type Generator interface {
@@ -36,9 +35,5 @@ func NewGenerator() Generator {
 		return &fakeGenerator{}
 	}
 
-	return &realGenerator{
-		typeCache:    make(map[reflect.Type]string),
-		eventTypes:   make(map[string]eventType),
-		handlerTypes: make(map[string]handlerInfo),
-	}
+	return newRealGenerator()
 }

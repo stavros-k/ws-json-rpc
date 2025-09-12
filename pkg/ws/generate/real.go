@@ -28,6 +28,7 @@ type realGenerator struct {
 	typeCache    map[reflect.Type]string
 	eventTypes   map[string]eventType
 	handlerTypes map[string]handlerInfo
+	filePatterns []string // file patterns to scan for enums
 
 	enums map[string]enumType
 }
@@ -38,6 +39,38 @@ func (g *realGenerator) AddEventType(name string, resp any, docs EventDocs) {
 
 func (g *realGenerator) AddHandlerType(name string, req any, resp any, docs HandlerDocs) {
 	g.handlerTypes[name] = handlerInfo{reqType: req, respType: resp, docs: docs}
+}
+
+func newRealGenerator() *realGenerator {
+	return &realGenerator{
+		typeCache:    make(map[reflect.Type]string),
+		eventTypes:   make(map[string]eventType),
+		handlerTypes: make(map[string]handlerInfo),
+		filePatterns: []string{
+			"internal/handlers/*.go",
+		},
+	}
+}
+
+func (g *realGenerator) shouldProcessFile(filePath string) bool {
+	if len(g.filePatterns) == 0 {
+		return true // If no patterns specified, process all
+	}
+
+	// Normalize path separators for cross-platform compatibility
+	normalizedPath := filepath.ToSlash(filePath)
+
+	for _, pattern := range g.filePatterns {
+		normalizedPattern := filepath.ToSlash(pattern)
+		matched, err := filepath.Match(normalizedPattern, normalizedPath)
+		if err != nil {
+			log.Fatalf("Invalid pattern %q: %v", pattern, err)
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *realGenerator) Run() {
@@ -75,6 +108,11 @@ func (g *realGenerator) scanEnums(rootPath string) error {
 		}
 
 		if !strings.HasSuffix(path, ".go") || strings.Contains(path, "_test.go") {
+			return nil
+		}
+
+		// Only process files matching specified patterns
+		if !g.shouldProcessFile(path) {
 			return nil
 		}
 
