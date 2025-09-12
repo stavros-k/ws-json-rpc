@@ -5,12 +5,16 @@ import (
 	"ws-json-rpc/pkg/ws"
 )
 
+// Status represents the status of a ping response
 type Status string
 
 const (
-	StatusOK       Status = "OK"
+	//Sent when the ping is successful
+	StatusOK Status = "OK"
+	// This is the default status, so it is not necessary to specify it
 	StatusNotFound Status = "NotFound"
-	StatusError    Status = "Error"
+	// Sent when there is an error processing the ping
+	StatusError Status = "Error"
 )
 
 type PingResult struct {
