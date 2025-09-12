@@ -8,9 +8,9 @@ import (
 type Status string
 
 const (
-	StatusOK       Status = "ok"
-	StatusNotFound Status = "not_found"
-	StatusError    Status = "error"
+	StatusOK       Status = "OK"
+	StatusNotFound Status = "NotFound"
+	StatusError    Status = "Error"
 )
 
 type PingResult struct {
