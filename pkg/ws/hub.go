@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 	"ws-json-rpc/pkg/ws/generate"
@@ -168,6 +169,11 @@ func NewHub(l *slog.Logger) *Hub {
 
 		generator: generate.NewGenerator(),
 	}
+}
+
+func (h *Hub) G() {
+	h.generator.Run()
+	os.Exit(0)
 }
 
 // WithMiddleware adds middleware to the hub that will be applied to all registered methods

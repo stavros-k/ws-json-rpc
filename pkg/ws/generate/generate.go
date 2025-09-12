@@ -8,6 +8,7 @@ import (
 type Generator interface {
 	AddEventType(name string, resp any, docs EventDocs)
 	AddHandlerType(name string, req any, resp any, docs HandlerDocs)
+	Run()
 }
 
 type handlerInfo struct {

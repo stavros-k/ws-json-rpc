@@ -1,6 +1,8 @@
 package generate
 
-import "reflect"
+import (
+	"reflect"
+)
 
 type realGenerator struct {
 	typeCache    map[reflect.Type]string
@@ -15,3 +17,5 @@ func (g *realGenerator) AddEventType(name string, resp any, docs EventDocs) {
 func (g *realGenerator) AddHandlerType(name string, req any, resp any, docs HandlerDocs) {
 	g.handlerTypes[name] = handlerInfo{reqType: req, respType: resp, docs: docs}
 }
+
+func (g *realGenerator) Run() {}

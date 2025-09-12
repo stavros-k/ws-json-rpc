@@ -44,6 +44,8 @@ func main() {
 	go hub.Run()
 	go simulate(hub)
 
+	hub.G()
+
 	http.HandleFunc("/ws", hub.ServeWS())
 	logger.Info("WebSocket server starting", slog.String("address", ":8080"))
 	if err := http.ListenAndServe(":8080", nil); err != nil {
