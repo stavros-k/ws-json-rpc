@@ -240,7 +240,7 @@ func enumToTypescript(enum enumType) string {
 			sb.WriteString(",\n")
 		}
 	}
-	sb.WriteString("\n} as const;\n")
+	sb.WriteString("\n} as const;\n\n")
 
 	return sb.String()
 }
