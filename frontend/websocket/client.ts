@@ -46,6 +46,8 @@ export interface WebSocketClientOptions {
   reconnectDelay?: number;
   maxReconnectAttempts?: number;
   requestTimeout?: number;
+  jsonReplacer?: (key: string, value: any) => any;
+  jsonReviver?: (key: string, value: any) => any;
 }
 
 // Client
@@ -62,6 +64,8 @@ export class WebSocketClient<
   private reconnectAttempts = 0;
   private isConnecting = false;
   private isManualClose = false;
+  private jsonReplacer?: (key: string, value: any) => any;
+  private jsonReviver?: (key: string, value: any) => any;
 
   // Request tracking
   private pendingRequests = new Map<
@@ -88,6 +92,8 @@ export class WebSocketClient<
     this.reconnectDelay = options.reconnectDelay ?? 1000;
     this.maxReconnectAttempts = options.maxReconnectAttempts ?? 5;
     this.requestTimeout = options.requestTimeout ?? 30000;
+    this.jsonReplacer = options.jsonReplacer;
+    this.jsonReviver = options.jsonReviver;
   }
 
   // Connection management
@@ -214,7 +220,10 @@ export class WebSocketClient<
   // Message handling
   private handleMessage(data: string): void {
     try {
-      const message: IncomingMessage<Events> = JSON.parse(data);
+      const message: IncomingMessage<Events> = JSON.parse(
+        data,
+        this.jsonReviver
+      );
 
       // Handle response
       if ("id" in message) {
@@ -237,7 +246,7 @@ export class WebSocketClient<
       throw new Error("WebSocket is not connected");
     }
 
-    this.ws.send(JSON.stringify(message));
+    this.ws.send(JSON.stringify(message, this.jsonReplacer));
   }
 
   // Public API methods
@@ -257,7 +266,6 @@ export class WebSocketClient<
     method: Method,
     params?: Methods[Method]["req"]
   ): Promise<ResponseMessage<Methods[Method]["res"]>> {
-
     // Handle regular method calls
     const id = crypto.randomUUID();
     const message: RequestMessage<Methods, Method> = { id, method, params };
