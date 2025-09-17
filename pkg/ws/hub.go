@@ -25,9 +25,9 @@ const (
 
 // wsRequest represents an object from the client
 type wsRequest struct {
+	ID     uuid.UUID       `json:"id"`
 	Method string          `json:"method"`
 	Params json.RawMessage `json:"params,omitempty"`
-	ID     uuid.UUID       `json:"id"`
 }
 
 // wsEvent represents an wsEvent that can be broadcast to subscribers
@@ -38,9 +38,9 @@ type wsEvent struct {
 
 // wsResponse represents a response from the server
 type wsResponse struct {
+	ID     uuid.UUID       `json:"id"`
 	Result json.RawMessage `json:"result,omitempty"`
 	Error  *wsErrorObj     `json:"error,omitempty"`
-	ID     uuid.UUID       `json:"id"`
 }
 
 // wsErrorObj represents an error on a response

@@ -236,9 +236,6 @@ func (g *realGenerator) scanEnums(rootPath string) error {
 }
 
 func enumToTypescript(enum enumType) string {
-	// 1. Generate TypeScript enum type
-	// 2. Generate a constant object for the enum values
-
 	valuesConst := fmt.Sprintf("%sValues", enum.name)
 	sb := strings.Builder{}
 	commentSb := strings.Builder{}
