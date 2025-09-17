@@ -1,66 +1,42 @@
-// Some basic types for readability
-type PayloadType = any;
-type EventName = string;
-type MethodName = string;
+// Basic types
 type UUID = ReturnType<typeof crypto.randomUUID>;
 
 // Base constraint types
-type MethodsRecord = Record<MethodName, { req: PayloadType; res: PayloadType }>;
-type EventsRecord = Record<EventName, PayloadType>;
-
-type MethodParameters<
-  Methods extends MethodsRecord,
-  MethodKey extends keyof Methods
-> = Methods[MethodKey]["req"] extends undefined
-  ? [] // No parameters if req is undefined
-  : [params: Methods[MethodKey]["req"]]; // 1 parameter if req is defined
+type MethodsRecord = Record<string, { req: any; res: any }>;
+type EventsRecord = Record<string, any>;
 
 // Request message sent to the server
 type RequestMessage<
   Methods extends MethodsRecord,
-  MethodKey extends keyof Methods
+  Method extends keyof Methods
 > = {
-  id: ReturnType<typeof crypto.randomUUID>;
-  method: MethodKey;
-  params: Methods[MethodKey]["req"];
-};
-
-// Response message is an object containing the message ID and its result or error from a method call
-type ResponseMessage<ResponseType = any> = {
   id: UUID;
-} & (SuccessResult<ResponseType> | ErrorResult);
-
-type SuccessResult<ResponseType> = {
-  result: ResponseType;
-  error?: never; // Success has no error
+  method: Method;
+  params: Methods[Method]["req"];
 };
 
-type ErrorResult = {
-  result?: never; // Error has no result
-  error: {
-    code: number;
-    message: string;
-    data?: any; // Can be anything, Only used for logging/debugging
-  };
-};
+// Response message with either result or error
+type ResponseMessage<Result = any> = {
+  id: UUID;
+} & (
+  | { result: Result; error?: never }
+  | { result?: never; error: { code: number; message: string; data?: any } }
+);
 
 // Event message is an object containing the event name and its data
-type EventMessage<
-  Events extends EventsRecord,
-  EventKey extends keyof Events
-> = {
-  event: EventKey;
-  data: Events[EventKey];
+type EventMessage<Events extends EventsRecord, Event extends keyof Events> = {
+  event: Event;
+  data: Events[Event];
 };
 
-// Incoming message is either a response from a method or a payload from an event
+// Incoming message is either a response or an event
 type IncomingMessage<Events extends EventsRecord> =
   | ResponseMessage
   | EventMessage<Events, keyof Events>;
 
-// Event handlers is a map of event names to their handlers
+// Event handlers map
 type EventHandlers<Events extends EventsRecord> = {
-  [EventKey in keyof Events]?: (data: Events[EventKey]) => void;
+  [Event in keyof Events]?: (data: Events[Event]) => void;
 };
 
 // Client options
@@ -265,15 +241,26 @@ export class WebSocketClient<
   }
 
   // Public API methods
-  async call<MethodKey extends keyof Methods>(
-    method: MethodKey,
-    ...args: MethodParameters<Methods, MethodKey>
-  ): Promise<ResponseMessage<Methods[MethodKey]["res"]>> {
-    const params = args[0];
+  // For methods without parameters
+  async call<Method extends keyof Methods>(
+    method: Methods[Method]["req"] extends undefined ? Method : never
+  ): Promise<ResponseMessage<Methods[Method]["res"]>>;
+
+  // For methods with parameters
+  async call<Method extends keyof Methods>(
+    method: Methods[Method]["req"] extends undefined ? never : Method,
+    params: Methods[Method]["req"]
+  ): Promise<ResponseMessage<Methods[Method]["res"]>>;
+
+  // Implementation
+  async call<Method extends keyof Methods>(
+    method: Method,
+    params?: Methods[Method]["req"]
+  ): Promise<ResponseMessage<Methods[Method]["res"]>> {
 
     // Handle regular method calls
     const id = crypto.randomUUID();
-    const message: RequestMessage<Methods, MethodKey> = { id, method, params };
+    const message: RequestMessage<Methods, Method> = { id, method, params };
 
     function newRejectObj(msg: string): ResponseMessage<any> {
       return {
@@ -309,14 +296,14 @@ export class WebSocketClient<
   }
 
   // Event subscription
-  on<EventKey extends keyof Events>(
-    event: EventKey,
-    handler: (data: Events[EventKey]) => void
+  on<Event extends keyof Events>(
+    event: Event,
+    handler: (data: Events[Event]) => void
   ): void {
     this.eventHandlers[event] = handler;
   }
 
-  off<EventKey extends keyof Events>(event: EventKey): void {
+  off<Event extends keyof Events>(event: Event): void {
     delete this.eventHandlers[event];
   }
 
