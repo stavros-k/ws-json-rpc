@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/token"
 	"path"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -144,7 +145,7 @@ func (ti TypeInfo) String() string {
 		sb.WriteString("  Fields:")
 		for _, field := range ti.Fields {
 			sb.WriteString("\n    - ")
-			sb.WriteString(field.Name) // TODO: Print type
+			sb.WriteString(field.String())
 		}
 	}
 
@@ -160,11 +161,29 @@ func (ti TypeInfo) String() string {
 }
 
 type FieldInfo struct {
-	Name       string
-	Type       string
-	Tag        string
-	TagOptions []string
-	Comment    Comment
+	Name        string
+	Type        string
+	JSONName    string
+	JSONOptions []string
+	Comment     Comment
+}
+
+func (fi FieldInfo) String() string {
+	var sb strings.Builder
+	sb.WriteString(fi.Name)
+	sb.WriteString(" (")
+	sb.WriteString(fi.Type)
+	sb.WriteString(")")
+	if fi.JSONName != "" {
+		sb.WriteString(" `")
+		sb.WriteString(fi.JSONName)
+		sb.WriteString("`")
+		for _, opt := range fi.JSONOptions {
+			sb.WriteString(", ")
+			sb.WriteString(opt)
+		}
+	}
+	return sb.String()
 }
 
 func (g *GoParser) AddDir(dir string) error {
@@ -238,6 +257,10 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 
 	if typeSpec.Name.Name == "" {
 		return g.fmtError(pkg, decl, fmt.Errorf("type name is empty"))
+	}
+
+	if !ast.IsExported(typeSpec.Name.Name) {
+		return nil
 	}
 
 	typeInfo := &TypeInfo{
@@ -325,9 +348,105 @@ func (g *GoParser) processDeclaration(pkg *packages.Package, file *ast.File, dec
 }
 
 func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *ast.GenDecl) error {
+	// Should have exactly one spec for a type declaration
+	if len(genDecl.Specs) != 1 {
+		return g.fmtError(pkg, genDecl, fmt.Errorf("expected exactly one type specification, found %d", len(genDecl.Specs)))
+	}
+
+	spec := genDecl.Specs[0]
+	typeSpec, ok := spec.(*ast.TypeSpec)
+	if !ok {
+		return g.fmtError(pkg, genDecl, fmt.Errorf("expected TypeSpec, got %T", spec))
+	}
+
+	// Only process struct types
+	structType, ok := typeSpec.Type.(*ast.StructType)
+	if !ok {
+		return nil // Not a struct, skip
+	}
+
+	// Find the type info we created in extractTypeMetadata
+	typeInfo, exists := g.types[typeSpec.Name.Name]
+	if !exists {
+		return g.fmtError(pkg, genDecl, fmt.Errorf("type info not found for struct: %s", typeSpec.Name.Name))
+	}
+
+	// Extract struct fields
+	var fields []FieldInfo
+	for _, field := range structType.Fields.List {
+
+		// ENFORCE: No anonymous/embedded fields
+		if len(field.Names) == 0 {
+			continue // FIXME:
+			return g.fmtError(pkg, genDecl, fmt.Errorf("anonymous/embedded fields are not supported: %+v", field))
+		}
+
+		// Ignore unexported fields
+		if !ast.IsExported(field.Names[0].Name) {
+			continue // Ignore unexported fields
+		}
+
+		// Named fields
+		for _, name := range field.Names {
+			fieldInfo := FieldInfo{
+				Name: name.Name,
+				// Type: g.extractTypeString(field.Type),
+			}
+
+			if field.Doc != nil {
+				fieldInfo.Comment.Above = strings.TrimSpace(field.Doc.Text())
+			}
+			if field.Comment != nil {
+				fieldInfo.Comment.Inline = strings.TrimSpace(field.Comment.Text())
+			}
+
+			if field.Tag != nil {
+				jsonName, jsonOptions, err := g.parseStructTag("json", field.Tag.Value)
+				if err != nil {
+					return g.fmtError(pkg, genDecl, err)
+				}
+				if jsonName == "-" {
+					continue // Ignore fields with json:"-"
+				}
+				fieldInfo.JSONName = jsonName
+				fieldInfo.JSONOptions = jsonOptions
+			}
+
+			fields = append(fields, fieldInfo)
+		}
+	}
+
+	typeInfo.Fields = fields
 	return nil
 }
 
+func (g *GoParser) parseStructTag(key string, tagValue string) (string, []string, error) {
+	if tagValue == "" {
+		return "", nil, fmt.Errorf("empty struct tag")
+	}
+
+	// Remove surrounding backticks
+	tagValue = strings.Trim(tagValue, "`")
+
+	reflectTag := reflect.StructTag(tagValue)
+	keyValue := reflectTag.Get(key)
+	if keyValue == "" {
+		return "", nil, fmt.Errorf("key %s not found in struct tag: %s", key, tagValue)
+	}
+
+	var options []string
+
+	// Split options by comma
+	for _, option := range strings.Split(keyValue, ",") {
+		options = append(options, strings.TrimSpace(option))
+	}
+
+	if len(options) == 0 {
+		return "", nil, fmt.Errorf("no options found in struct tag: %s", tagValue)
+	}
+
+	return options[0], options[1:], nil
+}
 func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.GenDecl) error {
 	var enumTypeName string
 	var values []EnumValue
@@ -377,12 +496,19 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 		// First enum member sets the type, all others must match
 		if enumTypeName == "" {
 			enumTypeName = ident.Name
+			if !ast.IsExported(enumTypeName) {
+				return nil
+			}
 			// Verify this type exists in our parsed types
 			if _, exists := g.types[enumTypeName]; !exists {
 				return g.fmtError(pkg, genDecl, fmt.Errorf("enum type not found: %s", enumTypeName))
 			}
 		} else if ident.Name != enumTypeName {
 			return g.fmtError(pkg, genDecl, fmt.Errorf("inconsistent enum type: expected %s, got %s", enumTypeName, ident.Name))
+		}
+
+		if !ast.IsExported(name.Name) {
+			return nil
 		}
 
 		ev := EnumValue{

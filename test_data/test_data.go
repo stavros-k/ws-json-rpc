@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+type UUID string
+
 // MyEnum is a custom type used for testing purposes.
 type MyEnum string
 
@@ -18,6 +20,13 @@ type MyOtherEnum int
 const (
 	MyOtherEnum1 MyOtherEnum = 1
 	MyOtherEnum2 MyOtherEnum = 2
+)
+
+type ignoredUnexportedEnum int
+
+const (
+	IgnoredUnexportedEnum1 ignoredUnexportedEnum = 1
+	IgnoredUnexportedEnum2 ignoredUnexportedEnum = 2
 )
 
 // TestData is a struct used for testing purposes.
@@ -89,6 +98,9 @@ type TestData struct {
 
 	NestedTypeField        NestedType `json:"nestedTypeField"`
 	NestedEmbededTypeField JSONTime   `json:"nestedEmbededTypeField"`
+
+	IgnoredExportedField   string `json:"-"` // This field should be ignored
+	ignoredUnexportedField string
 
 	// TODO: Maps
 	// TestData12 map[string]string `json:"testData12"`
