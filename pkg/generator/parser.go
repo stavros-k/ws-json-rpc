@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"os"
 	"path"
 	"reflect"
 	"sort"
@@ -238,6 +239,9 @@ func (fi FieldInfo) String() string {
 }
 
 func (g *GoParser) AddDir(dir string) error {
+	if _, err := os.Stat(dir); err != nil {
+		return err
+	}
 	pkgs, err := packages.Load(g.config, dir)
 	if err != nil {
 		return err
@@ -557,28 +561,13 @@ func (g *GoParser) analyzeFieldType(expr ast.Expr) (*FieldTypeInfo, error) {
 		} else {
 			return nil, fmt.Errorf("complex selector expression not supported: %T", t.X)
 		}
+	// case *ast.InterfaceType:
+	// 	typeInfo.BaseType = "interface{}"
 	default:
 		return nil, fmt.Errorf("unsupported base type expression: %T", t)
 	}
 
 	return typeInfo, nil
-}
-
-// Helper function to extract just the type name from an expression
-func (g *GoParser) getBaseType(expr ast.Expr) (string, error) {
-	switch t := expr.(type) {
-	case *ast.Ident:
-		return t.Name, nil
-	case *ast.SelectorExpr:
-		// For qualified types like pkg.Type
-		pkg, err := g.getBaseType(t.X)
-		if err != nil {
-			return "", err
-		}
-		return pkg + "." + t.Sel.Name, nil
-	default:
-		return "", fmt.Errorf("unsupported base type expression: %T", t)
-	}
 }
 
 func (g *GoParser) parseStructTag(key string, tagValue string) (string, []string, error) {
