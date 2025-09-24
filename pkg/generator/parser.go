@@ -44,6 +44,10 @@ func NewGoParser() *GoParser {
 
 type TypeKind string
 
+func (t TypeKind) String() string {
+	return string(t)
+}
+
 const (
 	StructType TypeKind = "struct"
 	EnumType   TypeKind = "enum"
@@ -51,10 +55,6 @@ const (
 	SliceType  TypeKind = "slice"
 	MapType    TypeKind = "map"
 )
-
-func (t TypeKind) String() string {
-	return string(t)
-}
 
 type Comment struct {
 	// Comment above the declaration
@@ -264,6 +264,11 @@ func (g *GoParser) Run() error {
 	if err := g.Parse(); err != nil {
 		return err
 	}
+
+	tsGenerator := NewTSGenerator(&TSGeneratorOptions{
+		GenerateEnumValues: true,
+	})
+	tsGenerator.Generate(g.types)
 
 	return nil
 }
@@ -485,6 +490,9 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 				}
 				if jsonName == "-" {
 					continue // Ignore fields with json:"-"
+				}
+				if jsonName == "" {
+					return g.fmtError(pkg, genDecl, fmt.Errorf("no json name found for field %s", name.Name))
 				}
 				fieldInfo.JSONName = jsonName
 				fieldInfo.JSONOptions = jsonOptions
