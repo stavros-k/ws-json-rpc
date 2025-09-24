@@ -1,11 +1,13 @@
 package generator
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/token"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -210,7 +212,7 @@ func (g *GoParser) ForEachDecl(f func(pkg *packages.Package, file *ast.File, dec
 				}
 
 				if err := f(pkg, file, genDecl); err != nil {
-					return err
+					return g.fmtError(pkg, genDecl, err)
 				}
 			}
 		}
@@ -225,7 +227,7 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 	}
 
 	if len(decl.Specs) > 1 {
-		return fmt.Errorf("multiple type specifications found, %+v", decl)
+		return g.fmtError(pkg, decl, fmt.Errorf("multiple type specifications found, %+v", decl))
 	}
 
 	spec := decl.Specs[0]
@@ -235,7 +237,7 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 	}
 
 	if typeSpec.Name.Name == "" {
-		return fmt.Errorf("type name is empty")
+		return g.fmtError(pkg, decl, fmt.Errorf("type name is empty"))
 	}
 
 	typeInfo := &TypeInfo{
@@ -269,7 +271,7 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 		typeInfo.Kind = BasicType
 
 	default:
-		return fmt.Errorf("unsupported type: %T", t)
+		return g.fmtError(pkg, decl, fmt.Errorf("unsupported type: %T", t))
 	}
 
 	g.types[typeInfo.Name] = typeInfo
@@ -306,58 +308,67 @@ func (g *GoParser) printTypes() {
 }
 
 func (g *GoParser) processDeclaration(pkg *packages.Package, file *ast.File, decl *ast.GenDecl) error {
+	if len(decl.Specs) == 0 {
+		return g.fmtError(pkg, decl, fmt.Errorf("no specifications found"))
+	}
 	switch decl.Tok {
 	case token.CONST:
 		return g.populateTypeWithEnumInfo(pkg, decl)
 	case token.TYPE:
-		fmt.Printf("Decl is a type declaration, will implement later\n")
+		return g.populateTypeWithStructInfo(pkg, decl)
+		// fmt.Println(g.fmtError(pkg, decl, fmt.Errorf("decl is a type declaration, will implement later")))
 	default:
-		fmt.Printf("Decl is of unknown type: %s\n", decl.Tok.String())
+		fmt.Println(g.fmtError(pkg, decl, fmt.Errorf("decl is of unknown type: %s", decl.Tok.String())))
 	}
 
 	return nil
 }
 
-func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.GenDecl) error {
-	if genDecl.Tok != token.CONST {
-		return nil
-	}
-	if len(genDecl.Specs) == 0 {
-		return fmt.Errorf("no enum specification found")
-	}
+func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *ast.GenDecl) error {
+	return nil
+}
 
+func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.GenDecl) error {
 	var enumTypeName string
 	var values []EnumValue
 
 	for _, spec := range genDecl.Specs {
 		valueSpec, ok := spec.(*ast.ValueSpec)
 		if !ok {
-			return fmt.Errorf("expected ValueSpec, got %T", spec)
+			return g.fmtError(pkg, genDecl, fmt.Errorf("expected ValueSpec, got %T", spec))
 		}
 
 		// ENFORCE: All enum members must have explicit type
 		if valueSpec.Type == nil {
-			return fmt.Errorf("enum member %s missing explicit type declaration", valueSpec.Names[0].Name)
+			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member %s missing explicit type declaration", valueSpec.Names[0].Name))
 		}
 
 		ident, ok := valueSpec.Type.(*ast.Ident)
 		if !ok {
-			return fmt.Errorf("unexpected type: %T", valueSpec.Type)
+			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member type is not an identifier"))
 		}
 
+		// ENFORCE: iota is not supported
 		if ident.Name == "iota" {
-			return fmt.Errorf("iota not supported")
+			return g.fmtError(pkg, genDecl, fmt.Errorf("iota not supported"))
 		}
 
+		// ENFORCE: Each ValueSpec must have exactly one name and one value
+		// (ie MyEnum1 MyEnum = "MyEnum1")
+		// This means we do not support grouped declarations like:
+		// const (
+		//     MyEnum1 MyEnum = "MyEnum1"
+		//     MyEnum2          = "MyEnum2"
+		// )
 		if len(valueSpec.Names) != 1 {
 			if len(valueSpec.Names) == 0 {
-				return fmt.Errorf("enum member declaration has no names")
+				return g.fmtError(pkg, genDecl, fmt.Errorf("enum member declaration has no names"))
 			}
-			return fmt.Errorf("enum members must be declared one per line, found %d names", len(valueSpec.Names))
+			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member declaration has multiple names"))
 		}
 
 		if len(valueSpec.Values) != 1 {
-			return fmt.Errorf("enum member %s must have exactly one value, found %d", valueSpec.Names[0].Name, len(valueSpec.Values))
+			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member %s must have exactly one value, found %d", valueSpec.Names[0].Name, len(valueSpec.Values)))
 		}
 
 		name := valueSpec.Names[0]
@@ -368,10 +379,10 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 			enumTypeName = ident.Name
 			// Verify this type exists in our parsed types
 			if _, exists := g.types[enumTypeName]; !exists {
-				return fmt.Errorf("enum type not found: %s", enumTypeName)
+				return g.fmtError(pkg, genDecl, fmt.Errorf("enum type not found: %s", enumTypeName))
 			}
 		} else if ident.Name != enumTypeName {
-			return fmt.Errorf("inconsistent enum type: expected %s, got %s", enumTypeName, ident.Name)
+			return g.fmtError(pkg, genDecl, fmt.Errorf("inconsistent enum type: expected %s, got %s", enumTypeName, ident.Name))
 		}
 
 		ev := EnumValue{
@@ -381,7 +392,7 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 		if t, exists := pkg.TypesInfo.Types[value]; exists && t.IsValue() {
 			ev.Value = t.Value.String()
 		} else {
-			return fmt.Errorf("cannot determine value for enum member %s", name.Name)
+			return g.fmtError(pkg, genDecl, fmt.Errorf("cannot determine value for enum member %s", name.Name))
 		}
 
 		if valueSpec.Doc != nil {
@@ -396,11 +407,55 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 	}
 
 	if enumTypeName == "" {
-		return fmt.Errorf("enum type not found")
+		return g.fmtError(pkg, genDecl, fmt.Errorf("enum type not found"))
 	}
 
 	typeInfo := g.types[enumTypeName]
 	typeInfo.Kind = EnumType
 	typeInfo.EnumValues = values
 	return nil
+}
+
+func (g *GoParser) fmtError(pkg *packages.Package, decl *ast.GenDecl, err error) error {
+	var sb strings.Builder
+
+	// Package
+	sb.WriteString("Error: \n")
+	sb.WriteString("  Package: ")
+	sb.WriteString(pkg.PkgPath)
+	sb.WriteString("\n")
+
+	sb.WriteString("  Position: ")
+	sb.WriteString(path.Base(g.fset.File(decl.Pos()).Name()))
+	sb.WriteString(":")
+	sb.WriteString(strconv.Itoa(pkg.Fset.Position(decl.Pos()).Line))
+	sb.WriteString("\n")
+
+	// Declaration
+	sb.WriteString("  Declaration: ")
+	sb.WriteString(decl.Tok.String())
+	if len(decl.Specs) > 0 {
+		switch s := decl.Specs[0].(type) {
+		case *ast.TypeSpec:
+			if s.Name.Name != "" {
+				sb.WriteString(" (type: ")
+				sb.WriteString(s.Name.Name)
+				sb.WriteString(")")
+			}
+		case *ast.ValueSpec:
+			if len(s.Names) > 0 && s.Names[0].Name != "" {
+				sb.WriteString(" (const: ")
+				sb.WriteString(s.Names[0].Name)
+				sb.WriteString(")")
+			}
+		}
+	}
+	sb.WriteString("\n")
+
+	// Error
+	sb.WriteString("  Message: ")
+	sb.WriteString(err.Error())
+	sb.WriteString("\n")
+
+	return errors.New(sb.String())
 }
