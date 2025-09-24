@@ -1,12 +1,14 @@
 package main
 
 import (
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 	"ws-json-rpc/internal/consts"
 	"ws-json-rpc/internal/handlers"
+	"ws-json-rpc/pkg/generator"
 	"ws-json-rpc/pkg/ws"
 	"ws-json-rpc/pkg/ws/generate"
 	mw "ws-json-rpc/pkg/ws/middleware"
@@ -24,6 +26,11 @@ func slogReplacer(groups []string, a slog.Attr) slog.Attr {
 }
 
 func main() {
+	gen := generator.NewGoParser()
+	if err := gen.Run(); err != nil {
+		log.Fatal(err)
+	}
+	os.Exit(0)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level:       slog.LevelDebug,
 		ReplaceAttr: slogReplacer,
