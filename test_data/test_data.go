@@ -4,7 +4,16 @@ import (
 	"time"
 )
 
+type Anything interface{}
 type UUID string
+type UUIDs []UUID
+
+type MyMap map[string]int
+
+type myStruct struct {
+	Field1 string `json:"field1"`
+	Field2 int    `json:"field2"`
+}
 
 // MyEnum is a custom type used for testing purposes.
 type MyEnum string
@@ -32,21 +41,22 @@ const (
 
 // TestData is a struct used for testing purposes.
 type TestData struct {
-	StringField string  `json:"stringField"`
-	IntField    int     `json:"intField"`
-	Int8Field   int8    `json:"int8Field"`
-	Int16Field  int16   `json:"int16Field"`
-	Int32Field  int32   `json:"int32Field"`
-	Int64Field  int64   `json:"int64Field"`
-	UintField   uint    `json:"uintField"`
-	Uint8Field  uint8   `json:"uint8Field"`
-	Uint16Field uint16  `json:"uint16Field"`
-	Uint32Field uint32  `json:"uint32Field"`
-	Uint64Field uint64  `json:"uint64Field"`
-	FloatField  float32 `json:"floatField"`
-	DoubleField float64 `json:"doubleField"`
-	BoolField   bool    `json:"boolField"`
-	EnumField   MyEnum  `json:"enumField"`
+	InterfaceField interface{} `json:"interfaceField"`
+	StringField    string      `json:"stringField"`
+	IntField       int         `json:"intField"`
+	Int8Field      int8        `json:"int8Field"`
+	Int16Field     int16       `json:"int16Field"`
+	Int32Field     int32       `json:"int32Field"`
+	Int64Field     int64       `json:"int64Field"`
+	UintField      uint        `json:"uintField"`
+	Uint8Field     uint8       `json:"uint8Field"`
+	Uint16Field    uint16      `json:"uint16Field"`
+	Uint32Field    uint32      `json:"uint32Field"`
+	Uint64Field    uint64      `json:"uint64Field"`
+	FloatField     float32     `json:"floatField"`
+	DoubleField    float64     `json:"doubleField"`
+	BoolField      bool        `json:"boolField"`
+	EnumField      MyEnum      `json:"enumField"`
 
 	OptionalStringField *string  `json:"optionalStringField,omitempty"`
 	OptionalIntField    *int     `json:"optionalIntField,omitempty"`

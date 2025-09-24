@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"reflect"
-	"sort"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -148,7 +147,8 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 		Position: Position{
 			Package:  pkg.PkgPath,
 			Filename: path.Base(g.fset.File(decl.Pos()).Name()),
-			Line:     pkg.Fset.Position(decl.Pos()).Line},
+			Line:     pkg.Fset.Position(decl.Pos()).Line,
+		},
 	}
 
 	if decl.Doc != nil {
@@ -158,20 +158,65 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 	// get the type
 	switch t := typeSpec.Type.(type) {
 	case *ast.StructType:
-		typeInfo.Underlying = "struct"
-		typeInfo.Kind = StructType
+		typeInfo.Kind = StructKind
+		typeInfo.Underlying = StructDetails{} // Fields populated later
+
 	case *ast.Ident:
-		typeInfo.Underlying = t.Name
-		typeInfo.Kind = BasicType
+		typeInfo.Kind = BasicKind
+		typeInfo.Underlying = BasicDetails{BaseType: t.Name}
+
 	case *ast.ArrayType:
-		typeInfo.Underlying = "slice"
-		typeInfo.Kind = SliceType
+		elementType, err := g.analyzeFieldType(t.Elt)
+		if err != nil {
+			return err
+		}
+		if t.Len == nil {
+			// It's a slice
+			typeInfo.Kind = SliceKind
+			typeInfo.Underlying = SliceDetails{ElementType: elementType}
+		} else {
+			// It's an array
+			length := ""
+			if lit, ok := t.Len.(*ast.BasicLit); ok {
+				length = lit.Value
+			}
+			typeInfo.Kind = ArrayKind
+			typeInfo.Underlying = ArrayDetails{
+				ElementType: elementType,
+				Length:      length,
+			}
+		}
+
 	case *ast.MapType:
-		typeInfo.Underlying = "map"
-		typeInfo.Kind = MapType
+		keyType, err := g.analyzeFieldType(t.Key)
+		if err != nil {
+			return err
+		}
+		valueType, err := g.analyzeFieldType(t.Value)
+		if err != nil {
+			return err
+		}
+		typeInfo.Kind = MapKind
+		typeInfo.Underlying = MapDetails{
+			KeyType:   keyType,
+			ValueType: valueType,
+		}
+	case *ast.InterfaceType:
+		// Empty interface{} becomes "any"
+		if len(t.Methods.List) == 0 {
+			typeInfo.Kind = BasicKind
+			typeInfo.Underlying = BasicDetails{BaseType: "any"}
+		} else {
+			return fmt.Errorf("non-empty interfaces cannot be serialized to JSON")
+		}
 	case *ast.StarExpr:
-		typeInfo.Underlying = "pointer"
-		typeInfo.Kind = BasicType
+		// Pointer type (e.g., type MyPtr *string)
+		pointedType, err := g.analyzeFieldType(t.X)
+		if err != nil {
+			return err
+		}
+		typeInfo.Kind = PointerKind
+		typeInfo.Underlying = PointerDetails{PointedType: pointedType}
 
 	default:
 		return g.fmtError(pkg, decl, fmt.Errorf("unsupported type: %T", t))
@@ -180,20 +225,6 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 	g.types[typeInfo.Name] = typeInfo
 
 	return nil
-}
-
-func (g *GoParser) printTypes() {
-	types := make([]*TypeInfo, 0, len(g.types))
-	for _, t := range g.types {
-		types = append(types, t)
-	}
-	sort.Slice(types, func(i, j int) bool {
-		return types[i].Name < types[j].Name
-	})
-
-	for _, t := range types {
-		fmt.Printf("\n- %v\n", t)
-	}
 }
 
 func (g *GoParser) processDeclaration(pkg *packages.Package, file *ast.File, decl *ast.GenDecl) error {
@@ -308,7 +339,9 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 		}
 	}
 
-	typeInfo.Fields = fields
+	typeInfo.Underlying = StructDetails{
+		Fields: fields,
+	}
 	return nil
 }
 
@@ -374,6 +407,12 @@ func (g *GoParser) analyzeFieldType(expr ast.Expr) (*FieldTypeInfo, error) {
 			typeInfo.BaseType = ident.Name + "." + t.Sel.Name
 		} else {
 			return nil, fmt.Errorf("complex selector expression not supported: %T", t.X)
+		}
+	case *ast.InterfaceType:
+		if len(t.Methods.List) == 0 {
+			typeInfo.BaseType = "any" // empty interface{}
+		} else {
+			return nil, fmt.Errorf("non-empty interfaces cannot be serialized to JSON")
 		}
 	default:
 		return nil, fmt.Errorf("unsupported base type expression: %T", t)
@@ -502,7 +541,15 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 	}
 
 	typeInfo := g.types[enumTypeName]
-	typeInfo.Kind = EnumType
-	typeInfo.EnumValues = values
+	typeInfo.Kind = EnumKind
+	enumDetails := EnumDetails{
+		EnumValues: values,
+	}
+	if basic, ok := typeInfo.Underlying.(BasicDetails); ok {
+		enumDetails.BaseType = basic.BaseType
+	} else {
+		return fmt.Errorf("enum type %s is not a basic type", enumTypeName)
+	}
+	typeInfo.Underlying = enumDetails
 	return nil
 }
