@@ -2,6 +2,8 @@ package generator
 
 import (
 	"fmt"
+	"os"
+	"sort"
 	"strings"
 )
 
@@ -25,13 +27,35 @@ func NewTSGenerator(options *TSGeneratorOptions) *TSGenerator {
 }
 
 func (g *TSGenerator) Generate(types map[string]*TypeInfo) {
+	typesSlice := make([]*TypeInfo, 0, len(types))
 	for _, t := range types {
+		typesSlice = append(typesSlice, t)
+	}
+	sort.Slice(typesSlice, func(i, j int) bool {
+		return typesSlice[i].Name < typesSlice[j].Name
+	})
+	for _, t := range typesSlice {
 		g.tsTypes[t.Name] = g.generateType(t)
 	}
 
 	for _, tsType := range g.tsTypes {
 		fmt.Println(tsType)
 	}
+
+	file, err := os.Create("out.ts")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+	for _, tsType := range g.tsTypes {
+		_, err = file.WriteString(tsType)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+	fmt.Println("TypeScript definitions written to out.ts")
 }
 
 type TSTypeInfo struct {
@@ -222,7 +246,7 @@ func (g *TSGenerator) generateEnumType(t *TypeInfo) string {
 			sb.WriteString("\n")
 		}
 		sb.WriteString("  | ")
-		sb.WriteString(ev.Name)
+		sb.WriteString(ev.Value)
 		if i != len(details.EnumValues)-1 {
 			sb.WriteString("\n")
 		}

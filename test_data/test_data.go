@@ -20,9 +20,9 @@ type MyEnum string
 
 const (
 	// Some comment
-	MyEnum1                    MyEnum = "MyEnum1" // Some inline comment
+	MyEnum1                    MyEnum = "MyEnumValue1" // Some inline comment
 	ignoredUnexportedEnumValue MyEnum = "ignoredUnexportedEnumValue"
-	MyEnum2                    MyEnum = "MyEnum2"
+	MyEnum2                    MyEnum = "MyEnumValue2"
 )
 
 type MyOtherEnum int

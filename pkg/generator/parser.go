@@ -12,6 +12,8 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// TODO: Take into account the json tags for optionality and naming
+
 type GoParser struct {
 	types  map[string]*TypeInfo
 	config *packages.Config
