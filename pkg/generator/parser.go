@@ -160,9 +160,48 @@ func (ti TypeInfo) String() string {
 	return sb.String()
 }
 
+type FieldTypeInfo struct {
+	IsPointer   bool
+	IsSlice     bool
+	IsArray     bool
+	IsMap       bool
+	IsEmbedded  bool           // For embedded fields
+	BaseType    string         // For simple types: "User", "string", etc.
+	KeyType     *FieldTypeInfo // For maps: recursive type info
+	ValueType   *FieldTypeInfo // For maps, slices, arrays: recursive type info
+	ArrayLength string         // For fixed arrays: [5]int
+}
+
+func (fti FieldTypeInfo) String() string {
+	var sb strings.Builder
+
+	if fti.IsPointer {
+		sb.WriteString("*")
+	}
+
+	if fti.IsSlice {
+		sb.WriteString("[]")
+		sb.WriteString(fti.ValueType.String())
+	} else if fti.IsArray {
+		sb.WriteString("[")
+		sb.WriteString(fti.ArrayLength)
+		sb.WriteString("]")
+		sb.WriteString(fti.ValueType.String())
+	} else if fti.IsMap {
+		sb.WriteString("map[")
+		sb.WriteString(fti.KeyType.String())
+		sb.WriteString("]")
+		sb.WriteString(fti.ValueType.String())
+	} else {
+		sb.WriteString(fti.BaseType)
+	}
+
+	return sb.String()
+}
+
 type FieldInfo struct {
 	Name        string
-	Type        string
+	Type        *FieldTypeInfo
 	JSONName    string
 	JSONOptions []string
 	Comment     Comment
@@ -170,10 +209,16 @@ type FieldInfo struct {
 
 func (fi FieldInfo) String() string {
 	var sb strings.Builder
-	sb.WriteString(fi.Name)
-	sb.WriteString(" (")
-	sb.WriteString(fi.Type)
+	if fi.Name != "" {
+		sb.WriteString(fi.Name)
+		sb.WriteString(" ")
+	} else {
+		sb.WriteString("'embedded' ")
+	}
+	sb.WriteString("(")
+	sb.WriteString(fi.Type.String())
 	sb.WriteString(")")
+
 	if fi.JSONName != "" {
 		sb.WriteString(" `")
 		sb.WriteString(fi.JSONName)
@@ -183,6 +228,12 @@ func (fi FieldInfo) String() string {
 			sb.WriteString(opt)
 		}
 	}
+
+	if !fi.Comment.IsEmpty() {
+		sb.WriteString(" // ")
+		sb.WriteString(fi.Comment.String())
+	}
+
 	return sb.String()
 }
 
@@ -340,7 +391,6 @@ func (g *GoParser) processDeclaration(pkg *packages.Package, file *ast.File, dec
 		return g.populateTypeWithEnumInfo(pkg, decl)
 	case token.TYPE:
 		return g.populateTypeWithStructInfo(pkg, decl)
-		// fmt.Println(g.fmtError(pkg, decl, fmt.Errorf("decl is a type declaration, will implement later")))
 	default:
 		fmt.Println(g.fmtError(pkg, decl, fmt.Errorf("decl is of unknown type: %s", decl.Tok.String())))
 	}
@@ -375,11 +425,29 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 	// Extract struct fields
 	var fields []FieldInfo
 	for _, field := range structType.Fields.List {
-
-		// ENFORCE: No anonymous/embedded fields
 		if len(field.Names) == 0 {
-			continue // FIXME:
-			return g.fmtError(pkg, genDecl, fmt.Errorf("anonymous/embedded fields are not supported: %+v", field))
+			fieldInfo := FieldInfo{
+				Name: "",
+			}
+
+			typeInfo, err := g.analyzeFieldType(field.Type)
+			if err != nil {
+				return g.fmtError(pkg, genDecl, err)
+			}
+
+			typeInfo.IsEmbedded = true
+			fieldInfo.Type = typeInfo
+
+			if field.Doc != nil {
+				fieldInfo.Comment.Above = strings.TrimSpace(field.Doc.Text())
+			}
+
+			if field.Comment != nil {
+				fieldInfo.Comment.Inline = strings.TrimSpace(field.Comment.Text())
+			}
+
+			fields = append(fields, fieldInfo)
+			continue
 		}
 
 		// Ignore unexported fields
@@ -391,9 +459,13 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 		for _, name := range field.Names {
 			fieldInfo := FieldInfo{
 				Name: name.Name,
-				// FIXME:
-				// Type: g.extractTypeString(field.Type),
 			}
+
+			typeInfo, err := g.analyzeFieldType(field.Type)
+			if err != nil {
+				return g.fmtError(pkg, genDecl, err)
+			}
+			fieldInfo.Type = typeInfo
 
 			if field.Doc != nil {
 				fieldInfo.Comment.Above = strings.TrimSpace(field.Doc.Text())
@@ -420,6 +492,93 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 
 	typeInfo.Fields = fields
 	return nil
+}
+
+func (g *GoParser) analyzeFieldType(expr ast.Expr) (*FieldTypeInfo, error) {
+	typeInfo := &FieldTypeInfo{}
+	current := expr
+
+	// Check for pointer
+	if star, ok := current.(*ast.StarExpr); ok {
+		typeInfo.IsPointer = true
+		current = star.X
+	}
+
+	// Check for slice/array
+	if array, ok := current.(*ast.ArrayType); ok {
+		if array.Len == nil {
+			typeInfo.IsSlice = true
+		} else {
+			typeInfo.IsArray = true
+			if lit, ok := array.Len.(*ast.BasicLit); ok {
+				typeInfo.ArrayLength = lit.Value
+			} else {
+				return nil, fmt.Errorf("unsupported array length expression: %T", array.Len)
+			}
+		}
+
+		// Recursively analyze element type
+		elemType, err := g.analyzeFieldType(array.Elt)
+		if err != nil {
+			return nil, err
+		}
+		typeInfo.ValueType = elemType
+		return typeInfo, nil
+	}
+
+	// Check for map
+	if mapType, ok := current.(*ast.MapType); ok {
+		typeInfo.IsMap = true
+
+		// Recursively analyze key type
+		keyType, err := g.analyzeFieldType(mapType.Key)
+		if err != nil {
+			return nil, err
+		}
+		typeInfo.KeyType = keyType
+
+		// Recursively analyze value type
+		valueType, err := g.analyzeFieldType(mapType.Value)
+		if err != nil {
+			return nil, err
+		}
+		typeInfo.ValueType = valueType
+		return typeInfo, nil
+	}
+
+	// Simple base type
+	switch t := current.(type) {
+	case *ast.Ident:
+		typeInfo.BaseType = t.Name
+	case *ast.SelectorExpr:
+		// Handle pkg.Type
+		if ident, ok := t.X.(*ast.Ident); ok {
+			typeInfo.BaseType = ident.Name + "." + t.Sel.Name
+		} else {
+			return nil, fmt.Errorf("complex selector expression not supported: %T", t.X)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported base type expression: %T", t)
+	}
+
+	return typeInfo, nil
+}
+
+// Helper function to extract just the type name from an expression
+func (g *GoParser) getBaseType(expr ast.Expr) (string, error) {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return t.Name, nil
+	case *ast.SelectorExpr:
+		// For qualified types like pkg.Type
+		pkg, err := g.getBaseType(t.X)
+		if err != nil {
+			return "", err
+		}
+		return pkg + "." + t.Sel.Name, nil
+	default:
+		return "", fmt.Errorf("unsupported base type expression: %T", t)
+	}
 }
 
 func (g *GoParser) parseStructTag(key string, tagValue string) (string, []string, error) {

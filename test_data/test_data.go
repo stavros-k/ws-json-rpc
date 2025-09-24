@@ -103,11 +103,12 @@ type TestData struct {
 	IgnoredExportedField   string `json:"-"` // This field should be ignored
 	ignoredUnexportedField string
 
-	// TODO: Maps
-	// TestData12 map[string]string `json:"testData12"`
-	// TestData13 map[string]string `json:"testData13,omitempty"`
-	// TestData14 map[string]int    `json:"testData14"`
-	// TestData15 map[string]int    `json:"testData15,omitempty"`
+	MapStringStringField map[string]string         `json:"mapStringStringField"`
+	MapStringIntField    map[string]int            `json:"mapStringIntField"`
+	MapIntStringField    map[int]string            `json:"mapIntStringField"`
+	MapIntIntField       map[int]int               `json:"mapIntIntField"`
+	MapStringMapField    map[string]map[string]int `json:"mapStringMapField"`
+	MapStringEnumField   map[string]MyEnum         `json:"mapStringEnumField"`
 }
 
 type NestedType struct {
@@ -115,5 +116,6 @@ type NestedType struct {
 }
 
 type JSONTime struct {
-	time.Time
+	// Embed the standard time.Time type
+	time.Time // or just Time time.Time
 }
