@@ -561,8 +561,6 @@ func (g *GoParser) analyzeFieldType(expr ast.Expr) (*FieldTypeInfo, error) {
 		} else {
 			return nil, fmt.Errorf("complex selector expression not supported: %T", t.X)
 		}
-	// case *ast.InterfaceType:
-	// 	typeInfo.BaseType = "interface{}"
 	default:
 		return nil, fmt.Errorf("unsupported base type expression: %T", t)
 	}
