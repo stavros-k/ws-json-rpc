@@ -103,7 +103,7 @@ func (g *TSGenerator) generateSliceType(t *TypeInfo) string {
 	sb.WriteString("export type ")
 	sb.WriteString(t.Name)
 	sb.WriteString(" = Array<")
-	// FIXME:
+	sb.WriteString(g.goTypeToTSType(t.Underlying).Type)
 	sb.WriteString(">;\n")
 	return sb.String()
 }
@@ -118,7 +118,7 @@ func (g *TSGenerator) generateMapType(t *TypeInfo) string {
 	sb.WriteString("export type ")
 	sb.WriteString(t.Name)
 	sb.WriteString(" = Record<")
-	// FIXME:
+	sb.WriteString(g.goTypeToTSType(t.Underlying).Type)
 	sb.WriteString(", ")
 	// FIXME:
 	sb.WriteString(">;\n")
