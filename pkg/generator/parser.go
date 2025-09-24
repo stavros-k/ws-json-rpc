@@ -230,6 +230,10 @@ func (g *GoParser) ForEachDecl(f func(pkg *packages.Package, file *ast.File, dec
 					continue
 				}
 
+				if len(genDecl.Specs) == 0 {
+					return g.fmtError(pkg, genDecl, fmt.Errorf("no specifications found"))
+				}
+
 				if err := f(pkg, file, genDecl); err != nil {
 					return g.fmtError(pkg, genDecl, err)
 				}
@@ -331,9 +335,6 @@ func (g *GoParser) printTypes() {
 }
 
 func (g *GoParser) processDeclaration(pkg *packages.Package, file *ast.File, decl *ast.GenDecl) error {
-	if len(decl.Specs) == 0 {
-		return g.fmtError(pkg, decl, fmt.Errorf("no specifications found"))
-	}
 	switch decl.Tok {
 	case token.CONST:
 		return g.populateTypeWithEnumInfo(pkg, decl)
@@ -390,6 +391,7 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 		for _, name := range field.Names {
 			fieldInfo := FieldInfo{
 				Name: name.Name,
+				// FIXME:
 				// Type: g.extractTypeString(field.Type),
 			}
 
@@ -472,6 +474,10 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 			return g.fmtError(pkg, genDecl, fmt.Errorf("iota not supported"))
 		}
 
+		if !ast.IsExported(ident.Name) {
+			return nil
+		}
+
 		// ENFORCE: Each ValueSpec must have exactly one name and one value
 		// (ie MyEnum1 MyEnum = "MyEnum1")
 		// This means we do not support grouped declarations like:
@@ -496,9 +502,6 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 		// First enum member sets the type, all others must match
 		if enumTypeName == "" {
 			enumTypeName = ident.Name
-			if !ast.IsExported(enumTypeName) {
-				return nil
-			}
 			// Verify this type exists in our parsed types
 			if _, exists := g.types[enumTypeName]; !exists {
 				return g.fmtError(pkg, genDecl, fmt.Errorf("enum type not found: %s", enumTypeName))
@@ -507,8 +510,9 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 			return g.fmtError(pkg, genDecl, fmt.Errorf("inconsistent enum type: expected %s, got %s", enumTypeName, ident.Name))
 		}
 
+		// Skip unexported enum members
 		if !ast.IsExported(name.Name) {
-			return nil
+			continue
 		}
 
 		ev := EnumValue{
