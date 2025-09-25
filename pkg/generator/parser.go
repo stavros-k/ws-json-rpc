@@ -437,56 +437,70 @@ func getEmbeddedName(t TypeExpression) string {
 	}
 }
 
+// populateTypeWithStructInfo is the SECOND PASS function for processing struct types.
+// It fills in the field details for struct types that were identified in the first pass.
+// This can safely reference other types since all types are now known.
+// Called via processDeclaration for TYPE declarations.
 func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *ast.GenDecl) error {
 	// Handle each type spec in the declaration
+	// Supports both single and grouped type declarations
 	for _, spec := range genDecl.Specs {
+		// Ensure we have a type specification
 		typeSpec, ok := spec.(*ast.TypeSpec)
 		if !ok {
 			return g.fmtError(pkg, genDecl, fmt.Errorf("expected TypeSpec, got %T", spec))
-
 		}
 
+		// Skip unexported types (lowercase names)
 		if !ast.IsExported(typeSpec.Name.Name) {
-			continue // Skip unexported types
+			continue
 		}
 
-		// Only process struct types
+		// Only process struct types - skip aliases, interfaces, etc.
 		structType, ok := typeSpec.Type.(*ast.StructType)
 		if !ok {
-			continue // Not a struct, skip
+			continue // Not a struct, nothing to populate
 		}
 
-		// Find the type info we created in extractTypeMetadata
+		// Find the TypeInfo created in the first pass (extractTypeMetadata)
+		// This should always exist for exported types
 		typeInfo, exists := g.types[typeSpec.Name.Name]
 		if !exists {
 			return g.fmtError(pkg, genDecl, fmt.Errorf("type info not found for struct: %s", typeSpec.Name.Name))
 		}
 
-		// Extract struct fields
+		// Build the field list for this struct
 		var fields []FieldInfo
+
+		// Iterate through all fields in the struct
 		for _, field := range structType.Fields.List {
+			// Analyze the field's type (might be basic, slice, map, pointer, etc.)
 			fieldType, err := g.analyzeType(field.Type)
 			if err != nil {
 				return err
 			}
 
+			// Handle embedded fields (anonymous fields)
+			// Example: type User struct { BaseModel; Name string }
 			if len(field.Names) == 0 {
-				// Embedded field
+				// Extract the name from the embedded type for identification
 				embeddedName := getEmbeddedName(fieldType)
 				fields = append(fields, FieldInfo{
 					Name:    embeddedName,
-					Type:    EmbeddedType{Type: fieldType},
+					Type:    EmbeddedType{Type: fieldType}, // Wrap in EmbeddedType marker
 					Comment: g.extractComment(field.Doc, field.Comment),
 				})
 				continue
 			}
 
-			// Ignore unexported fields
+			// Skip unexported named fields (lowercase names)
+			// Check first name - if unexported, skip all names in this field
 			if !ast.IsExported(field.Names[0].Name) {
-				continue // Ignore unexported fields
+				continue
 			}
 
-			// Named fields
+			// Process named fields
+			// Note: Go allows multiple names per field: X, Y int
 			for _, name := range field.Names {
 				fieldInfo := FieldInfo{
 					Name:    name.Name,
@@ -494,25 +508,38 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 					Comment: g.extractComment(field.Doc, field.Comment),
 				}
 
-				if field.Tag != nil {
-					jsonName, jsonOptions, err := g.parseStructTag("json", field.Tag.Value)
-					if err != nil {
-						return g.fmtError(pkg, genDecl, err)
-					}
-					if jsonName == "" {
-						return g.fmtError(pkg, genDecl, fmt.Errorf("no json name found for field %s", name.Name))
-					}
-					if jsonName == "-" {
-						continue // Ignore fields with json:"-"
-					}
-					fieldInfo.JSONName = jsonName
-					fieldInfo.JSONOptions = jsonOptions
+				// Enforce that all exported fields must have struct tags
+				if field.Tag == nil {
+					return g.fmtError(pkg, genDecl, fmt.Errorf("no tag found for field %s", name.Name))
 				}
+
+				// Process struct tags
+				// Tags control JSON serialization behavior
+				jsonName, jsonOptions, err := g.parseStructTag("json", field.Tag.Value)
+				if err != nil {
+					return g.fmtError(pkg, genDecl, err)
+				}
+
+				// Enforce that all exported fields must have explicit json tags
+				// This is a design choice for explicit API contracts
+				if jsonName == "" {
+					return g.fmtError(pkg, genDecl, fmt.Errorf("no json name found for field %s", name.Name))
+				}
+
+				// Handle json:"-" which explicitly excludes field from JSON
+				if jsonName == "-" {
+					continue // Skip this field entirely
+				}
+
+				// Store JSON metadata for code generation
+				fieldInfo.JSONName = jsonName
+				fieldInfo.JSONOptions = jsonOptions // e.g., ["omitempty", "string"]
 
 				fields = append(fields, fieldInfo)
 			}
 		}
 
+		// Replace the empty StructType from first pass with populated version
 		typeInfo.Type = StructType{Fields: fields}
 	}
 
