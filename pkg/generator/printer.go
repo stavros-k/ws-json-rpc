@@ -167,6 +167,10 @@ func (p PointerType) String() string {
 	return "*" + p.Element.String()
 }
 
+func (e EmbeddedType) String() string {
+	return "embedded:" + e.Type.String()
+}
+
 func (g *GoParser) fmtError(pkg *packages.Package, decl *ast.GenDecl, err error) error {
 	var sb strings.Builder
 

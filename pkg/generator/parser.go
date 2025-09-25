@@ -74,6 +74,7 @@ func (g *GoParser) Run() error {
 
 	return nil
 }
+
 func (g *GoParser) Parse() error {
 	// Parse all types with their names and comments and positions
 	if err := g.forEachDecl(g.extractTypeMetadata); err != nil {
@@ -213,17 +214,14 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 	}
 
 	typeInfo := &TypeInfo{
-		Name: typeSpec.Name.Name,
-		Type: typeExpr,
+		Name:    typeSpec.Name.Name,
+		Type:    typeExpr,
+		Comment: g.extractComment(decl.Doc, nil),
 		Position: Position{
 			Package:  pkg.PkgPath,
 			Filename: path.Base(g.fset.File(decl.Pos()).Name()),
 			Line:     pkg.Fset.Position(decl.Pos()).Line,
 		},
-	}
-
-	if decl.Doc != nil {
-		typeInfo.Comment.Above = strings.TrimSpace(decl.Doc.Text())
 	}
 
 	g.types[typeInfo.Name] = typeInfo
@@ -295,10 +293,9 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 			// Embedded field
 			embeddedName := getEmbeddedName(fieldType)
 			fields = append(fields, FieldInfo{
-				Name:       embeddedName,
-				Type:       fieldType,
-				IsEmbedded: true,
-				// ... comments ...
+				Name:    embeddedName,
+				Type:    EmbeddedType{Type: fieldType},
+				Comment: g.extractComment(field.Doc, field.Comment),
 			})
 			continue
 		}
@@ -311,20 +308,9 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 		// Named fields
 		for _, name := range field.Names {
 			fieldInfo := FieldInfo{
-				Name: name.Name,
-			}
-
-			typeInfo, err := g.analyzeType(field.Type)
-			if err != nil {
-				return g.fmtError(pkg, genDecl, err)
-			}
-			fieldInfo.Type = typeInfo
-
-			if field.Doc != nil {
-				fieldInfo.Comment.Above = strings.TrimSpace(field.Doc.Text())
-			}
-			if field.Comment != nil {
-				fieldInfo.Comment.Inline = strings.TrimSpace(field.Comment.Text())
+				Name:    name.Name,
+				Type:    fieldType,
+				Comment: g.extractComment(field.Doc, field.Comment),
 			}
 
 			if field.Tag != nil {
@@ -332,11 +318,11 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 				if err != nil {
 					return g.fmtError(pkg, genDecl, err)
 				}
-				if jsonName == "-" {
-					continue // Ignore fields with json:"-"
-				}
 				if jsonName == "" {
 					return g.fmtError(pkg, genDecl, fmt.Errorf("no json name found for field %s", name.Name))
+				}
+				if jsonName == "-" {
+					continue // Ignore fields with json:"-"
 				}
 				fieldInfo.JSONName = jsonName
 				fieldInfo.JSONOptions = jsonOptions
@@ -349,6 +335,19 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 	typeInfo.Type = StructType{Fields: fields}
 
 	return nil
+}
+
+func (g *GoParser) extractComment(doc, comment *ast.CommentGroup) Comment {
+	c := Comment{}
+
+	if doc != nil {
+		c.Above = strings.TrimSpace(doc.Text())
+	}
+	if comment != nil {
+		c.Inline = strings.TrimSpace(comment.Text())
+	}
+
+	return c
 }
 
 func (g *GoParser) parseStructTag(key string, tagValue string) (string, []string, error) {
@@ -446,21 +445,14 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 		}
 
 		ev := EnumValue{
-			Name: name.Name,
+			Name:    name.Name,
+			Comment: g.extractComment(valueSpec.Doc, valueSpec.Comment),
 		}
 
 		if t, exists := pkg.TypesInfo.Types[value]; exists && t.IsValue() {
 			ev.Value = t.Value.String()
 		} else {
 			return g.fmtError(pkg, genDecl, fmt.Errorf("cannot determine value for enum member %s", name.Name))
-		}
-
-		if valueSpec.Doc != nil {
-			ev.Comment.Above = strings.TrimSpace(valueSpec.Doc.Text())
-		}
-
-		if valueSpec.Comment != nil {
-			ev.Comment.Inline = strings.TrimSpace(valueSpec.Comment.Text())
 		}
 
 		values = append(values, ev)

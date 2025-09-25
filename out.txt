@@ -1,0 +1,278 @@
+
+- Name: Anything
+  Type: basic
+  Underlying: any
+  Position: ws-json-rpc/test_data - test_data.go:7
+
+
+- Name: JSONTime
+  Type: struct
+  Underlying: struct with 1 fields
+  Position: ws-json-rpc/test_data - test_data.go:144
+  Fields:
+    - time.Time (embedded:time.Time) // Embed the standard time.Time type | or just Time time.Time
+
+- Name: MyEnum
+  Type: enum
+  Underlying: enum(string)
+  Comment: MyEnum is a custom type used for testing purposes.
+  Position: ws-json-rpc/test_data - test_data.go:19
+  Values:
+    - MyEnum1 = "MyEnumValue1" // Some comment | Some inline comment
+    - MyEnum2 = "MyEnumValue2"
+
+- Name: MyMap
+  Type: map
+  Underlying: map[string]int
+  Position: ws-json-rpc/test_data - test_data.go:11
+  Key: string
+  Value: int
+
+- Name: MyOtherEnum
+  Type: enum
+  Underlying: enum(int)
+  Position: ws-json-rpc/test_data - test_data.go:28
+  Values:
+    - MyOtherEnum1 = 1
+    - MyOtherEnum2 = 2
+
+- Name: NestedType
+  Type: struct
+  Underlying: struct with 1 fields
+  Position: ws-json-rpc/test_data - test_data.go:140
+  Fields:
+    - StringField (string) `stringField`
+
+- Name: TestData
+  Type: struct
+  Underlying: struct with 85 fields
+  Comment: TestData is a struct used for testing purposes.
+  Position: ws-json-rpc/test_data - test_data.go:43
+  Fields:
+    - InterfaceField (any) `interfaceField`
+    - StringField (string) `stringField`
+    - IntField (int) `intField`
+    - Int8Field (int8) `int8Field`
+    - Int16Field (int16) `int16Field`
+    - Int32Field (int32) `int32Field`
+    - Int64Field (int64) `int64Field`
+    - UintField (uint) `uintField`
+    - Uint8Field (uint8) `uint8Field`
+    - Uint16Field (uint16) `uint16Field`
+    - Uint32Field (uint32) `uint32Field`
+    - Uint64Field (uint64) `uint64Field`
+    - FloatField (float32) `floatField`
+    - DoubleField (float64) `doubleField`
+    - BoolField (bool) `boolField`
+    - EnumField (MyEnum) `enumField`
+    - OptionalStringField (*string) `optionalStringField`, omitempty
+    - OptionalIntField (*int) `optionalIntField`, omitempty
+    - OptionalInt8Field (*int8) `optionalInt8Field`, omitempty
+    - OptionalInt16Field (*int16) `optionalInt16Field`, omitempty
+    - OptionalInt32Field (*int32) `optionalInt32Field`, omitempty
+    - OptionalInt64Field (*int64) `optionalInt64Field`, omitempty
+    - OptionalUintField (*uint) `optionalUintField`, omitempty
+    - OptionalUint8Field (*uint8) `optionalUint8Field`, omitempty
+    - OptionalUint16Field (*uint16) `optionalUint16Field`, omitempty
+    - OptionalUint32Field (*uint32) `optionalUint32Field`, omitempty
+    - OptionalUint64Field (*uint64) `optionalUint64Field`, omitempty
+    - OptionalFloatField (*float32) `optionalFloatField`, omitempty
+    - OptionalDoubleField (*float64) `optionalDoubleField`, omitempty
+    - OptionalBoolField (*bool) `optionalBoolField`, omitempty
+    - OptionalEnumField (*MyEnum) `optionalEnumField`, omitempty
+    - StringsField ([]string) `stringsField`
+    - IntsField ([]int) `intsField`
+    - Int8sField ([]int8) `int8sField`
+    - Int16sField ([]int16) `int16sField`
+    - Int32sField ([]int32) `int32sField`
+    - Int64sField ([]int64) `int64sField`
+    - UintsField ([]uint) `uintsField`
+    - Uint8sField ([]uint8) `uint8sField`
+    - Uint16sField ([]uint16) `uint16sField`
+    - Uint32sField ([]uint32) `uint32sField`
+    - Uint64sField ([]uint64) `uint64sField`
+    - Float16sField ([]float32) `float16sField`
+    - FloatsField ([]float32) `floatsField`
+    - DoublesField ([]float64) `doublesField`
+    - BoolsField ([]bool) `boolsField`
+    - EnumsField ([]MyEnum) `enumsField`
+    - FixedStringsField ([5]string) `fixedStringsField`
+    - FixedIntsField ([5]int) `fixedIntsField`
+    - FixedInt8sField ([5]int8) `fixedInt8sField`
+    - FixedInt16sField ([5]int16) `fixedInt16sField`
+    - FixedInt32sField ([5]int32) `fixedInt32sField`
+    - FixedInt64sField ([5]int64) `fixedInt64sField`
+    - FixedUintsField ([5]uint) `fixedUintsField`
+    - FixedUint8sField ([5]uint8) `fixedUint8sField`
+    - FixedUint16sField ([5]uint16) `fixedUint16sField`
+    - FixedUint32sField ([5]uint32) `fixedUint32sField`
+    - FixedUint64sField ([5]uint64) `fixedUint64sField`
+    - FixedFloat32sField ([5]float32) `fixedFloat32sField`
+    - FixedFloat64sField ([5]float64) `fixedFloat64sField`
+    - FixedBoolsField ([5]bool) `fixedBoolsField`
+    - FixedEnumsField ([5]MyEnum) `fixedEnumsField`
+    - OptionalStringsField (*[]string) `optionalStringsField`, omitempty
+    - OptionalIntsField (*[]int) `optionalIntsField`, omitempty
+    - OptionalInt8sField (*[]int8) `optionalInt8sField`, omitempty
+    - OptionalInt16sField (*[]int16) `optionalInt16sField`, omitempty
+    - OptionalInt32sField (*[]int32) `optionalInt32sField`, omitempty
+    - OptionalInt64sField (*[]int64) `optionalInt64sField`, omitempty
+    - OptionalUintsField (*[]uint) `optionalUintsField`, omitempty
+    - OptionalUint8sField (*[]uint8) `optionalUint8sField`, omitempty
+    - OptionalUint16sField (*[]uint16) `optionalUint16sField`, omitempty
+    - OptionalUint32sField (*[]uint32) `optionalUint32sField`, omitempty
+    - OptionalUint64sField (*[]uint64) `optionalUint64sField`, omitempty
+    - OptionalFloat32sField (*[]float32) `optionalFloat32sField`, omitempty
+    - OptionalFloat64sField (*[]float64) `optionalFloat64sField`, omitempty
+    - OptionalBoolsField (*[]bool) `optionalBoolsField`, omitempty
+    - OptionalEnumsField (*[]MyEnum) `optionalEnumsField`, omitempty
+    - NestedTypeField (NestedType) `nestedTypeField`
+    - NestedEmbededTypeField (JSONTime) `nestedEmbededTypeField`
+    - MapStringStringField (map[string]string) `mapStringStringField`
+    - MapStringIntField (map[string]int) `mapStringIntField`
+    - MapIntStringField (map[int]string) `mapIntStringField`
+    - MapIntIntField (map[int]int) `mapIntIntField`
+    - MapStringMapField (map[string]map[string]int) `mapStringMapField`
+    - MapStringEnumField (map[string]MyEnum) `mapStringEnumField`
+
+- Name: UUID
+  Type: basic
+  Underlying: string
+  Position: ws-json-rpc/test_data - test_data.go:8
+
+
+- Name: UUIDs
+  Type: slice
+  Underlying: []UUID
+  Position: ws-json-rpc/test_data - test_data.go:9
+  Element: UUID
+export type Anything = any;
+
+export type JSONTime = {
+  ...time.Time;
+};
+
+// MyEnum is a custom type used for testing purposes.
+export type MyEnum = 
+  // Some comment | Some inline comment
+  | "MyEnumValue1"
+  | "MyEnumValue2";
+
+// MyEnum is a custom type used for testing purposes.
+export const MyEnumValues = {
+  // Some comment | Some inline comment
+  MyEnum1: "MyEnumValue1",
+  MyEnum2: "MyEnumValue2",
+} as const;
+
+
+export type MyMap = Record<string, number>;
+
+export type MyOtherEnum = 
+  | 1
+  | 2;
+
+export const MyOtherEnumValues = {
+  MyOtherEnum1: 1,
+  MyOtherEnum2: 2,
+} as const;
+
+
+export type NestedType = {
+  stringField: string;
+};
+
+// TestData is a struct used for testing purposes.
+export type TestData = {
+  interfaceField: any;
+  stringField: string;
+  intField: number;
+  int8Field: number;
+  int16Field: number;
+  int32Field: number;
+  int64Field: number;
+  uintField: number;
+  uint8Field: number;
+  uint16Field: number;
+  uint32Field: number;
+  uint64Field: number;
+  floatField: number;
+  doubleField: number;
+  boolField: boolean;
+  enumField: MyEnum;
+  optionalStringField?: string | null;
+  optionalIntField?: number | null;
+  optionalInt8Field?: number | null;
+  optionalInt16Field?: number | null;
+  optionalInt32Field?: number | null;
+  optionalInt64Field?: number | null;
+  optionalUintField?: number | null;
+  optionalUint8Field?: number | null;
+  optionalUint16Field?: number | null;
+  optionalUint32Field?: number | null;
+  optionalUint64Field?: number | null;
+  optionalFloatField?: number | null;
+  optionalDoubleField?: number | null;
+  optionalBoolField?: boolean | null;
+  optionalEnumField?: MyEnum | null;
+  stringsField: Array<string>;
+  intsField: Array<number>;
+  int8sField: Array<number>;
+  int16sField: Array<number>;
+  int32sField: Array<number>;
+  int64sField: Array<number>;
+  uintsField: Array<number>;
+  uint8sField: Array<number>;
+  uint16sField: Array<number>;
+  uint32sField: Array<number>;
+  uint64sField: Array<number>;
+  float16sField: Array<number>;
+  floatsField: Array<number>;
+  doublesField: Array<number>;
+  boolsField: Array<boolean>;
+  enumsField: Array<MyEnum>;
+  fixedStringsField: Array<string>;
+  fixedIntsField: Array<number>;
+  fixedInt8sField: Array<number>;
+  fixedInt16sField: Array<number>;
+  fixedInt32sField: Array<number>;
+  fixedInt64sField: Array<number>;
+  fixedUintsField: Array<number>;
+  fixedUint8sField: Array<number>;
+  fixedUint16sField: Array<number>;
+  fixedUint32sField: Array<number>;
+  fixedUint64sField: Array<number>;
+  fixedFloat32sField: Array<number>;
+  fixedFloat64sField: Array<number>;
+  fixedBoolsField: Array<boolean>;
+  fixedEnumsField: Array<MyEnum>;
+  optionalStringsField?: Array<string> | null;
+  optionalIntsField?: Array<number> | null;
+  optionalInt8sField?: Array<number> | null;
+  optionalInt16sField?: Array<number> | null;
+  optionalInt32sField?: Array<number> | null;
+  optionalInt64sField?: Array<number> | null;
+  optionalUintsField?: Array<number> | null;
+  optionalUint8sField?: Array<number> | null;
+  optionalUint16sField?: Array<number> | null;
+  optionalUint32sField?: Array<number> | null;
+  optionalUint64sField?: Array<number> | null;
+  optionalFloat32sField?: Array<number> | null;
+  optionalFloat64sField?: Array<number> | null;
+  optionalBoolsField?: Array<boolean> | null;
+  optionalEnumsField?: Array<MyEnum> | null;
+  nestedTypeField: NestedType;
+  nestedEmbededTypeField: JSONTime;
+  mapStringStringField: Record<string, string>;
+  mapStringIntField: Record<string, number>;
+  mapIntStringField: Record<number, string>;
+  mapIntIntField: Record<number, number>;
+  mapStringMapField: Record<string, Record<string, number>>;
+  mapStringEnumField: Record<string, MyEnum>;
+};
+
+export type UUID = string;
+
+export type UUIDs = Array<UUID>;
+
+TypeScript definitions written to out.ts

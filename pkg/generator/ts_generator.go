@@ -186,6 +186,7 @@ func (g *TSGenerator) generatePointerType(t *TypeInfo, typ PointerType) string {
 	sb.WriteString(" | null; // Pointer type\n")
 	return sb.String()
 }
+
 func (g *TSGenerator) generateStructType(t *TypeInfo, typ StructType) string {
 	var sb strings.Builder
 	if !t.Comment.IsEmpty() {
@@ -198,8 +199,9 @@ func (g *TSGenerator) generateStructType(t *TypeInfo, typ StructType) string {
 	sb.WriteString(" = {\n")
 
 	for _, field := range typ.Fields {
-		if field.IsEmbedded {
-			// For embedded fields, spread the type
+		// FIXME: Handle embedded fields
+		if _, ok := field.Type.(EmbeddedType); ok {
+			// Spread the embedded type
 			sb.WriteString("  ...")
 			sb.WriteString(field.Name)
 			sb.WriteString(";\n")

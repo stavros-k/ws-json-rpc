@@ -1,8 +1,9 @@
+export type Anything = any;
 export type JSONTime = {
-  // Embed the standard time.Time type | or just Time time.Time
-  ...};
+  ...time.Time;
+};
 // MyEnum is a custom type used for testing purposes.
-export type MyEnum =
+export type MyEnum = 
   // Some comment | Some inline comment
   | "MyEnumValue1"
   | "MyEnumValue2";
@@ -15,12 +16,7 @@ export const MyEnumValues = {
 } as const;
 
 export type MyMap = Record<string, number>;
-export type NestedType = {
-  stringField: string;
-};
-export type UUID = string;
-export type Anything = any;
-export type MyOtherEnum =
+export type MyOtherEnum = 
   | 1
   | 2;
 
@@ -29,6 +25,9 @@ export const MyOtherEnumValues = {
   MyOtherEnum2: 2,
 } as const;
 
+export type NestedType = {
+  stringField: string;
+};
 // TestData is a struct used for testing purposes.
 export type TestData = {
   interfaceField: any;
@@ -47,21 +46,21 @@ export type TestData = {
   doubleField: number;
   boolField: boolean;
   enumField: MyEnum;
-  optionalStringField: string | null;
-  optionalIntField: number | null;
-  optionalInt8Field: number | null;
-  optionalInt16Field: number | null;
-  optionalInt32Field: number | null;
-  optionalInt64Field: number | null;
-  optionalUintField: number | null;
-  optionalUint8Field: number | null;
-  optionalUint16Field: number | null;
-  optionalUint32Field: number | null;
-  optionalUint64Field: number | null;
-  optionalFloatField: number | null;
-  optionalDoubleField: number | null;
-  optionalBoolField: boolean | null;
-  optionalEnumField: MyEnum | null;
+  optionalStringField?: string | null;
+  optionalIntField?: number | null;
+  optionalInt8Field?: number | null;
+  optionalInt16Field?: number | null;
+  optionalInt32Field?: number | null;
+  optionalInt64Field?: number | null;
+  optionalUintField?: number | null;
+  optionalUint8Field?: number | null;
+  optionalUint16Field?: number | null;
+  optionalUint32Field?: number | null;
+  optionalUint64Field?: number | null;
+  optionalFloatField?: number | null;
+  optionalDoubleField?: number | null;
+  optionalBoolField?: boolean | null;
+  optionalEnumField?: MyEnum | null;
   stringsField: Array<string>;
   intsField: Array<number>;
   int8sField: Array<number>;
@@ -78,21 +77,36 @@ export type TestData = {
   doublesField: Array<number>;
   boolsField: Array<boolean>;
   enumsField: Array<MyEnum>;
-  optionalStringsField: Array<string> | null;
-  optionalIntsField: Array<number> | null;
-  optionalInt8sField: Array<number> | null;
-  optionalInt16sField: Array<number> | null;
-  optionalInt32sField: Array<number> | null;
-  optionalInt64sField: Array<number> | null;
-  optionalUintsField: Array<number> | null;
-  optionalUint8sField: Array<number> | null;
-  optionalUint16sField: Array<number> | null;
-  optionalUint32sField: Array<number> | null;
-  optionalUint64sField: Array<number> | null;
-  optionalFloat32sField: Array<number> | null;
-  optionalFloat64sField: Array<number> | null;
-  optionalBoolsField: Array<boolean> | null;
-  optionalEnumsField: Array<MyEnum> | null;
+  fixedStringsField: Array<string>;
+  fixedIntsField: Array<number>;
+  fixedInt8sField: Array<number>;
+  fixedInt16sField: Array<number>;
+  fixedInt32sField: Array<number>;
+  fixedInt64sField: Array<number>;
+  fixedUintsField: Array<number>;
+  fixedUint8sField: Array<number>;
+  fixedUint16sField: Array<number>;
+  fixedUint32sField: Array<number>;
+  fixedUint64sField: Array<number>;
+  fixedFloat32sField: Array<number>;
+  fixedFloat64sField: Array<number>;
+  fixedBoolsField: Array<boolean>;
+  fixedEnumsField: Array<MyEnum>;
+  optionalStringsField?: Array<string> | null;
+  optionalIntsField?: Array<number> | null;
+  optionalInt8sField?: Array<number> | null;
+  optionalInt16sField?: Array<number> | null;
+  optionalInt32sField?: Array<number> | null;
+  optionalInt64sField?: Array<number> | null;
+  optionalUintsField?: Array<number> | null;
+  optionalUint8sField?: Array<number> | null;
+  optionalUint16sField?: Array<number> | null;
+  optionalUint32sField?: Array<number> | null;
+  optionalUint64sField?: Array<number> | null;
+  optionalFloat32sField?: Array<number> | null;
+  optionalFloat64sField?: Array<number> | null;
+  optionalBoolsField?: Array<boolean> | null;
+  optionalEnumsField?: Array<MyEnum> | null;
   nestedTypeField: NestedType;
   nestedEmbededTypeField: JSONTime;
   mapStringStringField: Record<string, string>;
@@ -102,4 +116,5 @@ export type TestData = {
   mapStringMapField: Record<string, Record<string, number>>;
   mapStringEnumField: Record<string, MyEnum>;
 };
+export type UUID = string;
 export type UUIDs = Array<UUID>;

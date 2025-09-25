@@ -33,7 +33,6 @@ type FieldInfo struct {
 	JSONName    string
 	JSONOptions []string
 	Comment     Comment
-	IsEmbedded  bool
 }
 
 // Basic type (string, int, etc) or type reference (User, UUID)
@@ -87,6 +86,15 @@ type PointerType struct {
 }
 
 func (p PointerType) Kind() TypeKind { return PointerKind }
+
+// Embedded type wrapper
+type EmbeddedType struct {
+	Type TypeExpression
+}
+
+func (e EmbeddedType) Kind() TypeKind {
+	return e.Type.Kind() // Delegate to the wrapped type
+}
 
 // Comment represents comments associated with a type or field
 type Comment struct {
