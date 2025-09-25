@@ -1,7 +1,9 @@
 export type Anything = any;
+
 export type JSONTime = {
   ...time.Time;
 };
+
 // MyEnum is a custom type used for testing purposes.
 export type MyEnum = 
   // Some comment | Some inline comment
@@ -17,7 +19,9 @@ export const MyEnumValues = {
 
 // MyInt is a custom integer type used for testing purposes.
 export type MyInt = number; // int;
+
 export type MyMap = Record<string, number>;
+
 export type MyOtherEnum = 
   | 1
   | 2;
@@ -30,11 +34,13 @@ export const MyOtherEnumValues = {
 export type NestedType = {
   stringField: string;
 };
+
 // SomeStruct is a struct used for testing purposes.
 export type SomeStruct = {
   field1: string;
   field2: number;
 };
+
 // TestData is a struct used for testing purposes.
 export type TestData = {
   interfaceField: any;
@@ -123,5 +129,8 @@ export type TestData = {
   mapStringMapField: Record<string, Record<string, number>>;
   mapStringEnumField: Record<string, MyEnum>;
 };
+
 export type UUID = string;
+
 export type UUIDs = Array<UUID>;
+

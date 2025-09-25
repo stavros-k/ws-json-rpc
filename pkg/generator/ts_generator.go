@@ -51,7 +51,7 @@ func (g *TSGenerator) Generate(types map[string]*TypeInfo) {
 	}
 	defer file.Close()
 	for _, tsType := range renderedTypes {
-		_, err = file.WriteString(tsType)
+		_, err = file.WriteString(tsType + "\n")
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -288,7 +288,7 @@ func (g *TSGenerator) generateEnumType(t *TypeInfo, typ EnumType) string {
 			sb.WriteString(ev.Value)
 			sb.WriteString(",\n")
 		}
-		sb.WriteString("} as const;\n\n")
+		sb.WriteString("} as const;\n")
 	}
 
 	return sb.String()
