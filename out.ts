@@ -1,15 +1,19 @@
+// From: ws-json-rpc/test_data.test_data.go:7
 export type Anything = any;
 
+// From: ws-json-rpc/test_data.test_data.go:165
 export type JSONTime = {
   ...time.Time;
 };
 
+// From: ws-json-rpc/test_data.test_data.go:33
 // MyEnum is a custom type used for testing purposes.
 export type MyEnum = 
   // Some comment | Some inline comment
   | "MyEnumValue1"
   | "MyEnumValue2";
 
+// From: ws-json-rpc/test_data.test_data.go:33
 // MyEnum is a custom type used for testing purposes.
 export const MyEnumValues = {
   // Some comment | Some inline comment
@@ -17,30 +21,37 @@ export const MyEnumValues = {
   MyEnum2: "MyEnumValue2",
 } as const;
 
+// From: ws-json-rpc/test_data.test_data.go:21
 // MyInt is a custom integer type used for testing purposes.
 export type MyInt = number; // int;
 
+// From: ws-json-rpc/test_data.test_data.go:11
 export type MyMap = Record<string, number>;
 
+// From: ws-json-rpc/test_data.test_data.go:49
 export type MyOtherEnum = 
   | 1
   | 2;
 
+// From: ws-json-rpc/test_data.test_data.go:49
 export const MyOtherEnumValues = {
   MyOtherEnum1: 1,
   MyOtherEnum2: 2,
 } as const;
 
+// From: ws-json-rpc/test_data.test_data.go:161
 export type NestedType = {
   stringField: string;
 };
 
+// From: ws-json-rpc/test_data.test_data.go:24
 // SomeStruct is a struct used for testing purposes.
 export type SomeStruct = {
   field1: string;
   field2: number;
 };
 
+// From: ws-json-rpc/test_data.test_data.go:64
 // TestData is a struct used for testing purposes.
 export type TestData = {
   interfaceField: any;
@@ -130,7 +141,9 @@ export type TestData = {
   mapStringEnumField: Record<string, MyEnum>;
 };
 
+// From: ws-json-rpc/test_data.test_data.go:8
 export type UUID = string;
 
+// From: ws-json-rpc/test_data.test_data.go:9
 export type UUIDs = Array<UUID>;
 

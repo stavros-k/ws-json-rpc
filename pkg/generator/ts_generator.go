@@ -105,6 +105,7 @@ func (g *TSGenerator) generateType(t *TypeInfo) string {
 
 func (g *TSGenerator) generateBasicType(t *TypeInfo, typ BasicType) string {
 	var sb strings.Builder
+	generatePosition(&sb, t.Position)
 	if !t.Comment.IsEmpty() {
 		sb.WriteString("// ")
 		sb.WriteString(t.Comment.String())
@@ -125,6 +126,7 @@ func (g *TSGenerator) generateBasicType(t *TypeInfo, typ BasicType) string {
 
 func (g *TSGenerator) generateSliceType(t *TypeInfo, typ SliceType) string {
 	var sb strings.Builder
+	generatePosition(&sb, t.Position)
 	if !t.Comment.IsEmpty() {
 		sb.WriteString("// ")
 		sb.WriteString(t.Comment.String())
@@ -140,6 +142,7 @@ func (g *TSGenerator) generateSliceType(t *TypeInfo, typ SliceType) string {
 
 func (g *TSGenerator) generateArrayType(t *TypeInfo, typ ArrayType) string {
 	var sb strings.Builder
+	generatePosition(&sb, t.Position)
 	if !t.Comment.IsEmpty() {
 		sb.WriteString("// ")
 		sb.WriteString(t.Comment.String())
@@ -157,6 +160,7 @@ func (g *TSGenerator) generateArrayType(t *TypeInfo, typ ArrayType) string {
 
 func (g *TSGenerator) generateMapType(t *TypeInfo, typ MapType) string {
 	var sb strings.Builder
+	generatePosition(&sb, t.Position)
 	if !t.Comment.IsEmpty() {
 		sb.WriteString("// ")
 		sb.WriteString(t.Comment.String())
@@ -174,6 +178,7 @@ func (g *TSGenerator) generateMapType(t *TypeInfo, typ MapType) string {
 
 func (g *TSGenerator) generatePointerType(t *TypeInfo, typ PointerType) string {
 	var sb strings.Builder
+	generatePosition(&sb, t.Position)
 	if !t.Comment.IsEmpty() {
 		sb.WriteString("// ")
 		sb.WriteString(t.Comment.String())
@@ -189,6 +194,7 @@ func (g *TSGenerator) generatePointerType(t *TypeInfo, typ PointerType) string {
 
 func (g *TSGenerator) generateStructType(t *TypeInfo, typ StructType) string {
 	var sb strings.Builder
+	generatePosition(&sb, t.Position)
 	if !t.Comment.IsEmpty() {
 		sb.WriteString("// ")
 		sb.WriteString(t.Comment.String())
@@ -243,6 +249,7 @@ func (g *TSGenerator) generateStructType(t *TypeInfo, typ StructType) string {
 
 func (g *TSGenerator) generateEnumType(t *TypeInfo, typ EnumType) string {
 	var sb strings.Builder
+	generatePosition(&sb, t.Position)
 	if !t.Comment.IsEmpty() {
 		sb.WriteString("// ")
 		sb.WriteString(t.Comment.String())
@@ -268,6 +275,7 @@ func (g *TSGenerator) generateEnumType(t *TypeInfo, typ EnumType) string {
 
 	if g.Options.GenerateEnumValues {
 		sb.WriteString("\n")
+		generatePosition(&sb, t.Position)
 		if !t.Comment.IsEmpty() {
 			sb.WriteString("// ")
 			sb.WriteString(t.Comment.String())
@@ -312,4 +320,8 @@ func (g *TSGenerator) generateTypeExpression(t TypeExpression) string {
 		// For struct/enum references, just use the type name
 		return "unknown" // or handle other cases
 	}
+}
+
+func generatePosition(sb *strings.Builder, pos Position) {
+	sb.WriteString(fmt.Sprintf("// From: %s.%s:%d\n", pos.Package, pos.Filename, pos.Line))
 }
