@@ -615,74 +615,94 @@ func (g *GoParser) parseStructTag(key string, tagValue string) (string, []string
 	return options[0], options[1:], nil
 }
 
+// populateTypeWithEnumInfo is the SECOND PASS function for processing enum types.
+// It identifies const declarations that are enum values and associates them with their enum type.
+// This parser enforces strict enum conventions for reliable code generation.
+// Called via processDeclaration for CONST declarations.
 func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.GenDecl) error {
+	// Track the enum type name across all constants in this block
+	// All constants in a block must be of the same enum type
 	var enumTypeName string
 	var values []EnumValue
 
+	// Process each constant in the const block
 	for _, spec := range genDecl.Specs {
+		// Ensure we have a value specification (const declaration)
 		valueSpec, ok := spec.(*ast.ValueSpec)
 		if !ok {
 			return g.fmtError(pkg, genDecl, fmt.Errorf("expected ValueSpec, got %T", spec))
 		}
 
 		// ENFORCE: All enum members must have explicit type
+		// Rejects: const MyEnum1 = "value" (missing type)
+		// Requires: const MyEnum1 MyEnum = "value"
 		if valueSpec.Type == nil {
 			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member %s missing explicit type declaration", valueSpec.Names[0].Name))
 		}
 
+		// Ensure the type is a simple identifier (not a complex type expression)
 		ident, ok := valueSpec.Type.(*ast.Ident)
 		if !ok {
 			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member type is not an identifier"))
 		}
 
 		// ENFORCE: iota is not supported
+		// This parser requires explicit values for predictable code generation
 		if ident.Name == "iota" {
 			return g.fmtError(pkg, genDecl, fmt.Errorf("iota not supported"))
 		}
 
 		// ENFORCE: Each ValueSpec must have exactly one name and one value
-		// (ie MyEnum1 MyEnum = "MyEnum1")
-		// This means we do not support grouped declarations like:
-		// const (
-		//     MyEnum1 MyEnum = "MyEnum1"
-		//     MyEnum2          = "MyEnum2"
-		// )
+		// Rejects: const A, B MyEnum = "a", "b" (multiple names)
+		// Rejects: const A MyEnum (no value)
+		// Requires: const A MyEnum = "a"
 		if len(valueSpec.Names) != 1 {
-			if len(valueSpec.Names) == 0 {
-				return g.fmtError(pkg, genDecl, fmt.Errorf("enum member declaration has no names"))
-			}
-			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member declaration has multiple names"))
+			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member %s must have exactly one name, found %d",
+				valueSpec.Names[0].Name, len(valueSpec.Names)))
 		}
 
+		// Ensure exactly one value expression
 		if len(valueSpec.Values) != 1 {
-			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member %s must have exactly one value, found %d", valueSpec.Names[0].Name, len(valueSpec.Values)))
+			return g.fmtError(pkg, genDecl, fmt.Errorf("enum member %s must have exactly one value, found %d",
+				valueSpec.Names[0].Name, len(valueSpec.Values)))
 		}
 
 		name := valueSpec.Names[0]
 		value := valueSpec.Values[0]
 
-		// First enum member sets the type, all others must match
+		// First constant in the block establishes the enum type
+		// All subsequent constants must use the same type
 		if enumTypeName == "" {
 			enumTypeName = ident.Name
-			// Verify this type exists in our parsed types
+
+			// Verify this enum type was discovered in the first pass
+			// If not, this const block doesn't represent a valid enum
 			if _, exists := g.types[enumTypeName]; !exists {
 				return g.fmtError(pkg, genDecl, fmt.Errorf("enum type not found: %s", enumTypeName))
 			}
 		} else if ident.Name != enumTypeName {
-			return g.fmtError(pkg, genDecl, fmt.Errorf("inconsistent enum type: expected %s, got %s", enumTypeName, ident.Name))
+			// Enforce all constants in block have same type
+			return g.fmtError(pkg, genDecl, fmt.Errorf("inconsistent enum type: expected %s, got %s",
+				enumTypeName, ident.Name))
 		}
 
-		// Skip unexported enum members (ie const unexported = ...)
+		// Skip unexported enum members (lowercase names)
+		// Example: const unexportedValue MyEnum = "internal"
 		if !ast.IsExported(name.Name) {
 			continue
 		}
 
+		// Create enum value entry
 		ev := EnumValue{
 			Name:    name.Name,
 			Comment: g.extractComment(valueSpec.Doc, valueSpec.Comment),
 		}
 
+		// Extract the actual constant value using Go's type checker
+		// pkg.TypesInfo.Types maps AST nodes to their computed type/value
+		// This gives us the evaluated constant value (handles expressions)
 		if t, exists := pkg.TypesInfo.Types[value]; exists && t.IsValue() {
+			// t.Value is a go/constant.Value that can be stringified
 			ev.Value = t.Value.String()
 		} else {
 			return g.fmtError(pkg, genDecl, fmt.Errorf("cannot determine value for enum member %s", name.Name))
@@ -691,17 +711,23 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 		values = append(values, ev)
 	}
 
+	// If no enum type was found, this const block doesn't define enum values
 	if enumTypeName == "" {
 		return g.fmtError(pkg, genDecl, fmt.Errorf("enum type not found"))
 	}
 
+	// Update the TypeInfo from BasicType to EnumType with the discovered values
 	typeInfo := g.types[enumTypeName]
 	enumType := EnumType{EnumValues: values}
+
+	// Extract the base type (string, int, etc.) from the original BasicType
 	if basic, ok := typeInfo.Type.(BasicType); ok {
 		enumType.BaseType = basic.Name
 	} else {
 		return fmt.Errorf("enum type %s is not a basic type", enumTypeName)
 	}
+
+	// Replace the BasicType with the fully populated EnumType
 	typeInfo.Type = enumType
 
 	return nil
