@@ -52,11 +52,11 @@ func (ti TypeInfo) String() string {
 	sb.WriteString("Name: ")
 	sb.WriteString(ti.Name)
 	sb.WriteString("\n")
-	sb.WriteString("  Kind: ")
-	sb.WriteString(ti.Kind.String())
+	sb.WriteString("  Type: ")
+	sb.WriteString(ti.Type.Kind().String())
 	sb.WriteString("\n")
 	sb.WriteString("  Underlying: ")
-	sb.WriteString(ti.Underlying.String()) // Use the String() method from the interface
+	sb.WriteString(ti.Type.String())
 	sb.WriteString("\n")
 
 	if !ti.Comment.IsEmpty() {
@@ -69,67 +69,40 @@ func (ti TypeInfo) String() string {
 	sb.WriteString("\n")
 
 	// Handle type-specific details
-	switch details := ti.Underlying.(type) {
-	case StructDetails:
-		if len(details.Fields) > 0 {
+	switch t := ti.Type.(type) {
+	case StructType:
+		if len(t.Fields) > 0 {
 			sb.WriteString("  Fields:")
-			for _, field := range details.Fields {
+			for _, field := range t.Fields {
 				sb.WriteString("\n    - ")
 				sb.WriteString(field.String())
 			}
 		}
-	case EnumDetails:
-		if len(details.EnumValues) > 0 {
+	case EnumType:
+		if len(t.EnumValues) > 0 {
 			sb.WriteString("  Values:")
-			for _, ev := range details.EnumValues {
+			for _, ev := range t.EnumValues {
 				sb.WriteString("\n    - ")
 				sb.WriteString(ev.String())
 			}
 		}
-	case SliceDetails:
+	case SliceType:
 		sb.WriteString("  Element: ")
-		sb.WriteString(details.ElementType.String())
-	case ArrayDetails:
+		sb.WriteString(t.Element.String())
+	case ArrayType:
 		sb.WriteString("  Element: ")
-		sb.WriteString(details.ElementType.String())
+		sb.WriteString(t.Element.String())
 		sb.WriteString(" (length: ")
-		sb.WriteString(details.Length)
+		sb.WriteString(strconv.Itoa(t.Length))
 		sb.WriteString(")")
-	case MapDetails:
+	case MapType:
 		sb.WriteString("  Key: ")
-		sb.WriteString(details.KeyType.String())
+		sb.WriteString(t.Key.String())
 		sb.WriteString("\n  Value: ")
-		sb.WriteString(details.ValueType.String())
-	case PointerDetails:
+		sb.WriteString(t.Value.String())
+	case PointerType:
 		sb.WriteString("  Points to: ")
-		sb.WriteString(details.PointedType.String())
-	}
-
-	return sb.String()
-}
-
-func (fti FieldTypeInfo) String() string {
-	var sb strings.Builder
-
-	if fti.IsPointer {
-		sb.WriteString("*")
-	}
-
-	if fti.IsSlice {
-		sb.WriteString("[]")
-		sb.WriteString(fti.ValueType.String())
-	} else if fti.IsArray {
-		sb.WriteString("[")
-		sb.WriteString(fti.ArrayLength)
-		sb.WriteString("]")
-		sb.WriteString(fti.ValueType.String())
-	} else if fti.IsMap {
-		sb.WriteString("map[")
-		sb.WriteString(fti.KeyType.String())
-		sb.WriteString("]")
-		sb.WriteString(fti.ValueType.String())
-	} else {
-		sb.WriteString(fti.BaseType)
+		sb.WriteString(t.Element.String())
 	}
 
 	return sb.String()
@@ -165,32 +138,33 @@ func (fi FieldInfo) String() string {
 	return sb.String()
 }
 
-func (b BasicDetails) String() string {
-	return b.BaseType
+// String methods for the unified types
+func (b BasicType) String() string {
+	return b.Name
 }
 
-func (e EnumDetails) String() string {
+func (e EnumType) String() string {
 	return fmt.Sprintf("enum(%s)", e.BaseType)
 }
 
-func (s StructDetails) String() string {
+func (s StructType) String() string {
 	return fmt.Sprintf("struct with %d fields", len(s.Fields))
 }
 
-func (s SliceDetails) String() string {
-	return "[]" + s.ElementType.String()
+func (s SliceType) String() string {
+	return "[]" + s.Element.String()
 }
 
-func (a ArrayDetails) String() string {
-	return fmt.Sprintf("[%s]%s", a.Length, a.ElementType.String())
+func (a ArrayType) String() string {
+	return fmt.Sprintf("[%d]%s", a.Length, a.Element.String())
 }
 
-func (m MapDetails) String() string {
-	return fmt.Sprintf("map[%s]%s", m.KeyType.String(), m.ValueType.String())
+func (m MapType) String() string {
+	return fmt.Sprintf("map[%s]%s", m.Key.String(), m.Value.String())
 }
 
-func (p PointerDetails) String() string {
-	return "*" + p.PointedType.String()
+func (p PointerType) String() string {
+	return "*" + p.Element.String()
 }
 
 func (g *GoParser) fmtError(pkg *packages.Package, decl *ast.GenDecl, err error) error {

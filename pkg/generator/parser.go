@@ -7,12 +7,11 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
-
-// TODO: Take into account the json tags for optionality and naming
 
 type GoParser struct {
 	types  map[string]*TypeInfo
@@ -121,6 +120,70 @@ func (g *GoParser) forEachDecl(f func(pkg *packages.Package, file *ast.File, dec
 	return nil
 }
 
+// Single method to analyze any type expression
+func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return BasicType{Name: t.Name}, nil
+
+	case *ast.StructType:
+		// Return empty struct, fields populated in second pass
+		return StructType{}, nil
+
+	case *ast.InterfaceType:
+		if len(t.Methods.List) == 0 {
+			return BasicType{Name: "any"}, nil
+		}
+		return nil, fmt.Errorf("non-empty interfaces not supported")
+
+	case *ast.StarExpr:
+		element, err := g.analyzeType(t.X)
+		if err != nil {
+			return nil, err
+		}
+		return PointerType{Element: element}, nil
+
+	case *ast.ArrayType:
+		element, err := g.analyzeType(t.Elt)
+		if err != nil {
+			return nil, err
+		}
+
+		if t.Len == nil {
+			return SliceType{Element: element}, nil
+		}
+
+		length := 0
+		if lit, ok := t.Len.(*ast.BasicLit); ok {
+			length, err = strconv.Atoi(lit.Value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid array length: %s", lit.Value)
+			}
+		}
+		return ArrayType{Element: element, Length: length}, nil
+
+	case *ast.MapType:
+		key, err := g.analyzeType(t.Key)
+		if err != nil {
+			return nil, err
+		}
+		value, err := g.analyzeType(t.Value)
+		if err != nil {
+			return nil, err
+		}
+		return MapType{Key: key, Value: value}, nil
+
+	case *ast.SelectorExpr:
+		if ident, ok := t.X.(*ast.Ident); ok {
+			return BasicType{Name: ident.Name + "." + t.Sel.Name}, nil
+		}
+		return nil, fmt.Errorf("complex selector not supported")
+
+	default:
+		return nil, fmt.Errorf("unsupported type: %T", t)
+	}
+}
+
 func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, decl *ast.GenDecl) error {
 	if decl.Tok != token.TYPE {
 		return nil
@@ -144,8 +207,14 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 		return nil
 	}
 
+	typeExpr, err := g.analyzeType(typeSpec.Type)
+	if err != nil {
+		return err
+	}
+
 	typeInfo := &TypeInfo{
 		Name: typeSpec.Name.Name,
+		Type: typeExpr,
 		Position: Position{
 			Package:  pkg.PkgPath,
 			Filename: path.Base(g.fset.File(decl.Pos()).Name()),
@@ -155,73 +224,6 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 
 	if decl.Doc != nil {
 		typeInfo.Comment.Above = strings.TrimSpace(decl.Doc.Text())
-	}
-
-	// get the type
-	switch t := typeSpec.Type.(type) {
-	case *ast.StructType:
-		typeInfo.Kind = StructKind
-		typeInfo.Underlying = StructDetails{} // Fields populated later
-
-	case *ast.Ident:
-		typeInfo.Kind = BasicKind
-		typeInfo.Underlying = BasicDetails{BaseType: t.Name}
-
-	case *ast.ArrayType:
-		elementType, err := g.analyzeFieldType(t.Elt)
-		if err != nil {
-			return err
-		}
-		if t.Len == nil {
-			// It's a slice
-			typeInfo.Kind = SliceKind
-			typeInfo.Underlying = SliceDetails{ElementType: elementType}
-		} else {
-			// It's an array
-			length := ""
-			if lit, ok := t.Len.(*ast.BasicLit); ok {
-				length = lit.Value
-			}
-			typeInfo.Kind = ArrayKind
-			typeInfo.Underlying = ArrayDetails{
-				ElementType: elementType,
-				Length:      length,
-			}
-		}
-
-	case *ast.MapType:
-		keyType, err := g.analyzeFieldType(t.Key)
-		if err != nil {
-			return err
-		}
-		valueType, err := g.analyzeFieldType(t.Value)
-		if err != nil {
-			return err
-		}
-		typeInfo.Kind = MapKind
-		typeInfo.Underlying = MapDetails{
-			KeyType:   keyType,
-			ValueType: valueType,
-		}
-	case *ast.InterfaceType:
-		// Empty interface{} becomes "any"
-		if len(t.Methods.List) == 0 {
-			typeInfo.Kind = BasicKind
-			typeInfo.Underlying = BasicDetails{BaseType: "any"}
-		} else {
-			return fmt.Errorf("non-empty interfaces cannot be serialized to JSON")
-		}
-	case *ast.StarExpr:
-		// Pointer type (e.g., type MyPtr *string)
-		pointedType, err := g.analyzeFieldType(t.X)
-		if err != nil {
-			return err
-		}
-		typeInfo.Kind = PointerKind
-		typeInfo.Underlying = PointerDetails{PointedType: pointedType}
-
-	default:
-		return g.fmtError(pkg, decl, fmt.Errorf("unsupported type: %T", t))
 	}
 
 	g.types[typeInfo.Name] = typeInfo
@@ -240,6 +242,17 @@ func (g *GoParser) processDeclaration(pkg *packages.Package, file *ast.File, dec
 	}
 
 	return nil
+}
+
+func getEmbeddedName(t TypeExpression) string {
+	switch typ := t.(type) {
+	case BasicType:
+		return typ.Name
+	case PointerType:
+		return getEmbeddedName(typ.Element)
+	default:
+		return ""
+	}
 }
 
 func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *ast.GenDecl) error {
@@ -273,28 +286,20 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 	// Extract struct fields
 	var fields []FieldInfo
 	for _, field := range structType.Fields.List {
+		fieldType, err := g.analyzeType(field.Type)
+		if err != nil {
+			return err
+		}
+
 		if len(field.Names) == 0 {
-			fieldInfo := FieldInfo{
-				Name: "",
-			}
-
-			typeInfo, err := g.analyzeFieldType(field.Type)
-			if err != nil {
-				return g.fmtError(pkg, genDecl, err)
-			}
-
-			typeInfo.IsEmbedded = true
-			fieldInfo.Type = typeInfo
-
-			if field.Doc != nil {
-				fieldInfo.Comment.Above = strings.TrimSpace(field.Doc.Text())
-			}
-
-			if field.Comment != nil {
-				fieldInfo.Comment.Inline = strings.TrimSpace(field.Comment.Text())
-			}
-
-			fields = append(fields, fieldInfo)
+			// Embedded field
+			embeddedName := getEmbeddedName(fieldType)
+			fields = append(fields, FieldInfo{
+				Name:       embeddedName,
+				Type:       fieldType,
+				IsEmbedded: true,
+				// ... comments ...
+			})
 			continue
 		}
 
@@ -309,7 +314,7 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 				Name: name.Name,
 			}
 
-			typeInfo, err := g.analyzeFieldType(field.Type)
+			typeInfo, err := g.analyzeType(field.Type)
 			if err != nil {
 				return g.fmtError(pkg, genDecl, err)
 			}
@@ -341,86 +346,9 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 		}
 	}
 
-	typeInfo.Underlying = StructDetails{
-		Fields: fields,
-	}
+	typeInfo.Type = StructType{Fields: fields}
+
 	return nil
-}
-
-func (g *GoParser) analyzeFieldType(expr ast.Expr) (*FieldTypeInfo, error) {
-	typeInfo := &FieldTypeInfo{}
-	current := expr
-
-	// Check for pointer
-	if star, ok := current.(*ast.StarExpr); ok {
-		typeInfo.IsPointer = true
-		current = star.X
-	}
-
-	// Check for slice/array
-	if array, ok := current.(*ast.ArrayType); ok {
-		if array.Len == nil {
-			typeInfo.IsSlice = true
-		} else {
-			typeInfo.IsArray = true
-			if lit, ok := array.Len.(*ast.BasicLit); ok {
-				typeInfo.ArrayLength = lit.Value
-			} else {
-				return nil, fmt.Errorf("unsupported array length expression: %T", array.Len)
-			}
-		}
-
-		// Recursively analyze element type
-		elemType, err := g.analyzeFieldType(array.Elt)
-		if err != nil {
-			return nil, err
-		}
-		typeInfo.ValueType = elemType
-		return typeInfo, nil
-	}
-
-	// Check for map
-	if mapType, ok := current.(*ast.MapType); ok {
-		typeInfo.IsMap = true
-
-		// Recursively analyze key type
-		keyType, err := g.analyzeFieldType(mapType.Key)
-		if err != nil {
-			return nil, err
-		}
-		typeInfo.KeyType = keyType
-
-		// Recursively analyze value type
-		valueType, err := g.analyzeFieldType(mapType.Value)
-		if err != nil {
-			return nil, err
-		}
-		typeInfo.ValueType = valueType
-		return typeInfo, nil
-	}
-
-	// Simple base type
-	switch t := current.(type) {
-	case *ast.Ident:
-		typeInfo.BaseType = t.Name
-	case *ast.SelectorExpr:
-		// Handle pkg.Type
-		if ident, ok := t.X.(*ast.Ident); ok {
-			typeInfo.BaseType = ident.Name + "." + t.Sel.Name
-		} else {
-			return nil, fmt.Errorf("complex selector expression not supported: %T", t.X)
-		}
-	case *ast.InterfaceType:
-		if len(t.Methods.List) == 0 {
-			typeInfo.BaseType = "any" // empty interface{}
-		} else {
-			return nil, fmt.Errorf("non-empty interfaces cannot be serialized to JSON")
-		}
-	default:
-		return nil, fmt.Errorf("unsupported base type expression: %T", t)
-	}
-
-	return typeInfo, nil
 }
 
 func (g *GoParser) parseStructTag(key string, tagValue string) (string, []string, error) {
@@ -543,15 +471,13 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 	}
 
 	typeInfo := g.types[enumTypeName]
-	typeInfo.Kind = EnumKind
-	enumDetails := EnumDetails{
-		EnumValues: values,
-	}
-	if basic, ok := typeInfo.Underlying.(BasicDetails); ok {
-		enumDetails.BaseType = basic.BaseType
+	enumType := EnumType{EnumValues: values}
+	if basic, ok := typeInfo.Type.(BasicType); ok {
+		enumType.BaseType = basic.Name
 	} else {
 		return fmt.Errorf("enum type %s is not a basic type", enumTypeName)
 	}
-	typeInfo.Underlying = enumDetails
+	typeInfo.Type = enumType
+
 	return nil
 }

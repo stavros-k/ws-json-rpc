@@ -91,6 +91,22 @@ type TestData struct {
 	BoolsField    []bool    `json:"boolsField"`
 	EnumsField    []MyEnum  `json:"enumsField"`
 
+	FixedStringsField  [5]string  `json:"fixedStringsField"`
+	FixedIntsField     [5]int     `json:"fixedIntsField"`
+	FixedInt8sField    [5]int8    `json:"fixedInt8sField"`
+	FixedInt16sField   [5]int16   `json:"fixedInt16sField"`
+	FixedInt32sField   [5]int32   `json:"fixedInt32sField"`
+	FixedInt64sField   [5]int64   `json:"fixedInt64sField"`
+	FixedUintsField    [5]uint    `json:"fixedUintsField"`
+	FixedUint8sField   [5]uint8   `json:"fixedUint8sField"`
+	FixedUint16sField  [5]uint16  `json:"fixedUint16sField"`
+	FixedUint32sField  [5]uint32  `json:"fixedUint32sField"`
+	FixedUint64sField  [5]uint64  `json:"fixedUint64sField"`
+	FixedFloat32sField [5]float32 `json:"fixedFloat32sField"`
+	FixedFloat64sField [5]float64 `json:"fixedFloat64sField"`
+	FixedBoolsField    [5]bool    `json:"fixedBoolsField"`
+	FixedEnumsField    [5]MyEnum  `json:"fixedEnumsField"`
+
 	OptionalStringsField  *[]string  `json:"optionalStringsField,omitempty"`
 	OptionalIntsField     *[]int     `json:"optionalIntsField,omitempty"`
 	OptionalInt8sField    *[]int8    `json:"optionalInt8sField,omitempty"`

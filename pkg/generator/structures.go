@@ -12,112 +12,104 @@ const (
 	PointerKind TypeKind = "pointer"
 )
 
+// Shared interface for all type expressions
+type TypeExpression interface {
+	String() string
+	Kind() TypeKind
+}
+
+// Top-level type declaration
+type TypeInfo struct {
+	Name     string
+	Type     TypeExpression // Uses the shared interface
+	Comment  Comment
+	Position Position
+}
+
+// Field in a struct
+type FieldInfo struct {
+	Name        string
+	Type        TypeExpression // Uses the shared interface
+	JSONName    string
+	JSONOptions []string
+	Comment     Comment
+	IsEmbedded  bool
+}
+
+// Basic type (string, int, etc) or type reference (User, UUID)
+type BasicType struct {
+	Name string
+}
+
+func (b BasicType) Kind() TypeKind { return BasicKind }
+
+// Enum type
+type EnumType struct {
+	BaseType   string
+	EnumValues []EnumValue
+}
+
+func (e EnumType) Kind() TypeKind { return EnumKind }
+
+// Struct type
+type StructType struct {
+	Fields []FieldInfo
+}
+
+func (s StructType) Kind() TypeKind { return StructKind }
+
+// Slice type ([]T)
+type SliceType struct {
+	Element TypeExpression
+}
+
+func (s SliceType) Kind() TypeKind { return SliceKind }
+
+// Array type ([N]T)
+type ArrayType struct {
+	Element TypeExpression
+	Length  int
+}
+
+func (a ArrayType) Kind() TypeKind { return ArrayKind }
+
+// Map type (map[K]V)
+type MapType struct {
+	Key   TypeExpression
+	Value TypeExpression
+}
+
+func (m MapType) Kind() TypeKind { return MapKind }
+
+// Pointer type (*T)
+type PointerType struct {
+	Element TypeExpression
+}
+
+func (p PointerType) Kind() TypeKind { return PointerKind }
+
+// Comment represents comments associated with a type or field
 type Comment struct {
 	// Comment above the declaration
 	Above  string
 	Inline string // Comment on the same line
 }
 
+// IsEmpty returns true if there are no comments
 func (c Comment) IsEmpty() bool {
 	return c.Above == "" && c.Inline == ""
 }
 
+// EnumValue represents an enum value
 type EnumValue struct {
 	Name    string
 	Value   string // The actual value, (ie "1", "foo", etc)
 	Comment Comment
 }
 
+// Position represents the location of a type or field
 type Position struct {
 	Package  string
 	Filename string
 	Line     int
-}
-
-type TypeInfo struct {
-	Name       string
-	Kind       TypeKind
-	Underlying TypeDetails // Interface for type-specific details
-	Comment    Comment
-	Position   Position
-}
-
-type FieldTypeInfo struct {
-	IsPointer   bool
-	IsSlice     bool
-	IsArray     bool
-	IsMap       bool
-	IsEmbedded  bool           // For embedded fields
-	BaseType    string         // For simple types: "User", "string", etc.
-	KeyType     *FieldTypeInfo // For maps: recursive type info
-	ValueType   *FieldTypeInfo // For maps, slices, arrays: recursive type info
-	ArrayLength string         // For fixed arrays: [5]int
-}
-
-type FieldInfo struct {
-	Name        string
-	Type        *FieldTypeInfo
-	JSONName    string
-	JSONOptions []string
-	Comment     Comment
-}
-
-// Interface for type-specific details
-type TypeDetails interface {
-	String() string      // For debugging
-	GetBaseType() string // Returns the base type (for basic/enum) or empty
-}
-
-// Basic type (string, int, etc) or type alias (type UUID string)
-type BasicDetails struct {
-	BaseType string // "string", "int", "bool", etc.
-}
-
-func (b BasicDetails) GetBaseType() string { return b.BaseType }
-
-// Enum type
-type EnumDetails struct {
-	BaseType   string // "string", "int", etc.
-	EnumValues []EnumValue
-}
-
-func (e EnumDetails) GetBaseType() string { return e.BaseType }
-
-// Struct type
-type StructDetails struct {
-	Fields []FieldInfo
-}
-
-func (s StructDetails) GetBaseType() string { return "" }
-
-// Slice type ([]T or type MySlice []T)
-type SliceDetails struct {
-	ElementType *FieldTypeInfo
-}
-
-func (s SliceDetails) GetBaseType() string { return "" }
-
-// Array type ([N]T)
-type ArrayDetails struct {
-	ElementType *FieldTypeInfo
-	Length      string // "5", "10", etc.
-}
-
-func (a ArrayDetails) GetBaseType() string { return "" }
-
-// Map type (map[K]V)
-type MapDetails struct {
-	KeyType   *FieldTypeInfo
-	ValueType *FieldTypeInfo
-}
-
-func (m MapDetails) GetBaseType() string { return "" }
-
-// Pointer type (*T or type MyPtr *T)
-type PointerDetails struct {
-	PointedType *FieldTypeInfo
-}
-
-func (p PointerDetails) GetBaseType() string {
-	return ""
 }
