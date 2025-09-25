@@ -42,6 +42,9 @@ type GoParser struct {
 // NewGoParser creates a new parser instance configured to extract type information
 func NewGoParser(options *GoParserOptions) *GoParser {
 	fset := token.NewFileSet()
+	if options == nil {
+		options = &GoParserOptions{}
+	}
 	return &GoParser{
 		types:   make(map[string]*TypeInfo),
 		pkgs:    make(map[string]*packages.Package),
