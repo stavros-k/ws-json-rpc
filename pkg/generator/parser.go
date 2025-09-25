@@ -111,6 +111,10 @@ func (g *GoParser) forEachDecl(f func(pkg *packages.Package, file *ast.File, dec
 					return g.fmtError(pkg, genDecl, fmt.Errorf("no specifications found"))
 				}
 
+				if !g.isExportedDecl(genDecl) {
+					continue // Skip entirely
+				}
+
 				if err := f(pkg, file, genDecl); err != nil {
 					return g.fmtError(pkg, genDecl, err)
 				}
@@ -119,6 +123,30 @@ func (g *GoParser) forEachDecl(f func(pkg *packages.Package, file *ast.File, dec
 	}
 
 	return nil
+}
+
+func (g *GoParser) isExportedDecl(decl *ast.GenDecl) bool {
+	switch decl.Tok {
+	case token.TYPE:
+		// For type declarations, check if the type name is exported
+		if len(decl.Specs) > 0 {
+			if typeSpec, ok := decl.Specs[0].(*ast.TypeSpec); ok {
+				return ast.IsExported(typeSpec.Name.Name)
+			}
+		}
+	case token.CONST:
+		// For const declarations, check if the type being referenced is exported
+		for _, spec := range decl.Specs {
+			if valueSpec, ok := spec.(*ast.ValueSpec); ok && valueSpec.Type != nil {
+				if ident, ok := valueSpec.Type.(*ast.Ident); ok {
+					if ast.IsExported(ident.Name) {
+						return true // At least one references an exported type
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 // Single method to analyze any type expression
@@ -204,10 +232,6 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 		return g.fmtError(pkg, decl, fmt.Errorf("type name is empty"))
 	}
 
-	if !ast.IsExported(typeSpec.Name.Name) {
-		return nil
-	}
-
 	typeExpr, err := g.analyzeType(typeSpec.Type)
 	if err != nil {
 		return err
@@ -263,10 +287,6 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 	typeSpec, ok := spec.(*ast.TypeSpec)
 	if !ok {
 		return g.fmtError(pkg, genDecl, fmt.Errorf("expected TypeSpec, got %T", spec))
-	}
-
-	if !ast.IsExported(typeSpec.Name.Name) {
-		return nil // Skip unexported types
 	}
 
 	// Only process struct types
@@ -403,10 +423,6 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 			return g.fmtError(pkg, genDecl, fmt.Errorf("iota not supported"))
 		}
 
-		if !ast.IsExported(ident.Name) {
-			return nil
-		}
-
 		// ENFORCE: Each ValueSpec must have exactly one name and one value
 		// (ie MyEnum1 MyEnum = "MyEnum1")
 		// This means we do not support grouped declarations like:
@@ -439,7 +455,7 @@ func (g *GoParser) populateTypeWithEnumInfo(pkg *packages.Package, genDecl *ast.
 			return g.fmtError(pkg, genDecl, fmt.Errorf("inconsistent enum type: expected %s, got %s", enumTypeName, ident.Name))
 		}
 
-		// Skip unexported enum members
+		// Skip unexported enum members (ie const unexported = ...)
 		if !ast.IsExported(name.Name) {
 			continue
 		}

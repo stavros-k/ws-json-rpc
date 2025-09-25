@@ -25,6 +25,13 @@ const (
 	MyEnum2                    MyEnum = "MyEnumValue2"
 )
 
+type myenum string
+
+const (
+	myEnum3 myenum = "MyEnumValue3" // Some inline comment
+	MyEnum4 myenum = "MyEnumValue4"
+)
+
 type MyOtherEnum int
 
 const (
