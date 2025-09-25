@@ -189,8 +189,8 @@ func (g *GoParser) fmtError(pkg *packages.Package, decl *ast.GenDecl, err error)
 	// Declaration
 	sb.WriteString("  Declaration: ")
 	sb.WriteString(decl.Tok.String())
-	if len(decl.Specs) > 0 {
-		switch s := decl.Specs[0].(type) {
+	for _, spec := range decl.Specs {
+		switch s := spec.(type) {
 		case *ast.TypeSpec:
 			if s.Name.Name != "" {
 				sb.WriteString(" (type: ")
@@ -204,6 +204,7 @@ func (g *GoParser) fmtError(pkg *packages.Package, decl *ast.GenDecl, err error)
 				sb.WriteString(")")
 			}
 		}
+		sb.WriteString("\n")
 	}
 	sb.WriteString("\n")
 
