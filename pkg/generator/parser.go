@@ -256,23 +256,38 @@ func (g *GoParser) isExportedDecl(decl *ast.GenDecl) bool {
 	return false
 }
 
-// Single method to analyze any type expression
+// analyzeType recursively analyzes Go type expressions from the AST and converts them
+// to our TypeExpression interface. This is used for both top-level type declarations
+// and field types within structs. It handles all supported Go type constructs.
+// Called during both first pass (for type declarations) and second pass (for struct fields).
 func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
 	switch t := expr.(type) {
 	case *ast.Ident:
+		// Simple identifier type: string, int, MyType, etc.
+		// We treat all identifiers as BasicType - could be:
+		// - Built-in types: string, int, bool, any
+		// - User-defined types: MyEnum, UUID
+		// - Type aliases: type UUID string
 		return BasicType{Name: t.Name}, nil
 
 	case *ast.StructType:
-		// Return empty struct, fields populated in second pass
+		// Struct type definition: struct { ... }
+		// Return empty StructType - fields will be populated in second pass
+		// to avoid forward reference issues with field types
 		return StructType{}, nil
 
 	case *ast.InterfaceType:
+		// Interface type definition: interface { ... }
+		// Only support empty interface{} which becomes "any"
 		if len(t.Methods.List) == 0 {
 			return BasicType{Name: "any"}, nil
 		}
+		// Non-empty interfaces can't be serialized to JSON meaningfully
 		return nil, fmt.Errorf("non-empty interfaces not supported")
 
 	case *ast.StarExpr:
+		// Pointer type: *T
+		// Recursively analyze the pointed-to type
 		element, err := g.analyzeType(t.X)
 		if err != nil {
 			return nil, err
@@ -280,17 +295,23 @@ func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
 		return PointerType{Element: element}, nil
 
 	case *ast.ArrayType:
+		// Array or slice type: []T or [N]T
+		// First analyze the element type
 		element, err := g.analyzeType(t.Elt)
 		if err != nil {
 			return nil, err
 		}
 
+		// Check if it's a slice (no length) or array (has length)
 		if t.Len == nil {
+			// Slice type: []T
 			return SliceType{Element: element}, nil
 		}
 
+		// Array type: [N]T - extract the length
 		length := 0
 		if lit, ok := t.Len.(*ast.BasicLit); ok {
+			// Parse the array length literal
 			length, err = strconv.Atoi(lit.Value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid array length: %s", lit.Value)
@@ -299,6 +320,8 @@ func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
 		return ArrayType{Element: element, Length: length}, nil
 
 	case *ast.MapType:
+		// Map type: map[K]V
+		// Recursively analyze both key and value types
 		key, err := g.analyzeType(t.Key)
 		if err != nil {
 			return nil, err
@@ -310,12 +333,19 @@ func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
 		return MapType{Key: key, Value: value}, nil
 
 	case *ast.SelectorExpr:
+		// Qualified type from another package: pkg.Type
+		// Example: time.Time, uuid.UUID
+		// We concatenate as "pkg.Type" string for now
+		// TODO: Could handle standard library types specially
 		if ident, ok := t.X.(*ast.Ident); ok {
 			return BasicType{Name: ident.Name + "." + t.Sel.Name}, nil
 		}
+		// Complex selectors like pkg1.pkg2.Type not supported
 		return nil, fmt.Errorf("complex selector not supported")
 
 	default:
+		// Catch-all for unsupported type expressions
+		// Examples: chan T, func types, etc.
 		return nil, fmt.Errorf("unsupported type: %T", t)
 	}
 }
