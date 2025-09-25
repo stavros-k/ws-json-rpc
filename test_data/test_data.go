@@ -15,6 +15,20 @@ type myStruct struct {
 	Field2 int    `json:"field2"`
 }
 
+// This is a type group, this comment is ignored
+type (
+	// MyInt is a custom integer type used for testing purposes.
+	MyInt int
+	myInt int
+	// SomeStruct is a struct used for testing purposes.
+	SomeStruct struct {
+		Field1 string `json:"field1"`
+		Field2 int    `json:"field2"`
+	}
+
+	someStructAlias = SomeStruct
+)
+
 // MyEnum is a custom type used for testing purposes.
 type MyEnum string
 

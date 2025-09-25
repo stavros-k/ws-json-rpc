@@ -26,11 +26,22 @@ func slogReplacer(groups []string, a slog.Attr) slog.Attr {
 }
 
 func main() {
-	gen := generator.NewGoParser()
-	if err := gen.Run(); err != nil {
+	gen := generator.NewGoParser(&generator.GoParserOptions{
+		PrintParsedTypes: true,
+	})
+	if err := gen.AddDir("./test_data"); err != nil {
 		log.Fatal(err)
 	}
+	types, err := gen.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+	tsGen := generator.NewTSGenerator(&generator.TSGeneratorOptions{
+		GenerateEnumValues: true,
+	})
+	tsGen.Generate(types)
 	os.Exit(0)
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level:       slog.LevelDebug,
 		ReplaceAttr: slogReplacer,
