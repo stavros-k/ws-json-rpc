@@ -502,6 +502,7 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 		// Build the field list for this struct
 		var fields []FieldInfo
 
+		hasEmbeddedField := false
 		// Iterate through all fields in the struct
 		for _, field := range structType.Fields.List {
 			// Analyze the field's type (might be basic, slice, map, pointer, etc.)
@@ -513,6 +514,11 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 			// Handle embedded fields (anonymous fields)
 			// Example: type User struct { BaseModel; Name string }
 			if len(field.Names) == 0 {
+				if hasEmbeddedField {
+					return g.fmtError(pkg, genDecl, fmt.Errorf("structs cannot have multiple embedded fields"))
+				}
+				hasEmbeddedField = true
+
 				// Extract the name from the embedded type for identification
 				embeddedName := getEmbeddedName(fieldType)
 				fields = append(fields, FieldInfo{
@@ -567,6 +573,9 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 
 				fields = append(fields, fieldInfo)
 			}
+		}
+		if hasEmbeddedField && len(fields) > 1 {
+			return g.fmtError(pkg, genDecl, fmt.Errorf("structs can only have embedded fields if they are the only field"))
 		}
 
 		// Replace the empty StructType from first pass with populated version
