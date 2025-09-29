@@ -512,7 +512,7 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 			}
 
 			// Handle embedded fields (anonymous fields)
-			// Example: type User struct { BaseModel; Name string }
+			// Example: type JSONTime struct { time.Time }
 			if len(field.Names) == 0 {
 				if hasEmbeddedField {
 					return g.fmtError(pkg, genDecl, fmt.Errorf("structs cannot have multiple embedded fields"))
