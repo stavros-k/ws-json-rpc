@@ -65,6 +65,7 @@ func main() {
 	hub.G()
 
 	http.HandleFunc("/ws", hub.ServeWS())
+	http.HandleFunc("/rpc", hub.ServeHTTP())
 	logger.Info("WebSocket server starting", slog.String("address", ":8080"))
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		logger.Error("server failed", slog.String("error", err.Error()))
