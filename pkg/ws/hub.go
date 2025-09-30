@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -23,8 +24,8 @@ const (
 	MAX_MESSAGE_SIZE             = 1024 * 1024 // 1 MB
 )
 
-// wsRequest represents an object from the client
-type wsRequest struct {
+// rpcRequest represents an object from the client
+type rpcRequest struct {
 	ID     uuid.UUID       `json:"id"`
 	Method string          `json:"method"`
 	Params json.RawMessage `json:"params,omitempty"`
@@ -36,15 +37,15 @@ type wsEvent struct {
 	Data      any    `json:"data"`
 }
 
-// wsResponse represents a response from the server
-type wsResponse struct {
+// rpcResponse represents a response from the server
+type rpcResponse struct {
 	ID     uuid.UUID       `json:"id"`
 	Result json.RawMessage `json:"result,omitempty"`
-	Error  *wsErrorObj     `json:"error,omitempty"`
+	Error  *rpcErrorObj    `json:"error,omitempty"`
 }
 
-// wsErrorObj represents an error on a response
-type wsErrorObj struct {
+// rpcErrorObj represents an error on a response
+type rpcErrorObj struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    any    `json:"data,omitempty"`
@@ -324,6 +325,126 @@ func (h *Hub) clientUnregister(client *Client) {
 	}
 	h.clientsMutex.Unlock()
 	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
+}
+
+// ServeHTTP handles HTTP JSON-RPC requests
+func (h *Hub) ServeHTTP() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Only accept POST requests
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Set content type for JSON-RPC
+		w.Header().Set("Content-Type", "application/json")
+
+		// Read request body
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			h.sendHTTPError(w, uuid.Nil, ErrCodeParse, "Failed to read request body")
+			return
+		}
+
+		// Parse the request using the ws JSON helper
+		req, err := FromJSON[rpcRequest](body)
+		if err != nil {
+			h.sendHTTPError(w, uuid.Nil, ErrCodeParse, "Invalid JSON in request body")
+			return
+		}
+
+		// Handle the request
+		h.handleHTTPRequest(w, r, req)
+	}
+}
+
+// handleHTTPRequest processes a single HTTP JSON-RPC request
+func (h *Hub) handleHTTPRequest(w http.ResponseWriter, r *http.Request, req rpcRequest) {
+	reqLogger := h.logger.With(
+		slog.String("method", req.Method),
+		slog.String("id", req.ID.String()),
+		slog.String("remote_addr", r.RemoteAddr),
+	)
+
+	reqLogger.Debug("handling HTTP JSON-RPC request")
+
+	// Get the handler
+	h.methodsMutex.RLock()
+	method, exists := h.methods[req.Method]
+	h.methodsMutex.RUnlock()
+	if !exists {
+		h.sendHTTPError(w, req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method))
+		return
+	}
+
+	// Parse json into the structured params
+	typedParams, err := method.parser(req.Params)
+	if err != nil {
+		reqLogger.Error("unmarshal error", slog.String("error", err.Error()))
+		h.sendHTTPError(w, req.ID, ErrCodeInternal, fmt.Sprintf("Failed to parse params on method %q: %s", req.Method, err.Error()))
+		return
+	}
+
+	// Set a timeout for the request
+	ctx, cancel := context.WithTimeout(r.Context(), MAX_REQUEST_TIMEOUT)
+	defer cancel()
+
+	// Create a minimal HandlerContext for HTTP (no client)
+	hctx := &HandlerContext{Client: nil, Logger: reqLogger}
+
+	// Call the handler
+	result, err := method.handler(ctx, hctx, typedParams)
+	if err != nil {
+		reqLogger.Error("handler error", slog.String("error", err.Error()))
+		// If its a handler error, let handler specify code/message
+		if err, ok := err.(HandlerError); ok {
+			h.sendHTTPError(w, req.ID, err.Code(), err.Error())
+			return
+		}
+
+		// Unknown errors, send internal error
+		h.sendHTTPError(w, req.ID, ErrCodeInternal, fmt.Sprintf("Failed to handle request on method %q: %s", req.Method, err.Error()))
+		return
+	}
+
+	h.sendHTTPSuccess(w, req.ID, result)
+}
+
+// sendHTTPSuccess sends a successful JSON-RPC response over HTTP
+func (h *Hub) sendHTTPSuccess(w http.ResponseWriter, id uuid.UUID, result any) {
+	data, err := ToJSON(result)
+	if err != nil {
+		h.sendHTTPError(w, id, ErrCodeInternal, "Failed to serialize response")
+		return
+	}
+
+	resp := rpcResponse{ID: id, Result: data}
+	h.sendHTTPResponse(w, resp)
+}
+
+// sendHTTPError sends an error JSON-RPC response over HTTP
+func (h *Hub) sendHTTPError(w http.ResponseWriter, id uuid.UUID, code int, message string) {
+	resp := rpcResponse{
+		ID:    id,
+		Error: &rpcErrorObj{Code: code, Message: message},
+	}
+	h.sendHTTPResponse(w, resp)
+}
+
+// sendHTTPResponse sends a JSON-RPC response over HTTP using ws JSON helper
+func (h *Hub) sendHTTPResponse(w http.ResponseWriter, resp rpcResponse) {
+	w.Header().Set("Content-Type", "application/json")
+
+	data, err := ToJSON(resp)
+	if err != nil {
+		h.logger.Error("failed to encode HTTP response", slog.String("error", err.Error()))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := w.Write(data); err != nil {
+		h.logger.Error("failed to write HTTP response", slog.String("error", err.Error()))
+	}
 }
 
 func (h *Hub) broadcastEvent(event wsEvent) {

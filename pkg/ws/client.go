@@ -71,7 +71,7 @@ func (c *Client) readPump() {
 		}
 
 		// Parse message
-		req, err := FromJSON[wsRequest](message)
+		req, err := FromJSON[rpcRequest](message)
 		if err != nil {
 			c.logger.Warn("parse error", slog.String("error", err.Error()))
 			if err := c.sendError(uuid.Nil, ErrCodeParse, err.Error()); err != nil {
@@ -121,7 +121,7 @@ func (c *Client) writePump() {
 	}
 }
 
-func (c *Client) handleRequest(req wsRequest) {
+func (c *Client) handleRequest(req rpcRequest) {
 	// Derive a logger from the original for this request
 	reqLogger := c.logger.With(slog.String("method", req.Method))
 	reqLogger = reqLogger.With(slog.String("id", req.ID.String()))
@@ -186,19 +186,19 @@ func (c *Client) sendSuccess(id uuid.UUID, result any) error {
 		return err
 	}
 
-	resp := wsResponse{ID: id, Result: data}
+	resp := rpcResponse{ID: id, Result: data}
 	return c.sendData(resp)
 }
 
 func (c *Client) sendError(id uuid.UUID, code int, message string) error {
-	resp := wsResponse{
+	resp := rpcResponse{
 		ID:    id,
-		Error: &wsErrorObj{Code: code, Message: message},
+		Error: &rpcErrorObj{Code: code, Message: message},
 	}
 	return c.sendData(resp)
 }
 
-func (c *Client) sendData(r wsResponse) error {
+func (c *Client) sendData(r rpcResponse) error {
 	msg, err := ToJSON(r)
 	if err != nil {
 		return err
