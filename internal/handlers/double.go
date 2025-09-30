@@ -11,7 +11,15 @@ type DoubleParams struct {
 	Other int `json:"other"`
 }
 
-func (h *Handlers) Double(ctx context.Context, hctx *rpc.HandlerContext, params DoubleParams) (AddResult, error) {
-	// Direct method call
-	return h.Add(ctx, hctx, AddParams{A: params.Value, B: params.Value})
+type DoubleResult struct {
+	Result int `json:"result"`
+}
+
+func (h *Handlers) Double(ctx context.Context, hctx *rpc.HandlerContext, params DoubleParams) (DoubleResult, error) {
+	res, err := h.Add(ctx, hctx, AddParams{A: params.Value, B: params.Other})
+	if err != nil {
+		return DoubleResult{}, err
+	}
+
+	return DoubleResult{Result: res.Result * 2}, nil
 }
