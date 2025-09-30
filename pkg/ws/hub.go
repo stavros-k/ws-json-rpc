@@ -281,24 +281,25 @@ func (h *Hub) Run() {
 // ServeWS handles websocket requests from clients
 // This is called for every new connection
 func (h *Hub) ServeWS() http.HandlerFunc {
+	wsLogger := h.logger.With(slog.String("handler", "ws"))
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{})
 		if err != nil {
-			h.logger.Error("upgrade failed", slog.String("error", err.Error()))
+			wsLogger.Error("upgrade failed", slog.String("error", err.Error()))
 			return
 		}
 		conn.SetReadLimit(MAX_MESSAGE_SIZE)
 
 		remoteHost, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
-			h.logger.Error("failed to parse remote address", slog.String("error", err.Error()))
+			wsLogger.Error("failed to parse remote address", slog.String("error", err.Error()))
 			return
 		}
 
 		ctx, cancel := context.WithCancel(context.Background())
 		clientID := r.URL.Query().Get("clientID")
 		if clientID == "" {
-			h.logger.Warn("no client ID provided, generating one", slog.String("remote_addr", remoteHost))
+			wsLogger.Warn("no client ID provided, generating one", slog.String("remote_addr", remoteHost))
 			clientID = fmt.Sprintf("client-%s-%p", remoteHost, conn)
 		}
 
@@ -310,8 +311,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			ctx:         ctx,
 			cancel:      cancel,
 			sendChannel: make(chan []byte, MAX_QUEUED_EVENTS_PER_CLIENT),
-			logger: h.logger.With(
-				slog.String("handler", "ws"),
+			logger: wsLogger.With(
 				slog.String("client_id", clientID),
 				slog.String("remote_addr", remoteHost),
 			),
@@ -367,9 +367,11 @@ func (h *Hub) clientUnregister(client *WSClient) {
 
 // ServeHTTP handles HTTP JSON-RPC requests
 func (h *Hub) ServeHTTP() http.HandlerFunc {
+	httpLogger := h.logger.With(slog.String("handler", "http"))
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Only accept POST requests
 		if r.Method != http.MethodPost {
+			httpLogger.Warn("http request not allowed", slog.String("method", r.Method))
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
@@ -377,76 +379,43 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 		// Parse the request using streaming JSON helper
 		req, err := FromJSONStream[RPCRequest](r.Body)
 		if err != nil {
-			h.sendHTTPError(w, uuid.Nil, ErrCodeParse, "Invalid JSON in request body")
+			// Create a minimal error response
+			resp := RPCResponse{
+				ID:    uuid.Nil,
+				Error: &RPCErrorObj{Code: ErrCodeParse, Message: "Invalid JSON in request body"},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			if err := ToJSONStream(w, resp); err != nil {
+				// Log the error but cannot do much else
+				httpLogger.Error("failed to encode HTTP response", slog.String("error", err.Error()))
+			}
 			return
+		}
+
+		// Create HTTP client for this request
+		remoteHost, _, _ := net.SplitHostPort(r.RemoteAddr)
+		clientID := fmt.Sprintf("http-%s-%s", remoteHost, req.ID.String())
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		client := &HTTPClient{
+			w:          w,
+			r:          r,
+			hub:        h,
+			remoteHost: remoteHost,
+			ctx:        ctx,
+			cancel:     cancel,
+			id:         clientID,
+			logger: httpLogger.With(
+				slog.String("client_id", clientID),
+				slog.String("remote_host", remoteHost),
+			),
 		}
 
 		// Handle the request
-		h.handleHTTPRequest(w, r, req)
+		client.handleRequest(req)
 	}
-}
-
-// handleHTTPRequest processes a single HTTP JSON-RPC request
-func (h *Hub) handleHTTPRequest(w http.ResponseWriter, r *http.Request, req RPCRequest) {
-	reqLogger := h.logger.With(
-		slog.String("handler", "http"),
-		slog.String("method", req.Method),
-		slog.String("id", req.ID.String()),
-		slog.String("remote_addr", r.RemoteAddr),
-	)
-
-	reqLogger.Debug("handling HTTP JSON-RPC request")
-
-	// Get the handler
-	h.methodsMutex.RLock()
-	method, exists := h.methods[req.Method]
-	h.methodsMutex.RUnlock()
-	if !exists {
-		h.sendHTTPError(w, req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method))
-		return
-	}
-
-	// Parse json into the structured params
-	typedParams, err := method.parser(req.Params)
-	if err != nil {
-		reqLogger.Error("unmarshal error", slog.String("error", err.Error()))
-		h.sendHTTPError(w, req.ID, ErrCodeInternal, fmt.Sprintf("Failed to parse params on method %q: %s", req.Method, err.Error()))
-		return
-	}
-
-	// Set a timeout for the request
-	ctx, cancel := context.WithTimeout(r.Context(), MAX_REQUEST_TIMEOUT)
-	defer cancel()
-
-	// Create HTTP client for this request
-	remoteHost, _, _ := net.SplitHostPort(r.RemoteAddr)
-	clientID := fmt.Sprintf("http-%s-%s", remoteHost, req.ID.String())
-	httpClient := &HTTPClient{
-		hub:        h,
-		remoteHost: remoteHost,
-		ctx:        ctx,
-		id:         clientID,
-		logger:     reqLogger,
-	}
-
-	hctx := &HandlerContext{Logger: reqLogger, HTTPConn: httpClient}
-
-	// Call the handler
-	result, err := method.handler(ctx, hctx, typedParams)
-	if err != nil {
-		reqLogger.Error("handler error", slog.String("error", err.Error()))
-		// If its a handler error, let handler specify code/message
-		if err, ok := err.(HandlerError); ok {
-			h.sendHTTPError(w, req.ID, err.Code(), err.Error())
-			return
-		}
-
-		// Unknown errors, send internal error
-		h.sendHTTPError(w, req.ID, ErrCodeInternal, fmt.Sprintf("Failed to handle request on method %q: %s", req.Method, err.Error()))
-		return
-	}
-
-	h.sendHTTPSuccess(w, req.ID, result)
 }
 
 func (h *Hub) broadcastEvent(event RPCEvent) {
