@@ -9,9 +9,9 @@ import (
 	"ws-json-rpc/internal/consts"
 	"ws-json-rpc/internal/handlers"
 	"ws-json-rpc/pkg/generator"
-	"ws-json-rpc/pkg/ws"
-	"ws-json-rpc/pkg/ws/generate"
-	mw "ws-json-rpc/pkg/ws/middleware"
+	"ws-json-rpc/pkg/rpc"
+	"ws-json-rpc/pkg/rpc/generate"
+	mw "ws-json-rpc/pkg/rpc/middleware"
 
 	"github.com/google/uuid"
 )
@@ -26,39 +26,89 @@ func slogReplacer(groups []string, a slog.Attr) slog.Attr {
 }
 
 func main() {
+	// vm, _ := bindings.New()
+	// golang, _ := guts.NewGolangParser()
+	// _ = golang.IncludeGenerate("./internal/handlers")
+	// _ = golang.IncludeCustom(map[guts.GolangType]guts.GolangType{
+	// 	"time.Time": "string",
+	// })
+	// ts, _ := golang.ToTypescript()
+	// ts.ApplyMutations(
+	// 	config.ExportTypes,
+	// 	config.EnumAsTypes,
+	// )
+
+	// keys := []string{}
+	// typeMap := map[string]string{}
+
+	// ts.ForEach(func(key string, node bindings.Node) {
+	// 	obj, _ := vm.ToTypescriptNode(node)
+	// 	text, _ := vm.SerializeToTypescript(obj)
+	// 	keys = append(keys, key)
+	// 	typeMap[key] = text
+	// })
+	// sort.Strings(keys)
+	// for _, key := range keys {
+	// 	fmt.Println(typeMap[key])
+	// }
+
 	gen := generator.NewGoParser(&generator.GoParserOptions{
-		PrintParsedTypes: true,
+		PrintParsedTypes: false,
 	})
-	if err := gen.AddDir("./test_data"); err != nil {
+	if err := gen.AddDir("./internal/handlers"); err != nil {
 		log.Fatal(err)
 	}
 	types, err := gen.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	tsGen := generator.NewTSGenerator(&generator.TSGeneratorOptions{
 		GenerateEnumValues: true,
-	})
-	tsGen.Generate(types)
-	os.Exit(0)
+	}, types)
+	tsMap := tsGen.GetRenderedTypes()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level:       slog.LevelDebug,
 		ReplaceAttr: slogReplacer,
 	}))
 
-	hub := ws.NewHub(logger)
-	ws.RegisterEvent[handlers.UserUpdateEventResponse](hub, generate.EventDocs{}, consts.EventKindUserUpdate.String())
-	ws.RegisterEvent[handlers.UserLoginEventResponse](hub, generate.EventDocs{}, consts.EventKindUserLogin.String())
+	hub := rpc.NewHub(logger, generate.NewGenerator(tsMap))
+	rpc.RegisterEvent[handlers.UserUpdateEventResponse](hub, generate.EventDocs{}, consts.EventKindUserUpdate.String())
+	rpc.RegisterEvent[handlers.UserLoginEventResponse](hub, generate.EventDocs{}, consts.EventKindUserLogin.String())
 
-	handlers := handlers.NewHandlers(hub)
+	methods := handlers.NewHandlers(hub)
 	hub.WithMiddleware(mw.LoggingMiddleware)
-	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindSubscribe.String(), handlers.Subscribe)
-	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindUnsubscribe.String(), handlers.Unsubscribe)
-	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindPing.String(), handlers.Ping)
-	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindEcho.String(), handlers.Echo)
-	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindAdd.String(), handlers.Add)
-	ws.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindDouble.String(), handlers.Double)
+	rpc.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindSubscribe.String(), methods.Subscribe)
+	rpc.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindUnsubscribe.String(), methods.Unsubscribe)
+	rpc.RegisterMethod(hub, generate.HandlerDocs{
+		Title:       "Ping",
+		Group:       "Utility",
+		Description: "Ping the server to check connectivity.",
+		Examples: []generate.HandlerExample{
+			{
+				Title:       "Ping",
+				Description: "Ping the server",
+				Params:      struct{}{},
+				Result:      handlers.PingResult{Message: "pong", Status: handlers.StatusOK},
+			},
+		},
+	}, consts.MethodKindPing.String(), methods.Ping)
+	rpc.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindEcho.String(), methods.Echo)
+	rpc.RegisterMethod(hub, generate.HandlerDocs{}, consts.MethodKindAdd.String(), methods.Add)
+	rpc.RegisterMethod(hub, generate.HandlerDocs{
+		Title:       "Double",
+		Group:       "Math",
+		Description: "Adds and then doubles the result of the addition",
+		Examples: []generate.HandlerExample{
+			{
+				Title:       "Add and double",
+				Description: "Adds 5 and 5, then doubles the result",
+				Params:      handlers.DoubleParams{Value: 5, Other: 5},
+				Result:      handlers.DoubleResult{Result: 20},
+			},
+		},
+	}, consts.MethodKindDouble.String(), methods.Double)
 	go hub.Run()
 	go simulate(hub)
 
@@ -72,12 +122,12 @@ func main() {
 	}
 }
 
-func simulate(h *ws.Hub) {
+func simulate(h *rpc.Hub) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		h.PublishEvent(ws.NewEvent(consts.EventKindUserUpdate.String(), handlers.UserUpdateEventResponse{
+		h.PublishEvent(rpc.NewEvent(consts.EventKindUserUpdate.String(), handlers.UserUpdateEventResponse{
 			ID:   uuid.New().String(),
 			Name: "Alice",
 		}))

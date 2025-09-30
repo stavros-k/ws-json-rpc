@@ -3,6 +3,7 @@ package generator
 import (
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,36 +14,46 @@ type TSGeneratorOptions struct {
 }
 
 type TSGenerator struct {
-	tsTypes map[string]string
-	Options TSGeneratorOptions
+	renderedTypes map[string]string
+	parsedTypes   map[string]*TypeInfo
+	Options       TSGeneratorOptions
 }
 
-func NewTSGenerator(options *TSGeneratorOptions) *TSGenerator {
+func NewTSGenerator(options *TSGeneratorOptions, types map[string]*TypeInfo) *TSGenerator {
 	if options == nil {
 		options = &TSGeneratorOptions{}
 	}
+
 	return &TSGenerator{
-		tsTypes: make(map[string]string),
-		Options: *options,
+		parsedTypes:   types,
+		renderedTypes: make(map[string]string),
+		Options:       *options,
 	}
 }
 
-func (g *TSGenerator) Generate(types map[string]*TypeInfo) {
-	typesSlice := make([]*TypeInfo, 0, len(types))
-	for _, t := range types {
-		typesSlice = append(typesSlice, t)
+func (g *TSGenerator) renderTypescriptTypes() {
+	for typeName, tsType := range g.parsedTypes {
+		g.renderedTypes[typeName] = g.generateType(tsType)
 	}
-	sort.Slice(typesSlice, func(i, j int) bool {
-		return typesSlice[i].Name < typesSlice[j].Name
-	})
+}
 
-	renderedTypes := make([]string, 0, len(g.tsTypes))
-	for _, t := range typesSlice {
-		g.tsTypes[t.Name] = g.generateType(t)
-		renderedTypes = append(renderedTypes, g.tsTypes[t.Name])
+func (g *TSGenerator) GetRenderedTypes() map[string]string {
+	if len(g.renderedTypes) == 0 {
+		g.renderTypescriptTypes()
+	}
+	return g.renderedTypes
+}
+
+func (g *TSGenerator) Generate() {
+	if len(g.renderedTypes) == 0 {
+		g.renderTypescriptTypes()
 	}
 
-	fmt.Println(strings.Join(renderedTypes, "\n"))
+	sortedTypesNames := make([]string, 0, len(g.renderedTypes))
+	for typeName := range g.renderedTypes {
+		sortedTypesNames = append(sortedTypesNames, typeName)
+	}
+	sort.Strings(sortedTypesNames)
 
 	file, err := os.Create("out.ts")
 	if err != nil {
@@ -50,8 +61,8 @@ func (g *TSGenerator) Generate(types map[string]*TypeInfo) {
 		return
 	}
 	defer file.Close()
-	for _, tsType := range renderedTypes {
-		_, err = file.WriteString(tsType + "\n")
+	for _, typeName := range sortedTypesNames {
+		_, err = file.WriteString(g.renderedTypes[typeName] + "\n")
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -106,11 +117,7 @@ func (g *TSGenerator) generateType(t *TypeInfo) string {
 func (g *TSGenerator) generateBasicType(t *TypeInfo, typ BasicType) string {
 	var sb strings.Builder
 	generatePosition(&sb, t.Position)
-	if !t.Comment.IsEmpty() {
-		sb.WriteString("// ")
-		sb.WriteString(t.Comment.String())
-		sb.WriteString("\n")
-	}
+	generateComment(&sb, t.Comment, 0)
 	sb.WriteString("export type ")
 	sb.WriteString(t.Name)
 	sb.WriteString(" = ")
@@ -127,11 +134,7 @@ func (g *TSGenerator) generateBasicType(t *TypeInfo, typ BasicType) string {
 func (g *TSGenerator) generateSliceType(t *TypeInfo, typ SliceType) string {
 	var sb strings.Builder
 	generatePosition(&sb, t.Position)
-	if !t.Comment.IsEmpty() {
-		sb.WriteString("// ")
-		sb.WriteString(t.Comment.String())
-		sb.WriteString("\n")
-	}
+	generateComment(&sb, t.Comment, 0)
 	sb.WriteString("export type ")
 	sb.WriteString(t.Name)
 	sb.WriteString(" = Array<")
@@ -143,11 +146,7 @@ func (g *TSGenerator) generateSliceType(t *TypeInfo, typ SliceType) string {
 func (g *TSGenerator) generateArrayType(t *TypeInfo, typ ArrayType) string {
 	var sb strings.Builder
 	generatePosition(&sb, t.Position)
-	if !t.Comment.IsEmpty() {
-		sb.WriteString("// ")
-		sb.WriteString(t.Comment.String())
-		sb.WriteString("\n")
-	}
+	generateComment(&sb, t.Comment, 0)
 	sb.WriteString("export type ")
 	sb.WriteString(t.Name)
 	sb.WriteString(" = Array<")
@@ -161,11 +160,7 @@ func (g *TSGenerator) generateArrayType(t *TypeInfo, typ ArrayType) string {
 func (g *TSGenerator) generateMapType(t *TypeInfo, typ MapType) string {
 	var sb strings.Builder
 	generatePosition(&sb, t.Position)
-	if !t.Comment.IsEmpty() {
-		sb.WriteString("// ")
-		sb.WriteString(t.Comment.String())
-		sb.WriteString("\n")
-	}
+	generateComment(&sb, t.Comment, 0)
 	sb.WriteString("export type ")
 	sb.WriteString(t.Name)
 	sb.WriteString(" = Record<")
@@ -179,11 +174,7 @@ func (g *TSGenerator) generateMapType(t *TypeInfo, typ MapType) string {
 func (g *TSGenerator) generatePointerType(t *TypeInfo, typ PointerType) string {
 	var sb strings.Builder
 	generatePosition(&sb, t.Position)
-	if !t.Comment.IsEmpty() {
-		sb.WriteString("// ")
-		sb.WriteString(t.Comment.String())
-		sb.WriteString("\n")
-	}
+	generateComment(&sb, t.Comment, 0)
 	sb.WriteString("export type ")
 	sb.WriteString(t.Name)
 	sb.WriteString(" = ")
@@ -195,11 +186,7 @@ func (g *TSGenerator) generatePointerType(t *TypeInfo, typ PointerType) string {
 func (g *TSGenerator) generateStructType(t *TypeInfo, typ StructType) string {
 	var sb strings.Builder
 	generatePosition(&sb, t.Position)
-	if !t.Comment.IsEmpty() {
-		sb.WriteString("// ")
-		sb.WriteString(t.Comment.String())
-		sb.WriteString("\n")
-	}
+	generateComment(&sb, t.Comment, 0)
 	sb.WriteString("export type ")
 	sb.WriteString(t.Name)
 	sb.WriteString(" = {\n")
@@ -214,11 +201,8 @@ func (g *TSGenerator) generateStructType(t *TypeInfo, typ StructType) string {
 			continue
 		}
 
-		if !field.Comment.IsEmpty() {
-			sb.WriteString("  // ")
-			sb.WriteString(field.Comment.String())
-			sb.WriteString("\n")
-		}
+		generateComment(&sb, field.Comment, 2)
+
 		sb.WriteString("  ")
 		if field.JSONName != "" {
 			sb.WriteString(field.JSONName)
@@ -228,11 +212,8 @@ func (g *TSGenerator) generateStructType(t *TypeInfo, typ StructType) string {
 
 		// Handle optional fields
 		isOptional := false
-		for _, opt := range field.JSONOptions {
-			if opt == "omitempty" {
-				isOptional = true
-				break
-			}
+		if slices.Contains(field.JSONOptions, "omitempty") {
+			isOptional = true
 		}
 		if isOptional {
 			sb.WriteString("?")
@@ -250,21 +231,13 @@ func (g *TSGenerator) generateStructType(t *TypeInfo, typ StructType) string {
 func (g *TSGenerator) generateEnumType(t *TypeInfo, typ EnumType) string {
 	var sb strings.Builder
 	generatePosition(&sb, t.Position)
-	if !t.Comment.IsEmpty() {
-		sb.WriteString("// ")
-		sb.WriteString(t.Comment.String())
-		sb.WriteString("\n")
-	}
+	generateComment(&sb, t.Comment, 0)
 	sb.WriteString("export type ")
 	sb.WriteString(t.Name)
 	sb.WriteString(" = \n")
 
 	for i, ev := range typ.EnumValues {
-		if !ev.Comment.IsEmpty() {
-			sb.WriteString("  // ")
-			sb.WriteString(ev.Comment.String())
-			sb.WriteString("\n")
-		}
+		generateComment(&sb, ev.Comment, 2)
 		sb.WriteString("  | ")
 		sb.WriteString(ev.Value)
 		if i != len(typ.EnumValues)-1 {
@@ -276,20 +249,12 @@ func (g *TSGenerator) generateEnumType(t *TypeInfo, typ EnumType) string {
 	if g.Options.GenerateEnumValues {
 		sb.WriteString("\n")
 		generatePosition(&sb, t.Position)
-		if !t.Comment.IsEmpty() {
-			sb.WriteString("// ")
-			sb.WriteString(t.Comment.String())
-			sb.WriteString("\n")
-		}
+		generateComment(&sb, t.Comment, 0)
 		sb.WriteString("export const ")
 		sb.WriteString(t.Name)
 		sb.WriteString("Values = {\n")
 		for _, ev := range typ.EnumValues {
-			if !ev.Comment.IsEmpty() {
-				sb.WriteString("  // ")
-				sb.WriteString(ev.Comment.String())
-				sb.WriteString("\n")
-			}
+			generateComment(&sb, ev.Comment, 2)
 			sb.WriteString("  ")
 			sb.WriteString(ev.Name)
 			sb.WriteString(": ")
@@ -324,4 +289,18 @@ func (g *TSGenerator) generateTypeExpression(t TypeExpression) string {
 
 func generatePosition(sb *strings.Builder, pos Position) {
 	sb.WriteString(fmt.Sprintf("// From: %s.%s:%d\n", pos.Package, pos.Filename, pos.Line))
+}
+
+func generateComment(sb *strings.Builder, comment Comment, ident int) {
+	if comment.IsEmpty() {
+		return
+	}
+
+	lines := strings.Lines(comment.String())
+	for line := range lines {
+		sb.WriteString(strings.Repeat(" ", ident))
+		sb.WriteString("// ")
+		sb.WriteString(line)
+	}
+	sb.WriteString("\n")
 }

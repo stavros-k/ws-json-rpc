@@ -10,38 +10,7 @@ type Generator interface {
 	Run()
 }
 
-type handlerInfo struct {
-	reqType  any
-	respType any
-	docs     HandlerDocs
-}
-
-type HandlerDocs struct {
-	Title       string
-	Group       string
-	Description string
-	Deprecated  bool
-	ParamsType  any
-	ResultType  any
-	Examples    []HandlerExample
-}
-
-type HandlerExample struct {
-	Title       string
-	Description string
-	Params      any
-	Result      any
-}
-
-type eventType struct {
-	respType any
-	docs     EventDocs
-}
-
-type EventDocs struct {
-}
-
-func NewGenerator() Generator {
+func NewGenerator(tsTypes map[string]string) Generator {
 	// Return a no-op generator if GENERATE is not set
 	// So production does not waste resources on code generation
 	isGen := os.Getenv("GENERATE") == "true"
@@ -49,5 +18,5 @@ func NewGenerator() Generator {
 		return &fakeGenerator{}
 	}
 
-	return newRealGenerator()
+	return newRealGenerator(tsTypes)
 }

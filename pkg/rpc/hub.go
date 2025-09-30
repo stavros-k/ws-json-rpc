@@ -7,11 +7,10 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
-	"reflect"
 	"sync"
 	"time"
 	"ws-json-rpc/pkg/rpc/generate"
+	"ws-json-rpc/pkg/utils"
 
 	"github.com/coder/websocket"
 	"github.com/google/uuid"
@@ -49,7 +48,7 @@ type RPCResponse struct {
 // NewRPCResponse creates a new JSON-RPC 2.0 response. Result is marshaled internally.
 func NewRPCResponse(id uuid.UUID, result any, err *RPCErrorObj) RPCResponse {
 	// Marshal the result
-	data, jsonErr := ToJSON(result)
+	data, jsonErr := utils.ToJSON(result)
 	if jsonErr != nil {
 		RPCErrorObj := RPCErrorObj{Code: ErrCodeInternal, Message: "Failed to serialize response"}
 		return RPCResponse{Version: "2.0", ID: id, Error: &RPCErrorObj}
@@ -125,7 +124,7 @@ func RegisterMethod[TParams any, TResult any](h *Hub, docs generate.HandlerDocs,
 	}
 
 	parser := func(rawParams json.RawMessage) (any, error) {
-		return FromJSON[TParams](rawParams)
+		return utils.FromJSON[TParams](rawParams)
 	}
 
 	// Apply global middlewares first (will be outermost)
@@ -140,18 +139,6 @@ func RegisterMethod[TParams any, TResult any](h *Hub, docs generate.HandlerDocs,
 
 	var reqZero TParams
 	var respZero TResult
-
-	docs.ParamsType = reqZero
-	docs.ResultType = respZero
-	for _, ex := range docs.Examples {
-		if reflect.TypeOf(ex.Params) != reflect.TypeOf(reqZero) {
-			panic("example params type does not match handler params type")
-		}
-		if reflect.TypeOf(ex.Result) != reflect.TypeOf(respZero) {
-			panic("example result type does not match handler result type")
-		}
-	}
-
 	h.generator.AddHandlerType(method, reqZero, respZero, docs)
 
 	h.registerHandler(method, Method{
@@ -193,7 +180,7 @@ type Hub struct {
 }
 
 // NewHub creates a new Hub instance
-func NewHub(l *slog.Logger) *Hub {
+func NewHub(l *slog.Logger, g generate.Generator) *Hub {
 	logger := l.With(slog.String("component", "hub"))
 
 	return &Hub{
@@ -214,13 +201,12 @@ func NewHub(l *slog.Logger) *Hub {
 		subscriptions:      make(map[string]map[*WSClient]struct{}),
 		subscriptionsMutex: sync.RWMutex{},
 
-		generator: generate.NewGenerator(),
+		generator: g,
 	}
 }
 
 func (h *Hub) G() {
 	h.generator.Run()
-	os.Exit(0)
 }
 
 // WithMiddleware adds middleware to the hub that will be applied to all registered methods
@@ -389,12 +375,12 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 		}
 
 		// Parse the request using streaming JSON helper
-		req, err := FromJSONStream[RPCRequest](r.Body)
+		req, err := utils.FromJSONStream[RPCRequest](r.Body)
 		if err != nil {
 			// Create a minimal error response
 			resp := NewRPCResponse(uuid.Nil, nil, &RPCErrorObj{Code: ErrCodeParse, Message: "Invalid JSON in request body"})
 			w.Header().Set("Content-Type", "application/json")
-			if err := ToJSONStream(w, resp); err != nil {
+			if err := utils.ToJSONStream(w, resp); err != nil {
 				// Log the error but cannot do much else
 				httpLogger.Error("failed to encode HTTP response", slog.String("error", err.Error()))
 			}
@@ -441,7 +427,7 @@ func (h *Hub) broadcastEvent(event RPCEvent) {
 		return
 	}
 
-	result, err := ToJSON(event)
+	result, err := utils.ToJSON(event)
 	if err != nil {
 		h.logger.Error("failed to marshal event", slog.String("event", event.EventName), slog.String("error", err.Error()))
 		return

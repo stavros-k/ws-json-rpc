@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"ws-json-rpc/pkg/utils"
 
 	"github.com/google/uuid"
 )
@@ -83,7 +84,7 @@ func (c *HTTPClient) sendError(id uuid.UUID, code int, message string) {
 func (c *HTTPClient) sendResponse(resp RPCResponse) {
 	c.w.Header().Set("Content-Type", "application/json")
 
-	if err := ToJSONStream(c.w, resp); err != nil {
+	if err := utils.ToJSONStream(c.w, resp); err != nil {
 		c.logger.Error("failed to encode HTTP response", slog.String("error", err.Error()))
 		http.Error(c.w, "Internal server error", http.StatusInternalServerError)
 	}

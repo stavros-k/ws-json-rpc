@@ -1,281 +1,187 @@
 package generate
 
 import (
-	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
-	"log"
 	"os"
-	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
+	"ws-json-rpc/pkg/utils"
 )
 
-type enumValue struct {
-	name    string
-	val     string
-	comment string
+// Docs is the top level structure for the generated docs
+type Docs struct {
+	Events          map[string]EventDocs   `json:"events"`
+	Handlers        map[string]HandlerDocs `json:"handlers"`
+	TypescriptTypes map[string]string      `json:"typescriptTypes"`
+	JSONTypes       map[string]string      `json:"jsonTypes"`
 }
 
-type enumType struct {
-	name    string
-	comment string
-	values  []enumValue
+// ReqResType is a type that contains JSON and Typescript representations
+type ReqResType struct {
+	JSONKey       string `json:"jsonKey"`
+	TypescriptKey string `json:"typescriptKey"`
+}
+
+// EventDocs is the structure for the docs of an event
+type EventDocs struct {
+	Title         string         `json:"title"`
+	Group         string         `json:"group"`
+	Description   string         `json:"description"`
+	Deprecated    bool           `json:"deprecated"`
+	ResultTypeKey string         `json:"resultKey"`
+	Examples      []EventExample `json:"examples"`
+}
+
+// EventExample is an example of an event
+type EventExample struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Result      any    `json:"-"`
+	ResultType  string `json:"result"`
+}
+
+// HandlerDocs is the structure for the docs of a handler
+type HandlerDocs struct {
+	Title         string           `json:"title"`
+	Group         string           `json:"group"`
+	Description   string           `json:"description"`
+	Deprecated    bool             `json:"deprecated"`
+	ParamsTypeKey string           `json:"paramsKey"`
+	ResultTypeKey string           `json:"resultKey"`
+	Examples      []HandlerExample `json:"examples"`
+}
+
+type StringifiedType[T any] struct {
+	Value T
+}
+
+func (s StringifiedType[T]) MarshalJSON() ([]byte, error) {
+	return utils.ToJSON(s.Value)
+}
+
+// HandlerExample is an example of a handler
+type HandlerExample struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Params      any    `json:"-"`
+	Result      any    `json:"-"`
+	ParamsType  string `json:"params"`
+	ResultType  string `json:"result"`
 }
 
 type realGenerator struct {
-	typeCache    map[reflect.Type]string
-	eventTypes   map[string]eventType
-	handlerTypes map[string]handlerInfo
-	filePatterns []string // file patterns to scan for enums
-
-	enums map[string]enumType
+	typescriptTypeCache map[string]string
+	docs                Docs
 }
 
-func (g *realGenerator) AddEventType(name string, resp any, docs EventDocs) {
-	g.eventTypes[name] = eventType{respType: resp, docs: docs}
-}
-
-func (g *realGenerator) AddHandlerType(name string, req any, resp any, docs HandlerDocs) {
-	g.handlerTypes[name] = handlerInfo{reqType: req, respType: resp, docs: docs}
-}
-
-func newRealGenerator() *realGenerator {
+func newRealGenerator(tsTypes map[string]string) *realGenerator {
 	return &realGenerator{
-		typeCache:    make(map[reflect.Type]string),
-		eventTypes:   make(map[string]eventType),
-		handlerTypes: make(map[string]handlerInfo),
-		filePatterns: []string{
-			"internal/handlers/*.go",
+		typescriptTypeCache: tsTypes,
+		docs: Docs{
+			Events:          make(map[string]EventDocs),
+			Handlers:        make(map[string]HandlerDocs),
+			TypescriptTypes: make(map[string]string),
+			JSONTypes:       make(map[string]string),
 		},
 	}
 }
-
-func (g *realGenerator) shouldProcessFile(filePath string) bool {
-	if len(g.filePatterns) == 0 {
-		return true // If no patterns specified, process all
+func (g *realGenerator) mustGetJSONRepresentation(v any) string {
+	if v == nil || v == struct{}{} {
+		return "null"
 	}
 
-	// Normalize path separators for cross-platform compatibility
-	normalizedPath := filepath.ToSlash(filePath)
+	jsonStr, err := utils.ToJSON(v)
+	if err != nil {
+		panic("failed to marshal event type to JSON: " + err.Error())
+	}
+	return string(jsonStr)
+}
 
-	for _, pattern := range g.filePatterns {
-		normalizedPattern := filepath.ToSlash(pattern)
-		matched, err := filepath.Match(normalizedPattern, normalizedPath)
-		if err != nil {
-			log.Fatalf("Invalid pattern %q: %v", pattern, err)
+func (g *realGenerator) mustGetJSONName(v any) string {
+	if v == nil || v == struct{}{} {
+		return "null"
+	}
+
+	return reflect.TypeOf(v).Name()
+}
+
+func (g *realGenerator) AddEventType(name string, resp any, docs EventDocs) {
+	for i, ex := range docs.Examples {
+		if reflect.TypeOf(ex.Result) != reflect.TypeOf(resp) {
+			panic("example result type does not match event result type")
 		}
-		if matched {
-			return true
+		docs.Examples[i].ResultType = g.mustGetJSONRepresentation(ex.Result)
+	}
+
+	resultTypeName := g.mustGetJSONName(resp)
+	docs.ResultTypeKey = resultTypeName
+
+	g.addJSONType(resultTypeName, resp)
+	g.docs.Events[name] = docs
+}
+
+func (g *realGenerator) addJSONType(name string, v any) {
+	jsonRep := g.mustGetJSONRepresentation(v)
+	if typ, exists := g.docs.JSONTypes[name]; exists {
+		if typ != jsonRep {
+			panic("conflicting JSON type for " + name)
 		}
 	}
-	return false
+	g.docs.JSONTypes[name] = jsonRep
+}
+
+func (g *realGenerator) AddHandlerType(name string, req any, resp any, docs HandlerDocs) {
+	for i, ex := range docs.Examples {
+		if reflect.TypeOf(ex.Params) != reflect.TypeOf(req) {
+			panic("example params type does not match handler params type")
+		}
+		if reflect.TypeOf(ex.Result) != reflect.TypeOf(resp) {
+			panic("example result type does not match handler result type")
+		}
+		docs.Examples[i].ParamsType = g.mustGetJSONRepresentation(ex.Params)
+		docs.Examples[i].ResultType = g.mustGetJSONRepresentation(ex.Result)
+	}
+
+	paramTypeName := g.mustGetJSONName(req)
+	docs.ParamsTypeKey = paramTypeName
+	g.addJSONType(paramTypeName, req)
+
+	resultTypeName := g.mustGetJSONName(resp)
+	docs.ResultTypeKey = resultTypeName
+	g.addJSONType(resultTypeName, resp)
+
+	g.docs.Handlers[name] = docs
 }
 
 func (g *realGenerator) Run() {
-	if g.enums == nil {
-		g.enums = make(map[string]enumType)
+	const rpcTypes = "rpc.ts"
+	const rpcDocs = "rpc.json"
+
+	// Write typescript types
+	sortedTypesNames := make([]string, 0, len(g.typescriptTypeCache))
+	for typeName := range g.typescriptTypeCache {
+		sortedTypesNames = append(sortedTypesNames, typeName)
 	}
-	err := g.scanEnums(".")
+	sort.Strings(sortedTypesNames)
+	var sb strings.Builder
+	// TODO: this should be a map type with method: req/res types and event: res types
+	for _, typeName := range sortedTypesNames {
+		typ := g.typescriptTypeCache[typeName]
+		sb.WriteString(typ)
+		sb.WriteString("\n")
+		g.docs.TypescriptTypes[typeName] = typ
+	}
+	if err := os.WriteFile(rpcTypes, []byte(sb.String()), 0644); err != nil {
+		panic("failed to write types to file: " + err.Error())
+	}
+
+	// Write docs
+	jsonStr, err := utils.ToJSON(g.docs)
 	if err != nil {
-		panic(err)
+		panic("failed to marshal docs to JSON: " + err.Error())
+	}
+	if err := os.WriteFile(rpcDocs, jsonStr, 0644); err != nil {
+		panic("failed to write docs to file: " + err.Error())
 	}
 
-	file, err := os.Create("frontend/websocket/generated.ts")
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	file.WriteString("// This file is generated. Do not edit manually.\n\n")
-
-	for _, enum := range g.enums {
-		_, err := file.WriteString(enumToTypescript(enum))
-		if err != nil {
-			panic(err)
-		}
-	}
-}
-
-func (g *realGenerator) scanEnums(rootPath string) error {
-	tempEnums := make(map[string]enumType)
-	typeComments := make(map[string]string)
-
-	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !strings.HasSuffix(path, ".go") || strings.Contains(path, "_test.go") {
-			return nil
-		}
-
-		// Only process files matching specified patterns
-		if !g.shouldProcessFile(path) {
-			return nil
-		}
-
-		fset := token.NewFileSet()
-		node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-		if err != nil {
-			return err
-		}
-
-		ast.Inspect(node, func(n ast.Node) bool {
-			x, ok := n.(*ast.GenDecl)
-			if !ok {
-				return true
-			}
-
-			switch x.Tok {
-			case token.TYPE:
-				for _, spec := range x.Specs {
-					// If its not a type spec (`type X ...`), skip it
-					typeSpec, ok := spec.(*ast.TypeSpec)
-					if !ok {
-						continue
-					}
-
-					// Capture its comment
-					if x.Doc != nil {
-						typeComments[typeSpec.Name.Name] = strings.TrimSpace(x.Doc.Text())
-					}
-				}
-
-			case token.CONST:
-				for _, spec := range x.Specs {
-					// If its not a value spec (`const X ...`), skip it
-					valueSpec, ok := spec.(*ast.ValueSpec)
-					if !ok {
-						continue
-					}
-
-					// Check type once for this valueSpec
-					if valueSpec.Type == nil {
-						continue
-					}
-
-					// Ident is a simple identifier like "Status" in const A Status = "value"
-					ident, ok := valueSpec.Type.(*ast.Ident)
-					if !ok {
-						continue
-					}
-
-					// Only handle simple single-name consts: const StatusOK Status = "OK"
-					if len(valueSpec.Names) != 1 || len(valueSpec.Values) != 1 {
-						log.Fatalf(
-							"Only enums with single declarations per line are supported. Found %d names and %d values for type %q in file %q at line %d",
-							len(valueSpec.Names),
-							len(valueSpec.Values),
-							ident.Name,
-							path,
-							fset.Position(valueSpec.Pos()).Line,
-						)
-						continue
-
-					}
-
-					name := valueSpec.Names[0]
-
-					// BasicLit is a literal value like "OK", 42, true - we want string literals
-					basicLit, ok := valueSpec.Values[0].(*ast.BasicLit)
-					if !ok {
-						continue
-					}
-
-					value := strings.Trim(basicLit.Value, `"`)
-					comment := ""
-					if valueSpec.Doc != nil {
-						comment = strings.TrimSpace(valueSpec.Doc.Text())
-					} else if valueSpec.Comment != nil {
-						comment = strings.TrimSpace(valueSpec.Comment.Text())
-					}
-
-					newEnumValue := enumValue{
-						name:    name.Name,
-						val:     value,
-						comment: comment,
-					}
-
-					if existingEnum, exists := tempEnums[ident.Name]; exists {
-						existingEnum.values = append(existingEnum.values, newEnumValue)
-						tempEnums[ident.Name] = existingEnum
-					} else {
-						tempEnums[ident.Name] = enumType{
-							name:   ident.Name,
-							values: []enumValue{newEnumValue},
-						}
-					}
-				}
-			}
-			return true
-		})
-
-		return nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	// Merge type comments and only keep enums with values
-	for name, enum := range tempEnums {
-		if len(enum.values) == 0 {
-			continue
-		}
-
-		if comment, exists := typeComments[name]; exists {
-			enum.comment = comment
-		}
-
-		g.enums[name] = enum
-	}
-
-	return nil
-}
-
-func enumToTypescript(enum enumType) string {
-	valuesConst := fmt.Sprintf("%sValues", enum.name)
-	sb := strings.Builder{}
-	commentSb := strings.Builder{}
-	for _, value := range enum.values {
-		if value.comment == "" {
-			continue
-		}
-		commentSb.WriteString(fmt.Sprintf("\n * `%s`", value.name))
-		commentSb.WriteString(fmt.Sprintf("\n * %s\n", value.comment))
-	}
-
-	if enum.comment != "" || commentSb.Len() > 0 {
-		sb.WriteString("/**\n")
-		if enum.comment != "" {
-			sb.WriteString(fmt.Sprintf("* %s\n", enum.comment))
-		}
-		sb.WriteString(commentSb.String())
-
-		sb.WriteString(" */\n")
-	}
-
-	// Create the type union
-	sb.WriteString(fmt.Sprintf(
-		"export type %s = typeof %sValues[keyof typeof %sValues];\n\n",
-		enum.name, valuesConst, valuesConst,
-	))
-
-	// Create the values object
-	sb.WriteString(fmt.Sprintf("export const %sValues = {\n", valuesConst))
-
-	for i, value := range enum.values {
-		if value.comment != "" {
-			sb.WriteString(fmt.Sprintf("  /** %s */\n", value.comment))
-		}
-		sb.WriteString(fmt.Sprintf("  %s: \"%s\"", value.name, value.val))
-		if i != len(enum.values)-1 {
-			sb.WriteString(",\n")
-		}
-	}
-	sb.WriteString("\n} as const;\n\n")
-
-	return sb.String()
 }

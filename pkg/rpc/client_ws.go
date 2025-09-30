@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"ws-json-rpc/pkg/utils"
 
 	"github.com/coder/websocket"
 	"github.com/google/uuid"
@@ -63,7 +64,7 @@ func (c *WSClient) readPump() {
 		}
 
 		// Parse message
-		req, err := FromJSON[RPCRequest](message)
+		req, err := utils.FromJSON[RPCRequest](message)
 		if err != nil {
 			c.logger.Warn("parse error", slog.String("error", err.Error()))
 			if err := c.sendError(uuid.Nil, ErrCodeParse, err.Error()); err != nil {
@@ -181,7 +182,7 @@ func (c *WSClient) sendError(id uuid.UUID, code int, message string) error {
 }
 
 func (c *WSClient) sendData(r RPCResponse) error {
-	msg, err := ToJSON(r)
+	msg, err := utils.ToJSON(r)
 	if err != nil {
 		return err
 	}
