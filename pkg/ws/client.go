@@ -20,7 +20,7 @@ const (
 
 type HTTPClient struct {
 	hub        *Hub
-	remoteAddr string
+	remoteHost string
 	ctx        context.Context
 	cancel     context.CancelFunc
 	id         string
@@ -31,20 +31,12 @@ type HTTPClient struct {
 type WSClient struct {
 	hub         *Hub
 	conn        *websocket.Conn
-	remoteAddr  string
+	remoteHost  string
 	ctx         context.Context
 	cancel      context.CancelFunc
 	sendChannel chan []byte
 	id          string
 	logger      *slog.Logger
-}
-
-func (c *WSClient) ID() string {
-	return c.id
-}
-
-func (c *WSClient) RemoteAddr() string {
-	return c.remoteAddr
 }
 
 func (c *WSClient) readPump() {
@@ -163,7 +155,7 @@ func (c *WSClient) handleRequest(req RPCRequest) {
 	defer cancel()
 
 	// Create a new HandlerContext
-	hctx := &HandlerContext{Client: c, Logger: reqLogger}
+	hctx := &HandlerContext{Logger: reqLogger, WSConn: c}
 
 	// Call the handler
 	result, err := method.handler(ctx, hctx, typedParams)

@@ -58,6 +58,25 @@ type HandlerError interface {
 	Code() int
 }
 
+// handlerError is the default implementation of HandlerError
+type handlerError struct {
+	code    int
+	message string
+}
+
+func (e handlerError) Error() string {
+	return e.message
+}
+
+func (e handlerError) Code() int {
+	return e.code
+}
+
+// NewHandlerError creates a new HandlerError
+func NewHandlerError(code int, message string) HandlerError {
+	return handlerError{code: code, message: message}
+}
+
 // HandlerFunc is a function that handles a method call
 type HandlerFunc func(ctx context.Context, hctx *HandlerContext, params any) (any, error)
 
@@ -77,8 +96,9 @@ type Method struct {
 
 // HandlerContext contains data that a handler might need
 type HandlerContext struct {
-	Client *WSClient
-	Logger *slog.Logger
+	Logger   *slog.Logger // Logger for this specific request (has method name and request ID)
+	WSConn   *WSClient    // WSConn is the WebSocket client (nil for HTTP requests)
+	HTTPConn *HTTPClient  // HTTPConn is the HTTP client (nil for WebSocket requests)
 }
 
 // NewEvent creates a new event
@@ -286,7 +306,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			hub:         h,
 			conn:        conn,
 			id:          clientID,
-			remoteAddr:  remoteHost,
+			remoteHost:  remoteHost,
 			ctx:         ctx,
 			cancel:      cancel,
 			sendChannel: make(chan []byte, MAX_QUEUED_EVENTS_PER_CLIENT),
@@ -322,7 +342,7 @@ func (h *Hub) clientRegister(client *WSClient) {
 	h.clientCount++
 	h.clientCountMutex.Unlock()
 
-	h.logger.Info("client registered", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
+	h.logger.Info("client registered", slog.String("client_id", client.id), slog.String("remote_host", client.remoteHost))
 }
 
 // clientUnregister removes a client from the hub
@@ -342,7 +362,7 @@ func (h *Hub) clientUnregister(client *WSClient) {
 		h.subscriptionsMutex.Unlock()
 	}
 	h.clientsMutex.Unlock()
-	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_addr", client.remoteAddr))
+	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_host", client.remoteHost))
 }
 
 // ServeHTTP handles HTTP JSON-RPC requests
@@ -398,8 +418,18 @@ func (h *Hub) handleHTTPRequest(w http.ResponseWriter, r *http.Request, req RPCR
 	ctx, cancel := context.WithTimeout(r.Context(), MAX_REQUEST_TIMEOUT)
 	defer cancel()
 
-	// FIXME: This should be http client
-	hctx := &HandlerContext{Client: nil, Logger: reqLogger}
+	// Create HTTP client for this request
+	remoteHost, _, _ := net.SplitHostPort(r.RemoteAddr)
+	clientID := fmt.Sprintf("http-%s-%s", remoteHost, req.ID.String())
+	httpClient := &HTTPClient{
+		hub:        h,
+		remoteHost: remoteHost,
+		ctx:        ctx,
+		id:         clientID,
+		logger:     reqLogger,
+	}
+
+	hctx := &HandlerContext{Logger: reqLogger, HTTPConn: httpClient}
 
 	// Call the handler
 	result, err := method.handler(ctx, hctx, typedParams)
