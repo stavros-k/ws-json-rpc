@@ -171,6 +171,7 @@ func (g *realGenerator) Run() {
 		sb.WriteString("\n")
 		g.docs.TypescriptTypes[typeName] = typ
 	}
+	sb.WriteString("\n")
 	if err := os.WriteFile(rpcTypes, []byte(sb.String()), 0644); err != nil {
 		panic("failed to write types to file: " + err.Error())
 	}
