@@ -18,15 +18,6 @@ const (
 	ErrCodeInternal = -32603 // "Internal JSON-RPC error."}
 )
 
-type HTTPClient struct {
-	hub        *Hub
-	remoteHost string
-	ctx        context.Context
-	cancel     context.CancelFunc
-	id         string
-	logger     *slog.Logger
-}
-
 // WSClient represents a connected WebSocket client
 type WSClient struct {
 	hub         *Hub
