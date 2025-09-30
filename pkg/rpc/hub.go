@@ -1,4 +1,4 @@
-package ws
+package rpc
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"sync"
 	"time"
-	"ws-json-rpc/pkg/ws/generate"
+	"ws-json-rpc/pkg/rpc/generate"
 
 	"github.com/coder/websocket"
 	"github.com/google/uuid"

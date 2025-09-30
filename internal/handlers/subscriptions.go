@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"ws-json-rpc/internal/consts"
-	"ws-json-rpc/pkg/ws"
+	"ws-json-rpc/pkg/rpc"
 )
 
 type UnsubscribeParams struct {
@@ -13,10 +13,10 @@ type UnsubscribeResult struct {
 	Unsubscribed bool `json:"unsubscribed"`
 }
 
-func (h *Handlers) Unsubscribe(ctx context.Context, hctx *ws.HandlerContext, params UnsubscribeParams) (UnsubscribeResult, error) {
+func (h *Handlers) Unsubscribe(ctx context.Context, hctx *rpc.HandlerContext, params UnsubscribeParams) (UnsubscribeResult, error) {
 	// Only WebSocket clients can unsubscribe from events
 	if hctx.WSConn == nil {
-		return UnsubscribeResult{}, ws.NewHandlerError(ws.ErrCodeInvalid, "Subscriptions are only available for WebSocket connections")
+		return UnsubscribeResult{}, rpc.NewHandlerError(rpc.ErrCodeInvalid, "Subscriptions are only available for WebSocket connections")
 	}
 
 	h.hub.Unsubscribe(hctx.WSConn, string(params.Event))
@@ -30,10 +30,10 @@ type SubscribeResult struct {
 	Subscribed bool `json:"subscribed"`
 }
 
-func (h *Handlers) Subscribe(ctx context.Context, hctx *ws.HandlerContext, params SubscribeParams) (SubscribeResult, error) {
+func (h *Handlers) Subscribe(ctx context.Context, hctx *rpc.HandlerContext, params SubscribeParams) (SubscribeResult, error) {
 	// Only WebSocket clients can subscribe to events
 	if hctx.WSConn == nil {
-		return SubscribeResult{}, ws.NewHandlerError(ws.ErrCodeInvalid, "Subscriptions are only available for WebSocket connections")
+		return SubscribeResult{}, rpc.NewHandlerError(rpc.ErrCodeInvalid, "Subscriptions are only available for WebSocket connections")
 	}
 
 	// Handler that needs hub access

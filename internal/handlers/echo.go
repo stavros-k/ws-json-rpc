@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"ws-json-rpc/pkg/ws"
+	"ws-json-rpc/pkg/rpc"
 )
 
 type EchoParams struct {
@@ -13,6 +13,6 @@ type EchoResult struct {
 	Echo string `json:"echo"`
 }
 
-func (h *Handlers) Echo(ctx context.Context, hctx *ws.HandlerContext, params EchoParams) (EchoResult, error) {
+func (h *Handlers) Echo(ctx context.Context, hctx *rpc.HandlerContext, params EchoParams) (EchoResult, error) {
 	return EchoResult{Echo: params.Message}, nil
 }

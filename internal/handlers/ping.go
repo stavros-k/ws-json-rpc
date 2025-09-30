@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"ws-json-rpc/pkg/ws"
+	"ws-json-rpc/pkg/rpc"
 )
 
 // Status represents the status of a ping response
@@ -22,7 +22,7 @@ type PingResult struct {
 	Status  Status `json:"status"`
 }
 
-func (h *Handlers) Ping(ctx context.Context, hctx *ws.HandlerContext, params struct{}) (PingResult, error) {
+func (h *Handlers) Ping(ctx context.Context, hctx *rpc.HandlerContext, params struct{}) (PingResult, error) {
 	hctx.Logger.Info("Ping received")
 	return PingResult{}, &HandlerError{code: HandlerErrorCodeNotImplemented, message: "not implemented"}
 	// return PingResult{Message: "pong", Status: StatusOK}, nil

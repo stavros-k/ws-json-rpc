@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"ws-json-rpc/pkg/ws"
+	"ws-json-rpc/pkg/rpc"
 )
 
 // -32768 to -32000	Reserved - Do not use (reserved for pre-defined errors)
@@ -31,10 +31,10 @@ func (e *HandlerError) Code() int {
 }
 
 type Handlers struct {
-	hub *ws.Hub
+	hub *rpc.Hub
 }
 
-func NewHandlers(hub *ws.Hub) *Handlers {
+func NewHandlers(hub *rpc.Hub) *Handlers {
 	return &Handlers{hub: hub}
 }
 

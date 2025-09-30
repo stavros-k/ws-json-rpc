@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"ws-json-rpc/pkg/ws"
+	"ws-json-rpc/pkg/rpc"
 )
 
 // Some other comment
@@ -11,7 +11,7 @@ type DoubleParams struct {
 	Other int `json:"other"`
 }
 
-func (h *Handlers) Double(ctx context.Context, hctx *ws.HandlerContext, params DoubleParams) (AddResult, error) {
+func (h *Handlers) Double(ctx context.Context, hctx *rpc.HandlerContext, params DoubleParams) (AddResult, error) {
 	// Direct method call
 	return h.Add(ctx, hctx, AddParams{A: params.Value, B: params.Value})
 }

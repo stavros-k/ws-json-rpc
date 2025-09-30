@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 	"time"
-	"ws-json-rpc/pkg/ws"
+	"ws-json-rpc/pkg/rpc"
 )
 
 type JSONTime struct {
@@ -19,6 +19,6 @@ type AddResult struct {
 	Time   JSONTime `json:"time"`
 }
 
-func (h *Handlers) Add(ctx context.Context, hctx *ws.HandlerContext, params AddParams) (AddResult, error) {
+func (h *Handlers) Add(ctx context.Context, hctx *rpc.HandlerContext, params AddParams) (AddResult, error) {
 	return AddResult{Result: params.A + params.B}, nil
 }
