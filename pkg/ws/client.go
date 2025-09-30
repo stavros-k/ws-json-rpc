@@ -18,8 +18,17 @@ const (
 	ErrCodeInternal = -32603 // "Internal JSON-RPC error."}
 )
 
-// Client represents a connected WebSocket client
-type Client struct {
+type HTTPClient struct {
+	hub        *Hub
+	remoteAddr string
+	ctx        context.Context
+	cancel     context.CancelFunc
+	id         string
+	logger     *slog.Logger
+}
+
+// WSClient represents a connected WebSocket client
+type WSClient struct {
 	hub         *Hub
 	conn        *websocket.Conn
 	remoteAddr  string
@@ -30,15 +39,15 @@ type Client struct {
 	logger      *slog.Logger
 }
 
-func (c *Client) ID() string {
+func (c *WSClient) ID() string {
 	return c.id
 }
 
-func (c *Client) RemoteAddr() string {
+func (c *WSClient) RemoteAddr() string {
 	return c.remoteAddr
 }
 
-func (c *Client) readPump() {
+func (c *WSClient) readPump() {
 	// When readPump exits, cancel the context and unregister the client
 	defer func() {
 		c.logger.Info("client read pump exited")
@@ -85,7 +94,7 @@ func (c *Client) readPump() {
 	}
 }
 
-func (c *Client) writePump() {
+func (c *WSClient) writePump() {
 	// When writePump exits, cancel the context and close the send channel
 	defer func() {
 		c.logger.Info("client write pump exited")
@@ -121,7 +130,7 @@ func (c *Client) writePump() {
 	}
 }
 
-func (c *Client) handleRequest(req RPCRequest) {
+func (c *WSClient) handleRequest(req RPCRequest) {
 	// Derive a logger from the original for this request
 	reqLogger := c.logger.With(slog.String("method", req.Method))
 	reqLogger = reqLogger.With(slog.String("id", req.ID.String()))
@@ -180,7 +189,7 @@ func (c *Client) handleRequest(req RPCRequest) {
 	}
 }
 
-func (c *Client) sendSuccess(id uuid.UUID, result any) error {
+func (c *WSClient) sendSuccess(id uuid.UUID, result any) error {
 	data, err := ToJSON(result)
 	if err != nil {
 		return err
@@ -190,7 +199,7 @@ func (c *Client) sendSuccess(id uuid.UUID, result any) error {
 	return c.sendData(resp)
 }
 
-func (c *Client) sendError(id uuid.UUID, code int, message string) error {
+func (c *WSClient) sendError(id uuid.UUID, code int, message string) error {
 	resp := RPCResponse{
 		ID:    id,
 		Error: &RPCErrorObj{Code: code, Message: message},
@@ -198,7 +207,7 @@ func (c *Client) sendError(id uuid.UUID, code int, message string) error {
 	return c.sendData(resp)
 }
 
-func (c *Client) sendData(r RPCResponse) error {
+func (c *WSClient) sendData(r RPCResponse) error {
 	msg, err := ToJSON(r)
 	if err != nil {
 		return err

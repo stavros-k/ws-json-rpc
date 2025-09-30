@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"sync"
 	"time"
 	"ws-json-rpc/pkg/ws/generate"
@@ -76,7 +77,7 @@ type Method struct {
 
 // HandlerContext contains data that a handler might need
 type HandlerContext struct {
-	Client *Client
+	Client *WSClient
 	Logger *slog.Logger
 }
 
@@ -107,6 +108,18 @@ func RegisterMethod[TParams any, TResult any](h *Hub, docs generate.HandlerDocs,
 
 	var reqZero TParams
 	var respZero TResult
+
+	docs.ParamsType = reqZero
+	docs.ResultType = respZero
+	for _, ex := range docs.Examples {
+		if reflect.TypeOf(ex.Params) != reflect.TypeOf(reqZero) {
+			panic("example params type does not match handler params type")
+		}
+		if reflect.TypeOf(ex.Result) != reflect.TypeOf(respZero) {
+			panic("example result type does not match handler result type")
+		}
+	}
+
 	h.generator.AddHandlerType(method, reqZero, respZero, docs)
 
 	h.registerHandler(method, Method{
@@ -131,17 +144,17 @@ type Hub struct {
 	clientCount      int
 	clientCountMutex sync.RWMutex
 
-	clients      map[*Client]struct{}
+	clients      map[*WSClient]struct{}
 	clientsMutex sync.RWMutex
 
 	methods      map[string]Method
 	methodsMutex sync.RWMutex
 
-	subscriptions      map[string]map[*Client]struct{}
+	subscriptions      map[string]map[*WSClient]struct{}
 	subscriptionsMutex sync.RWMutex
 
-	register   chan *Client
-	unregister chan *Client
+	register   chan *WSClient
+	unregister chan *WSClient
 	eventChan  chan RPCEvent
 
 	generator generate.Generator
@@ -153,20 +166,20 @@ func NewHub(l *slog.Logger) *Hub {
 
 	return &Hub{
 		logger:     logger,
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
+		register:   make(chan *WSClient),
+		unregister: make(chan *WSClient),
 		eventChan:  make(chan RPCEvent, 100),
 
 		clientCount:      0,
 		clientCountMutex: sync.RWMutex{},
 
-		clients:      make(map[*Client]struct{}),
+		clients:      make(map[*WSClient]struct{}),
 		clientsMutex: sync.RWMutex{},
 
 		methods:      make(map[string]Method),
 		methodsMutex: sync.RWMutex{},
 
-		subscriptions:      make(map[string]map[*Client]struct{}),
+		subscriptions:      make(map[string]map[*WSClient]struct{}),
 		subscriptionsMutex: sync.RWMutex{},
 
 		generator: generate.NewGenerator(),
@@ -192,12 +205,12 @@ func (h *Hub) registerEvent(eventName string) {
 		h.logger.Warn("event already registered", slog.String("event", eventName))
 		return
 	}
-	h.subscriptions[eventName] = make(map[*Client]struct{})
+	h.subscriptions[eventName] = make(map[*WSClient]struct{})
 	h.logger.Debug("event registered", slog.String("event", eventName))
 }
 
 // Subscribe adds a client to an event subscription
-func (h *Hub) Subscribe(client *Client, event string) error {
+func (h *Hub) Subscribe(client *WSClient, event string) error {
 	h.subscriptionsMutex.Lock()
 	// Check if event is registered
 	if _, ok := h.subscriptions[event]; !ok {
@@ -212,7 +225,7 @@ func (h *Hub) Subscribe(client *Client, event string) error {
 }
 
 // Unsubscribe removes a client from an event subscription
-func (h *Hub) Unsubscribe(client *Client, event string) {
+func (h *Hub) Unsubscribe(client *WSClient, event string) {
 	h.subscriptionsMutex.Lock()
 	if subscribers, ok := h.subscriptions[event]; ok {
 		delete(subscribers, client)
@@ -269,7 +282,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			clientID = fmt.Sprintf("client-%s-%p", remoteHost, conn)
 		}
 
-		client := &Client{
+		client := &WSClient{
 			hub:         h,
 			conn:        conn,
 			id:          clientID,
@@ -277,7 +290,11 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			ctx:         ctx,
 			cancel:      cancel,
 			sendChannel: make(chan []byte, MAX_QUEUED_EVENTS_PER_CLIENT),
-			logger:      h.logger.With(slog.String("client_id", clientID), slog.String("remote_addr", remoteHost)),
+			logger: h.logger.With(
+				slog.String("handler", "ws"),
+				slog.String("client_id", clientID),
+				slog.String("remote_addr", remoteHost),
+			),
 		}
 
 		h.register <- client
@@ -296,7 +313,7 @@ func (h *Hub) registerHandler(methodName string, handler Method) {
 }
 
 // clientRegister adds a new client to the hub
-func (h *Hub) clientRegister(client *Client) {
+func (h *Hub) clientRegister(client *WSClient) {
 	h.clientsMutex.Lock()
 	h.clients[client] = struct{}{}
 	h.clientsMutex.Unlock()
@@ -309,7 +326,7 @@ func (h *Hub) clientRegister(client *Client) {
 }
 
 // clientUnregister removes a client from the hub
-func (h *Hub) clientUnregister(client *Client) {
+func (h *Hub) clientUnregister(client *WSClient) {
 	h.clientsMutex.Lock()
 	if _, ok := h.clients[client]; ok {
 		delete(h.clients, client)
@@ -352,6 +369,7 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 // handleHTTPRequest processes a single HTTP JSON-RPC request
 func (h *Hub) handleHTTPRequest(w http.ResponseWriter, r *http.Request, req RPCRequest) {
 	reqLogger := h.logger.With(
+		slog.String("handler", "http"),
 		slog.String("method", req.Method),
 		slog.String("id", req.ID.String()),
 		slog.String("remote_addr", r.RemoteAddr),
@@ -380,7 +398,7 @@ func (h *Hub) handleHTTPRequest(w http.ResponseWriter, r *http.Request, req RPCR
 	ctx, cancel := context.WithTimeout(r.Context(), MAX_REQUEST_TIMEOUT)
 	defer cancel()
 
-	// Create a minimal HandlerContext for HTTP (no client)
+	// FIXME: This should be http client
 	hctx := &HandlerContext{Client: nil, Logger: reqLogger}
 
 	// Call the handler

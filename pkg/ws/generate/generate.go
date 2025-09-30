@@ -17,6 +17,20 @@ type handlerInfo struct {
 }
 
 type HandlerDocs struct {
+	Title       string
+	Group       string
+	Description string
+	Deprecated  bool
+	ParamsType  any
+	ResultType  any
+	Examples    []HandlerExample
+}
+
+type HandlerExample struct {
+	Title       string
+	Description string
+	Params      any
+	Result      any
 }
 
 type eventType struct {
