@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -26,9 +25,10 @@ const (
 
 // rpcRequest represents an object from the client
 type rpcRequest struct {
-	ID     uuid.UUID       `json:"id"`
-	Method string          `json:"method"`
-	Params json.RawMessage `json:"params,omitempty"`
+	Version string          `json:"jsonrpc"`
+	ID      uuid.UUID       `json:"id"`
+	Method  string          `json:"method"`
+	Params  json.RawMessage `json:"params,omitempty"`
 }
 
 // wsEvent represents an wsEvent that can be broadcast to subscribers
@@ -39,9 +39,10 @@ type wsEvent struct {
 
 // rpcResponse represents a response from the server
 type rpcResponse struct {
-	ID     uuid.UUID       `json:"id"`
-	Result json.RawMessage `json:"result,omitempty"`
-	Error  *rpcErrorObj    `json:"error,omitempty"`
+	Version string          `json:"jsonrpc"`
+	ID      uuid.UUID       `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *rpcErrorObj    `json:"error,omitempty"`
 }
 
 // rpcErrorObj represents an error on a response
@@ -336,18 +337,8 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 			return
 		}
 
-		// Set content type for JSON-RPC
-		w.Header().Set("Content-Type", "application/json")
-
-		// Read request body
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			h.sendHTTPError(w, uuid.Nil, ErrCodeParse, "Failed to read request body")
-			return
-		}
-
-		// Parse the request using the ws JSON helper
-		req, err := FromJSON[rpcRequest](body)
+		// Parse the request using streaming JSON helper
+		req, err := FromJSONStream[rpcRequest](r.Body)
 		if err != nil {
 			h.sendHTTPError(w, uuid.Nil, ErrCodeParse, "Invalid JSON in request body")
 			return
@@ -431,19 +422,13 @@ func (h *Hub) sendHTTPError(w http.ResponseWriter, id uuid.UUID, code int, messa
 	h.sendHTTPResponse(w, resp)
 }
 
-// sendHTTPResponse sends a JSON-RPC response over HTTP using ws JSON helper
+// sendHTTPResponse sends a JSON-RPC response over HTTP using streaming JSON helper
 func (h *Hub) sendHTTPResponse(w http.ResponseWriter, resp rpcResponse) {
 	w.Header().Set("Content-Type", "application/json")
 
-	data, err := ToJSON(resp)
-	if err != nil {
+	if err := ToJSONStream(w, resp); err != nil {
 		h.logger.Error("failed to encode HTTP response", slog.String("error", err.Error()))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	if _, err := w.Write(data); err != nil {
-		h.logger.Error("failed to write HTTP response", slog.String("error", err.Error()))
 	}
 }
 
