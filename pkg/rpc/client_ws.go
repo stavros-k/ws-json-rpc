@@ -173,21 +173,11 @@ func (c *WSClient) handleRequest(req RPCRequest) {
 }
 
 func (c *WSClient) sendSuccess(id uuid.UUID, result any) error {
-	data, err := ToJSON(result)
-	if err != nil {
-		return err
-	}
-
-	resp := RPCResponse{ID: id, Result: data}
-	return c.sendData(resp)
+	return c.sendData(NewRPCResponse(id, result, nil))
 }
 
 func (c *WSClient) sendError(id uuid.UUID, code int, message string) error {
-	resp := RPCResponse{
-		ID:    id,
-		Error: &RPCErrorObj{Code: code, Message: message},
-	}
-	return c.sendData(resp)
+	return c.sendData(NewRPCResponse(id, nil, &RPCErrorObj{Code: code, Message: message}))
 }
 
 func (c *WSClient) sendData(r RPCResponse) error {

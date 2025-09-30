@@ -46,6 +46,18 @@ type RPCResponse struct {
 	Error   *RPCErrorObj    `json:"error,omitempty"`
 }
 
+// NewRPCResponse creates a new JSON-RPC 2.0 response. Result is marshaled internally.
+func NewRPCResponse(id uuid.UUID, result any, err *RPCErrorObj) RPCResponse {
+	// Marshal the result
+	data, jsonErr := ToJSON(result)
+	if jsonErr != nil {
+		RPCErrorObj := RPCErrorObj{Code: ErrCodeInternal, Message: "Failed to serialize response"}
+		return RPCResponse{Version: "2.0", ID: id, Error: &RPCErrorObj}
+	}
+
+	return RPCResponse{Version: "2.0", ID: id, Result: data, Error: err}
+}
+
 // RPCErrorObj represents an error on a response
 type RPCErrorObj struct {
 	Code    int    `json:"code"`
@@ -380,10 +392,7 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 		req, err := FromJSONStream[RPCRequest](r.Body)
 		if err != nil {
 			// Create a minimal error response
-			resp := RPCResponse{
-				ID:    uuid.Nil,
-				Error: &RPCErrorObj{Code: ErrCodeParse, Message: "Invalid JSON in request body"},
-			}
+			resp := NewRPCResponse(uuid.Nil, nil, &RPCErrorObj{Code: ErrCodeParse, Message: "Invalid JSON in request body"})
 			w.Header().Set("Content-Type", "application/json")
 			if err := ToJSONStream(w, resp); err != nil {
 				// Log the error but cannot do much else

@@ -73,22 +73,11 @@ func (c *HTTPClient) handleRequest(req RPCRequest) {
 }
 
 func (c *HTTPClient) sendSuccess(id uuid.UUID, result any) {
-	data, err := ToJSON(result)
-	if err != nil {
-		c.sendError(id, ErrCodeInternal, "Failed to serialize response")
-		return
-	}
-
-	resp := RPCResponse{ID: id, Result: data}
-	c.sendResponse(resp)
+	c.sendResponse(NewRPCResponse(id, result, nil))
 }
 
 func (c *HTTPClient) sendError(id uuid.UUID, code int, message string) {
-	resp := RPCResponse{
-		ID:    id,
-		Error: &RPCErrorObj{Code: code, Message: message},
-	}
-	c.sendResponse(resp)
+	c.sendResponse(NewRPCResponse(id, nil, &RPCErrorObj{Code: code, Message: message}))
 }
 
 func (c *HTTPClient) sendResponse(resp RPCResponse) {
