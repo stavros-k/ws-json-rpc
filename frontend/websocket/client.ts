@@ -10,6 +10,7 @@ type RequestMessage<
   Methods extends MethodsRecord,
   Method extends keyof Methods
 > = {
+  jsonrpc: "2.0";
   id: UUID;
   method: Method;
   params: Methods[Method]["req"];
@@ -17,6 +18,7 @@ type RequestMessage<
 
 // Response message with either result or error
 type ResponseMessage<Result = any> = {
+  jsonrpc: "2.0";
   id: UUID;
 } & (
   | { result: Result; error?: never }
@@ -268,10 +270,16 @@ export class WebSocketClient<
   ): Promise<ResponseMessage<Methods[Method]["res"]>> {
     // Handle regular method calls
     const id = crypto.randomUUID();
-    const message: RequestMessage<Methods, Method> = { id, method, params };
+    const message: RequestMessage<Methods, Method> = {
+      jsonrpc: "2.0",
+      id,
+      method,
+      params,
+    };
 
     function newRejectObj(msg: string): ResponseMessage<any> {
       return {
+        jsonrpc: "2.0",
         id,
         error: { code: 32603, message: `[${String(method)}] ${msg}` },
       };

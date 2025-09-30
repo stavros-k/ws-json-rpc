@@ -23,30 +23,30 @@ const (
 	MAX_MESSAGE_SIZE             = 1024 * 1024 // 1 MB
 )
 
-// rpcRequest represents an object from the client
-type rpcRequest struct {
+// RPCRequest represents an object from the client
+type RPCRequest struct {
 	Version string          `json:"jsonrpc"`
 	ID      uuid.UUID       `json:"id"`
 	Method  string          `json:"method"`
 	Params  json.RawMessage `json:"params,omitempty"`
 }
 
-// wsEvent represents an wsEvent that can be broadcast to subscribers
-type wsEvent struct {
+// RPCEvent represents an RPCEvent that can be broadcast to subscribers
+type RPCEvent struct {
 	EventName string `json:"event"`
 	Data      any    `json:"data"`
 }
 
-// rpcResponse represents a response from the server
-type rpcResponse struct {
+// RPCResponse represents a response from the server
+type RPCResponse struct {
 	Version string          `json:"jsonrpc"`
 	ID      uuid.UUID       `json:"id"`
 	Result  json.RawMessage `json:"result,omitempty"`
-	Error   *rpcErrorObj    `json:"error,omitempty"`
+	Error   *RPCErrorObj    `json:"error,omitempty"`
 }
 
-// rpcErrorObj represents an error on a response
-type rpcErrorObj struct {
+// RPCErrorObj represents an error on a response
+type RPCErrorObj struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    any    `json:"data,omitempty"`
@@ -81,8 +81,8 @@ type HandlerContext struct {
 }
 
 // NewEvent creates a new event
-func NewEvent(eventName string, data any) wsEvent {
-	return wsEvent{EventName: eventName, Data: data}
+func NewEvent(eventName string, data any) RPCEvent {
+	return RPCEvent{EventName: eventName, Data: data}
 }
 
 // RegisterMethod registers a method with the hub
@@ -142,7 +142,7 @@ type Hub struct {
 
 	register   chan *Client
 	unregister chan *Client
-	eventChan  chan wsEvent
+	eventChan  chan RPCEvent
 
 	generator generate.Generator
 }
@@ -155,7 +155,7 @@ func NewHub(l *slog.Logger) *Hub {
 		logger:     logger,
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		eventChan:  make(chan wsEvent, 100),
+		eventChan:  make(chan RPCEvent, 100),
 
 		clientCount:      0,
 		clientCountMutex: sync.RWMutex{},
@@ -223,7 +223,7 @@ func (h *Hub) Unsubscribe(client *Client, event string) {
 }
 
 // PublishEvent sends an event to all subscribed clients
-func (h *Hub) PublishEvent(event wsEvent) {
+func (h *Hub) PublishEvent(event RPCEvent) {
 	h.eventChan <- event
 }
 
@@ -338,7 +338,7 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 		}
 
 		// Parse the request using streaming JSON helper
-		req, err := FromJSONStream[rpcRequest](r.Body)
+		req, err := FromJSONStream[RPCRequest](r.Body)
 		if err != nil {
 			h.sendHTTPError(w, uuid.Nil, ErrCodeParse, "Invalid JSON in request body")
 			return
@@ -350,7 +350,7 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 }
 
 // handleHTTPRequest processes a single HTTP JSON-RPC request
-func (h *Hub) handleHTTPRequest(w http.ResponseWriter, r *http.Request, req rpcRequest) {
+func (h *Hub) handleHTTPRequest(w http.ResponseWriter, r *http.Request, req RPCRequest) {
 	reqLogger := h.logger.With(
 		slog.String("method", req.Method),
 		slog.String("id", req.ID.String()),
@@ -409,21 +409,21 @@ func (h *Hub) sendHTTPSuccess(w http.ResponseWriter, id uuid.UUID, result any) {
 		return
 	}
 
-	resp := rpcResponse{ID: id, Result: data}
+	resp := RPCResponse{ID: id, Result: data}
 	h.sendHTTPResponse(w, resp)
 }
 
 // sendHTTPError sends an error JSON-RPC response over HTTP
 func (h *Hub) sendHTTPError(w http.ResponseWriter, id uuid.UUID, code int, message string) {
-	resp := rpcResponse{
+	resp := RPCResponse{
 		ID:    id,
-		Error: &rpcErrorObj{Code: code, Message: message},
+		Error: &RPCErrorObj{Code: code, Message: message},
 	}
 	h.sendHTTPResponse(w, resp)
 }
 
 // sendHTTPResponse sends a JSON-RPC response over HTTP using streaming JSON helper
-func (h *Hub) sendHTTPResponse(w http.ResponseWriter, resp rpcResponse) {
+func (h *Hub) sendHTTPResponse(w http.ResponseWriter, resp RPCResponse) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := ToJSONStream(w, resp); err != nil {
@@ -432,7 +432,7 @@ func (h *Hub) sendHTTPResponse(w http.ResponseWriter, resp rpcResponse) {
 	}
 }
 
-func (h *Hub) broadcastEvent(event wsEvent) {
+func (h *Hub) broadcastEvent(event RPCEvent) {
 	h.subscriptionsMutex.RLock()
 	defer h.subscriptionsMutex.RUnlock()
 	subscribers, ok := h.subscriptions[event.EventName]

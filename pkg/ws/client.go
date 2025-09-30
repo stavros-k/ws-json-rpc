@@ -71,7 +71,7 @@ func (c *Client) readPump() {
 		}
 
 		// Parse message
-		req, err := FromJSON[rpcRequest](message)
+		req, err := FromJSON[RPCRequest](message)
 		if err != nil {
 			c.logger.Warn("parse error", slog.String("error", err.Error()))
 			if err := c.sendError(uuid.Nil, ErrCodeParse, err.Error()); err != nil {
@@ -121,7 +121,7 @@ func (c *Client) writePump() {
 	}
 }
 
-func (c *Client) handleRequest(req rpcRequest) {
+func (c *Client) handleRequest(req RPCRequest) {
 	// Derive a logger from the original for this request
 	reqLogger := c.logger.With(slog.String("method", req.Method))
 	reqLogger = reqLogger.With(slog.String("id", req.ID.String()))
@@ -186,19 +186,19 @@ func (c *Client) sendSuccess(id uuid.UUID, result any) error {
 		return err
 	}
 
-	resp := rpcResponse{ID: id, Result: data}
+	resp := RPCResponse{ID: id, Result: data}
 	return c.sendData(resp)
 }
 
 func (c *Client) sendError(id uuid.UUID, code int, message string) error {
-	resp := rpcResponse{
+	resp := RPCResponse{
 		ID:    id,
-		Error: &rpcErrorObj{Code: code, Message: message},
+		Error: &RPCErrorObj{Code: code, Message: message},
 	}
 	return c.sendData(resp)
 }
 
-func (c *Client) sendData(r rpcResponse) error {
+func (c *Client) sendData(r RPCResponse) error {
 	msg, err := ToJSON(r)
 	if err != nil {
 		return err
