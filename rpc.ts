@@ -65,7 +65,7 @@ export type Handlers = {
 
 // From: ws-json-rpc/internal/handlers.add.go:9
 export type JSONTime = {
-  ...time.Time;
+  ...Time;
 };
 
 // From: ws-json-rpc/internal/handlers.ping.go:20
@@ -97,7 +97,7 @@ export const StatusValues = {
 
 // From: ws-json-rpc/internal/handlers.subscriptions.go:26
 export type SubscribeParams = {
-  event: consts.EventKind;
+  event: EventKind;
 };
 
 // From: ws-json-rpc/internal/handlers.subscriptions.go:29
@@ -107,7 +107,7 @@ export type SubscribeResult = {
 
 // From: ws-json-rpc/internal/handlers.subscriptions.go:9
 export type UnsubscribeParams = {
-  event: consts.EventKind;
+  event: EventKind;
 };
 
 // From: ws-json-rpc/internal/handlers.subscriptions.go:12
@@ -126,4 +126,5 @@ export type UserUpdateEventResponse = {
   id: string;
   name: string;
 };
+
 

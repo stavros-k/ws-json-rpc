@@ -35,6 +35,10 @@ type GoParser struct {
 	// Each package contains the parsed AST, type information, etc.
 	pkgs map[string]*packages.Package
 
+	// explicitPkgs tracks packages explicitly added via AddDir (not auto-loaded)
+	// Only these packages will have their types extracted
+	explicitPkgs map[string]bool
+
 	// options holds any configuration options for the parser
 	options *GoParserOptions
 }
@@ -46,10 +50,11 @@ func NewGoParser(options *GoParserOptions) *GoParser {
 		options = &GoParserOptions{}
 	}
 	return &GoParser{
-		types:   make(map[string]*TypeInfo),
-		pkgs:    make(map[string]*packages.Package),
-		fset:    fset,
-		options: options,
+		types:        make(map[string]*TypeInfo),
+		pkgs:         make(map[string]*packages.Package),
+		explicitPkgs: make(map[string]bool),
+		fset:         fset,
+		options:      options,
 		config: &packages.Config{
 			// Fset must be shared so position information is consistent
 			Fset: fset,
@@ -107,6 +112,9 @@ func (g *GoParser) AddDir(dir string) error {
 		// Store package keyed by its import path
 		// PkgPath is the unique import path like "github.com/user/project/pkg"
 		g.pkgs[p.PkgPath] = p
+
+		// Mark this package as explicitly added (not auto-loaded)
+		g.explicitPkgs[p.PkgPath] = true
 	}
 
 	return nil
@@ -164,10 +172,18 @@ func (g *GoParser) parse() error {
 // in all loaded packages and applies the provided function to each relevant declaration.
 // This is the core iteration mechanism used by both parsing passes.
 // The function 'f' is called for each exported TYPE or CONST declaration.
+// Only processes packages explicitly added via AddDir - auto-loaded packages are skipped.
 func (g *GoParser) forEachDecl(f func(pkg *packages.Package, file *ast.File, decl *ast.GenDecl) error) error {
-	// Iterate through all loaded packages
-	// g.pkgs is populated by AddDir() calls
+	// Iterate through all packages in g.pkgs
+	// This includes both explicitly added packages (via AddDir) and auto-loaded ones
+	// (loaded during cross-package reference resolution)
 	for _, pkg := range g.pkgs {
+		// Skip packages that were auto-loaded (not explicitly added via AddDir)
+		// We only want to extract types from packages the user explicitly requested
+		// Auto-loaded packages are only used for reference resolution
+		if !g.explicitPkgs[pkg.PkgPath] {
+			continue
+		}
 		// Each package contains multiple parsed Go files
 		// pkg.Syntax is a slice of *ast.File, one for each .go file in the package
 		for _, file := range pkg.Syntax {
@@ -256,11 +272,13 @@ func (g *GoParser) isExportedDecl(decl *ast.GenDecl) bool {
 	return false
 }
 
-// analyzeType recursively analyzes Go type expressions from the AST and converts them
+// analyzeTypeWithFile recursively analyzes Go type expressions from the AST and converts them
 // to our TypeExpression interface. This is used for both top-level type declarations
 // and field types within structs. It handles all supported Go type constructs.
 // Called during both first pass (for type declarations) and second pass (for struct fields).
-func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
+// The file parameter is used to resolve cross-package type references by looking up imports.
+// If file is nil, cross-package references cannot be auto-loaded and will remain qualified.
+func (g *GoParser) analyzeTypeWithFile(expr ast.Expr, file *ast.File) (TypeExpression, error) {
 	switch t := expr.(type) {
 	case *ast.Ident:
 		// Simple identifier type: string, int, MyType, etc.
@@ -288,7 +306,7 @@ func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
 	case *ast.StarExpr:
 		// Pointer type: *T
 		// Recursively analyze the pointed-to type
-		element, err := g.analyzeType(t.X)
+		element, err := g.analyzeTypeWithFile(t.X, file)
 		if err != nil {
 			return nil, err
 		}
@@ -297,7 +315,7 @@ func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
 	case *ast.ArrayType:
 		// Array or slice type: []T or [N]T
 		// First analyze the element type
-		element, err := g.analyzeType(t.Elt)
+		element, err := g.analyzeTypeWithFile(t.Elt, file)
 		if err != nil {
 			return nil, err
 		}
@@ -322,11 +340,11 @@ func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
 	case *ast.MapType:
 		// Map type: map[K]V
 		// Recursively analyze both key and value types
-		key, err := g.analyzeType(t.Key)
+		key, err := g.analyzeTypeWithFile(t.Key, file)
 		if err != nil {
 			return nil, err
 		}
-		value, err := g.analyzeType(t.Value)
+		value, err := g.analyzeTypeWithFile(t.Value, file)
 		if err != nil {
 			return nil, err
 		}
@@ -334,11 +352,93 @@ func (g *GoParser) analyzeType(expr ast.Expr) (TypeExpression, error) {
 
 	case *ast.SelectorExpr:
 		// Qualified type from another package: pkg.Type
-		// Example: time.Time, uuid.UUID
-		// We concatenate as "pkg.Type" string for now
-		// TODO: Could handle standard library types specially
+		// Example: time.Time, consts.EventKind
+		// This handles cross-package type references and attempts to auto-load them
 		if ident, ok := t.X.(*ast.Ident); ok {
-			return BasicType{Name: ident.Name + "." + t.Sel.Name}, nil
+			pkgName := ident.Name  // e.g., "time" or "consts"
+			typeName := t.Sel.Name // e.g., "Time" or "EventKind"
+
+			// STEP 1: Check if the package is already loaded
+			// Search through all loaded packages to find one matching the short name
+			var targetPkg *packages.Package
+			for _, pkg := range g.pkgs {
+				if pkg.Name == pkgName {
+					targetPkg = pkg
+					break
+				}
+			}
+
+			// STEP 2: If package not loaded, attempt auto-loading from file imports
+			// This only works if we have file context (file != nil)
+			if targetPkg == nil && file != nil {
+				// Search through the file's imports to find the full import path
+				// for this package name
+				var importPath string
+				for _, imp := range file.Imports {
+					// imp.Path.Value is quoted, e.g., "\"time\"" or "\"ws-json-rpc/internal/consts\""
+					path := strings.Trim(imp.Path.Value, "\"")
+
+					// Determine the package name from the import
+					// Handle both named imports (import foo "bar") and regular imports
+					var impName string
+					if imp.Name != nil {
+						// Named import: import foo "some/package"
+						impName = imp.Name.Name
+					} else {
+						// Regular import: the package name is the last path component
+						// e.g., "ws-json-rpc/internal/consts" -> "consts"
+						parts := strings.Split(path, "/")
+						impName = parts[len(parts)-1]
+					}
+
+					// Check if this import matches the package we're looking for
+					if impName == pkgName {
+						importPath = path
+						break
+					}
+				}
+
+				// If we found the import path, try to load the package
+				if importPath != "" {
+					pkgs, err := packages.Load(g.config, importPath)
+					if err == nil && len(pkgs) > 0 {
+						// Find the package with the matching name and add it to our cache
+						// Note: auto-loaded packages are NOT marked as explicit
+						// They're only used for reference resolution, not type extraction
+						for _, p := range pkgs {
+							if p.Name == pkgName {
+								g.pkgs[p.PkgPath] = p
+								targetPkg = p
+								break
+							}
+						}
+					}
+				}
+			}
+
+			// STEP 3: Handle the case where package couldn't be loaded
+			// If still not loaded, it's likely an external package or stdlib
+			// Keep the qualified name (e.g., "time.Time") for these
+			if targetPkg == nil {
+				return BasicType{Name: pkgName + "." + typeName}, nil
+			}
+
+			// STEP 4: Check for type name conflicts across packages
+			// Before stripping the package prefix, ensure no other package
+			// has already defined a type with the same name
+			// This prevents ambiguity in the generated TypeScript
+			if existingType, exists := g.types[typeName]; exists {
+				// If a type with this name exists from a different package, error out
+				if existingType.Position.Package != targetPkg.PkgPath {
+					return nil, fmt.Errorf("type name conflict: '%s' exists in both '%s' and '%s'",
+						typeName, existingType.Position.Package, targetPkg.PkgPath)
+				}
+			}
+
+			// STEP 5: Return the unqualified type name
+			// The package prefix is stripped (consts.EventKind -> EventKind)
+			// This type will be resolved during the first pass when the package is parsed
+			return BasicType{Name: typeName}, nil
 		}
 		// Complex selectors like pkg1.pkg2.Type not supported
 		return nil, fmt.Errorf("complex selector not supported")
@@ -383,7 +483,7 @@ func (g *GoParser) extractTypeMetadata(pkg *packages.Package, file *ast.File, de
 
 		// Analyze the type expression to determine what kind of type this is
 		// Returns BasicType, StructType (empty), SliceType, MapType, etc.
-		typeExpr, err := g.analyzeType(typeSpec.Type)
+		typeExpr, err := g.analyzeTypeWithFile(typeSpec.Type, file)
 		if err != nil {
 			return err
 		}
@@ -430,7 +530,7 @@ func (g *GoParser) processDeclaration(pkg *packages.Package, file *ast.File, dec
 	case token.TYPE:
 		// Process struct types to extract their fields
 		// Now safe to reference other types since first pass completed
-		return g.populateTypeWithStructInfo(pkg, decl)
+		return g.populateTypeWithStructInfo(pkg, file, decl)
 
 	default:
 		// Shouldn't reach here due to forEachDecl filtering, but log if it happens
@@ -471,7 +571,7 @@ func getEmbeddedName(t TypeExpression) string {
 // It fills in the field details for struct types that were identified in the first pass.
 // This can safely reference other types since all types are now known.
 // Called via processDeclaration for TYPE declarations.
-func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *ast.GenDecl) error {
+func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, file *ast.File, genDecl *ast.GenDecl) error {
 	// Handle each type spec in the declaration
 	// Supports both single and grouped type declarations
 	for _, spec := range genDecl.Specs {
@@ -506,7 +606,7 @@ func (g *GoParser) populateTypeWithStructInfo(pkg *packages.Package, genDecl *as
 		// Iterate through all fields in the struct
 		for _, field := range structType.Fields.List {
 			// Analyze the field's type (might be basic, slice, map, pointer, etc.)
-			fieldType, err := g.analyzeType(field.Type)
+			fieldType, err := g.analyzeTypeWithFile(field.Type, file)
 			if err != nil {
 				return err
 			}

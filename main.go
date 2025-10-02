@@ -58,6 +58,9 @@ func main() {
 	if err := gen.AddDir("./internal/handlers"); err != nil {
 		log.Fatal(err)
 	}
+	if err := gen.AddDir("./internal/consts"); err != nil {
+		log.Fatal(err)
+	}
 	types, err := gen.Run()
 	if err != nil {
 		log.Fatal(err)
