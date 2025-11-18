@@ -1,0 +1,359 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Local API Type Definition",
+    "description": "Schema for validating .type.json files in the Local API type system",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "type": "string",
+            "description": "JSON Schema reference"
+        }
+    },
+    "patternProperties": {
+        "^[A-Z][a-zA-Z0-9]*$": {
+            "$ref": "#/definitions/TypeDefinition"
+        }
+    },
+    "additionalProperties": false,
+    "minProperties": 1,
+    "definitions": {
+        "StringFormat": {
+            "type": "string",
+            "enum": ["date-time", "uuid"]
+        },
+        "PrimitiveType": {
+            "type": "string",
+            "enum": ["string", "number", "integer", "boolean"]
+        },
+        "NonStringPrimitiveType": {
+            "type": "string",
+            "enum": ["number", "integer", "boolean"]
+        },
+        "TypeReference": {
+            "type": "string",
+            "pattern": "^[A-Z][a-zA-Z0-9]*$"
+        },
+        "TypeReferenceObject": {
+            "type": "object",
+            "required": ["$ref"],
+            "properties": {
+                "$ref": {
+                    "$ref": "#/definitions/TypeReference"
+                }
+            },
+            "additionalProperties": false
+        },
+        "MapKeyType": {
+            "oneOf": [
+                {
+                    "type": "string",
+                    "const": "string"
+                },
+                {
+                    "$ref": "#/definitions/TypeReferenceObject"
+                }
+            ]
+        },
+        "TypeDefinition": {
+            "type": "object",
+            "required": ["kind"],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": ["enum", "object", "alias", "map", "array"]
+                },
+                "description": {
+                    "type": "string"
+                }
+            },
+            "oneOf": [
+                { "$ref": "#/definitions/EnumDefinition" },
+                { "$ref": "#/definitions/ObjectDefinition" },
+                { "$ref": "#/definitions/AliasDefinition" },
+                { "$ref": "#/definitions/MapDefinition" },
+                { "$ref": "#/definitions/ArrayDefinition" }
+            ]
+        },
+        "EnumDefinition": {
+            "type": "object",
+            "required": ["kind", "description", "values"],
+            "properties": {
+                "kind": {
+                    "const": "enum"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/EnumValue"
+                    },
+                    "minItems": 1
+                }
+            },
+            "additionalProperties": false
+        },
+        "EnumValue": {
+            "type": "object",
+            "required": ["value", "description"],
+            "properties": {
+                "value": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false
+        },
+        "ObjectDefinition": {
+            "type": "object",
+            "required": ["kind", "description", "fields"],
+            "properties": {
+                "kind": {
+                    "const": "object"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Field"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "Field": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-zA-Z0-9]*$"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "optional": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "nullable": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "type": {
+                    "$ref": "#/definitions/PrimitiveType"
+                },
+                "format": {
+                    "$ref": "#/definitions/StringFormat"
+                },
+                "$ref": {
+                    "$ref": "#/definitions/TypeReference"
+                },
+                "items": {
+                    "$ref": "#/definitions/FieldType"
+                },
+                "map": {
+                    "type": "object",
+                    "required": ["keyType", "valueType"],
+                    "properties": {
+                        "keyType": {
+                            "$ref": "#/definitions/MapKeyType"
+                        },
+                        "valueType": {
+                            "$ref": "#/definitions/FieldType"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "oneOf": [
+                {
+                    "required": ["type"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "const": "string"
+                        },
+                        "format": {
+                            "$ref": "#/definitions/StringFormat"
+                        }
+                    }
+                },
+                {
+                    "required": ["type"],
+                    "properties": {
+                        "type": {
+                            "$ref": "#/definitions/NonStringPrimitiveType"
+                        }
+                    }
+                },
+                {
+                    "required": ["$ref"],
+                    "properties": {
+                        "$ref": {
+                            "$ref": "#/definitions/TypeReference"
+                        }
+                    }
+                },
+                {
+                    "required": ["items"],
+                    "properties": {
+                        "items": {
+                            "$ref": "#/definitions/FieldType"
+                        }
+                    }
+                },
+                {
+                    "required": ["map"],
+                    "properties": {
+                        "map": {
+                            "type": "object",
+                            "required": ["keyType", "valueType"],
+                            "properties": {
+                                "keyType": {
+                                    "$ref": "#/definitions/MapKeyType"
+                                },
+                                "valueType": {
+                                    "$ref": "#/definitions/FieldType"
+                                }
+                            },
+                            "additionalProperties": false
+                        }
+                    }
+                }
+            ],
+            "additionalProperties": false
+        },
+        "FieldType": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "required": ["type"],
+                    "properties": {
+                        "type": {
+                            "type": "string",
+                            "const": "string"
+                        },
+                        "format": {
+                            "$ref": "#/definitions/StringFormat"
+                        },
+                        "nullable": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "required": ["type"],
+                    "properties": {
+                        "type": {
+                            "$ref": "#/definitions/NonStringPrimitiveType"
+                        },
+                        "nullable": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "required": ["$ref"],
+                    "properties": {
+                        "$ref": {
+                            "$ref": "#/definitions/TypeReference"
+                        },
+                        "nullable": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            ]
+        },
+        "AliasDefinition": {
+            "type": "object",
+            "required": ["kind", "description", "target"],
+            "properties": {
+                "kind": {
+                    "const": "alias"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "target": {
+                    "oneOf": [
+                        {
+                            "$ref": "#/definitions/PrimitiveType"
+                        },
+                        {
+                            "$ref": "#/definitions/TypeReferenceObject"
+                        }
+                    ]
+                },
+                "format": {
+                    "$ref": "#/definitions/StringFormat"
+                }
+            },
+            "if": {
+                "properties": {
+                    "format": {
+                        "type": "string"
+                    }
+                },
+                "required": ["format"]
+            },
+            "then": {
+                "properties": {
+                    "target": {
+                        "const": "string"
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "MapDefinition": {
+            "type": "object",
+            "required": ["kind", "description", "keyType", "valueType"],
+            "properties": {
+                "kind": {
+                    "const": "map"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "keyType": {
+                    "$ref": "#/definitions/MapKeyType"
+                },
+                "valueType": {
+                    "$ref": "#/definitions/FieldType"
+                }
+            },
+            "additionalProperties": false
+        },
+        "ArrayDefinition": {
+            "type": "object",
+            "required": ["kind", "description", "itemType"],
+            "properties": {
+                "kind": {
+                    "const": "array"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "itemType": {
+                    "$ref": "#/definitions/FieldType"
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}

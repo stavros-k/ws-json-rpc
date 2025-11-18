@@ -1,3 +1,5 @@
 words:
-  - fset
   - hctx
+  - rpchandlers
+  - rpctypes
+  - shiki

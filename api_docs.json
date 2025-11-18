@@ -1,0 +1,397 @@
+{
+  "info": {
+    "title": "Local API",
+    "version": "vdev (cd7f960-dirty)",
+    "description": "A JSON-RPC API over HTTP and Websockets"
+  },
+  "methods": {
+    "ping": {
+      "title": "Ping",
+      "description": "A simple ping method to check if the server is alive",
+      "group": "Core",
+      "tags": [
+        "health",
+        "status"
+      ],
+      "deprecated": false,
+      "protocols": {
+        "http": true,
+        "ws": true
+      },
+      "resultType": {
+        "$ref": "PingResult"
+      },
+      "paramType": {
+        "$ref": "null"
+      },
+      "examples": [
+        {
+          "title": "Ping",
+          "description": "Ping the server",
+          "params": "null",
+          "result": "{\n  \"message\": \"pong\",\n  \"status\": \"success\"\n}"
+        }
+      ],
+      "errors": []
+    },
+    "subscribe": {
+      "title": "Subscribe",
+      "description": "Subscribe to a data event",
+      "group": "Utility",
+      "tags": [],
+      "deprecated": false,
+      "protocols": {
+        "http": false,
+        "ws": true
+      },
+      "resultType": {
+        "$ref": "SubscribeResult"
+      },
+      "paramType": {
+        "$ref": "SubscribeParams"
+      },
+      "examples": [
+        {
+          "title": "Subscribe",
+          "description": "Subscribe to the DataCreated event",
+          "params": "{\n  \"event\": \"data.created\"\n}",
+          "result": "{\n  \"success\": true\n}"
+        }
+      ],
+      "errors": [
+        {
+          "title": "Invalid event",
+          "description": "The event topic is invalid",
+          "code": 400,
+          "message": "Invalid event topic"
+        }
+      ]
+    },
+    "unsubscribe": {
+      "title": "Unsubscribe",
+      "description": "Unsubscribe from a data event",
+      "group": "Utility",
+      "tags": [],
+      "deprecated": false,
+      "protocols": {
+        "http": false,
+        "ws": true
+      },
+      "resultType": {
+        "$ref": "UnsubscribeResult"
+      },
+      "paramType": {
+        "$ref": "UnsubscribeParams"
+      },
+      "examples": [
+        {
+          "title": "Unsubscribe",
+          "description": "Unsubscribe from the DataCreated event",
+          "params": "{\n  \"event\": \"data.created\"\n}",
+          "result": "{\n  \"success\": true\n}"
+        }
+      ],
+      "errors": [
+        {
+          "title": "Invalid event",
+          "description": "The event topic is invalid",
+          "code": 400,
+          "message": "Invalid event topic"
+        }
+      ]
+    }
+  },
+  "events": {
+    "data.created": {
+      "title": "DataCreated",
+      "description": "Event fired when new data is created",
+      "group": "Data",
+      "tags": [],
+      "deprecated": true,
+      "protocols": {
+        "http": false,
+        "ws": true
+      },
+      "resultType": {
+        "$ref": "SomeEvent"
+      },
+      "examples": [
+        {
+          "title": "Basic example",
+          "description": "Subscribe to the DataCreated event",
+          "params": "",
+          "result": "{\"id\":\"123e4567-e89b-12d3-a456-426614174000\"}"
+        }
+      ]
+    }
+  },
+  "types": {
+    "EventDataMap": {
+      "description": "A map of event data indexed by event ID",
+      "kind": "map",
+      "jsonRepresentation": "",
+      "typeDefinition": "{\n  \"kind\": \"map\",\n  \"description\": \"A map of event data indexed by event ID\",\n  \"keyType\": \"string\",\n  \"valueType\": {\n    \"$ref\": \"SomeEvent\"\n  }\n}",
+      "goRepresentation": "package rpcapi\n\n// EventDataMap - A map of event data indexed by event ID\ntype EventDataMap map[string]SomeEvent\n",
+      "tsRepresentation": "// A map of event data indexed by event ID\nexport type EventDataMap = Record<string, SomeEvent>;\n",
+      "csharpRepresentation": "namespace rpcapi\n{\n    /// <summary>\n    /// A map of event data indexed by event ID\n    /// </summary>\n    public class EventDataMap : Dictionary<string, SomeEvent> { }\n}\n",
+      "mapValueType": "SomeEvent",
+      "mapValueIsRef": true,
+      "references": [
+        "SomeEvent"
+      ]
+    },
+    "EventKind": {
+      "description": "All the available event topics",
+      "kind": "enum",
+      "jsonRepresentation": "",
+      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"All the available event topics\",\n  \"values\": [\n    {\n      \"Value\": \"data.created\",\n      \"Description\": \"Data created\"\n    },\n    {\n      \"Value\": \"data.updated\",\n      \"Description\": \"Data updated\"\n    }\n  ]\n}",
+      "goRepresentation": "package rpcapi\n\n// EventKind - All the available event topics\ntype EventKind string\n\nconst (\n\t// Data created\n\tEventKindDataCreated EventKind = \"data.created\"\n\t// Data updated\n\tEventKindDataUpdated EventKind = \"data.updated\"\n)\n\n// Valid returns true if the EventKind value is valid\nfunc (e EventKind) Valid() bool {\n\tswitch e {\n\tcase EventKindDataCreated, EventKindDataUpdated:\n\t\treturn true\n\tdefault:\n\t\treturn false\n\t}\n}\n",
+      "tsRepresentation": "// All the available event topics\nexport const EventKind = {\n  /** Data created */\n  DataCreated: \"data.created\",\n  /** Data updated */\n  DataUpdated: \"data.updated\",\n} as const;\n\nexport type EventKind = typeof EventKind[keyof typeof EventKind];\n\nexport function isEventKind(value: unknown): value is EventKind {\n\tswitch (value) {\n\t\tcase \"data.created\":\n\t\tcase \"data.updated\":\n\t\t\treturn true;\n\t\tdefault:\n\t\t\treturn false;\n\t}\n}\n",
+      "csharpRepresentation": "namespace rpcapi\n{\n    /// <summary>\n    /// All the available event topics\n    /// </summary>\n    public static class EventKind\n    {\n        /// <summary>Data created</summary>\n        public const string DataCreated = \"data.created\";\n        /// <summary>Data updated</summary>\n        public const string DataUpdated = \"data.updated\";\n\n        /// <summary>\n        /// Returns true if the value is a valid EventKind\n        /// </summary>\n        public static bool IsValid(string value)\n        {\n            switch (value)\n            {\n                case \"data.created\":\n                case \"data.updated\":\n                    return true;\n                default:\n                    return false;\n            }\n        }\n    }\n}\n",
+      "enumValues": [
+        {
+          "value": "data.created",
+          "description": "Data created"
+        },
+        {
+          "value": "data.updated",
+          "description": "Data updated"
+        }
+      ],
+      "referencedBy": [
+        "SubscribeParams",
+        "UnsubscribeParams"
+      ]
+    },
+    "MethodKind": {
+      "description": "All the available RPC methods",
+      "kind": "enum",
+      "jsonRepresentation": "",
+      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"All the available RPC methods\",\n  \"values\": [\n    {\n      \"Value\": \"ping\",\n      \"Description\": \"Ping\"\n    },\n    {\n      \"Value\": \"subscribe\",\n      \"Description\": \"Subscribe\"\n    },\n    {\n      \"Value\": \"unsubscribe\",\n      \"Description\": \"Unsubscribe\"\n    },\n    {\n      \"Value\": \"user.create\",\n      \"Description\": \"Create user\"\n    },\n    {\n      \"Value\": \"user.update\",\n      \"Description\": \"Update user\"\n    },\n    {\n      \"Value\": \"user.delete\",\n      \"Description\": \"Delete user\"\n    },\n    {\n      \"Value\": \"user.list\",\n      \"Description\": \"List users\"\n    },\n    {\n      \"Value\": \"user.get\",\n      \"Description\": \"Get user\"\n    }\n  ]\n}",
+      "goRepresentation": "package rpcapi\n\n// MethodKind - All the available RPC methods\ntype MethodKind string\n\nconst (\n\t// Ping\n\tMethodKindPing MethodKind = \"ping\"\n\t// Subscribe\n\tMethodKindSubscribe MethodKind = \"subscribe\"\n\t// Unsubscribe\n\tMethodKindUnsubscribe MethodKind = \"unsubscribe\"\n\t// Create user\n\tMethodKindUserCreate MethodKind = \"user.create\"\n\t// Update user\n\tMethodKindUserUpdate MethodKind = \"user.update\"\n\t// Delete user\n\tMethodKindUserDelete MethodKind = \"user.delete\"\n\t// List users\n\tMethodKindUserList MethodKind = \"user.list\"\n\t// Get user\n\tMethodKindUserGet MethodKind = \"user.get\"\n)\n\n// Valid returns true if the MethodKind value is valid\nfunc (e MethodKind) Valid() bool {\n\tswitch e {\n\tcase MethodKindPing, MethodKindSubscribe, MethodKindUnsubscribe, MethodKindUserCreate, MethodKindUserUpdate, MethodKindUserDelete, MethodKindUserList, MethodKindUserGet:\n\t\treturn true\n\tdefault:\n\t\treturn false\n\t}\n}\n",
+      "tsRepresentation": "// All the available RPC methods\nexport const MethodKind = {\n  /** Ping */\n  Ping: \"ping\",\n  /** Subscribe */\n  Subscribe: \"subscribe\",\n  /** Unsubscribe */\n  Unsubscribe: \"unsubscribe\",\n  /** Create user */\n  UserCreate: \"user.create\",\n  /** Update user */\n  UserUpdate: \"user.update\",\n  /** Delete user */\n  UserDelete: \"user.delete\",\n  /** List users */\n  UserList: \"user.list\",\n  /** Get user */\n  UserGet: \"user.get\",\n} as const;\n\nexport type MethodKind = typeof MethodKind[keyof typeof MethodKind];\n\nexport function isMethodKind(value: unknown): value is MethodKind {\n\tswitch (value) {\n\t\tcase \"ping\":\n\t\tcase \"subscribe\":\n\t\tcase \"unsubscribe\":\n\t\tcase \"user.create\":\n\t\tcase \"user.update\":\n\t\tcase \"user.delete\":\n\t\tcase \"user.list\":\n\t\tcase \"user.get\":\n\t\t\treturn true;\n\t\tdefault:\n\t\t\treturn false;\n\t}\n}\n",
+      "csharpRepresentation": "namespace rpcapi\n{\n    /// <summary>\n    /// All the available RPC methods\n    /// </summary>\n    public static class MethodKind\n    {\n        /// <summary>Ping</summary>\n        public const string Ping = \"ping\";\n        /// <summary>Subscribe</summary>\n        public const string Subscribe = \"subscribe\";\n        /// <summary>Unsubscribe</summary>\n        public const string Unsubscribe = \"unsubscribe\";\n        /// <summary>Create user</summary>\n        public const string UserCreate = \"user.create\";\n        /// <summary>Update user</summary>\n        public const string UserUpdate = \"user.update\";\n        /// <summary>Delete user</summary>\n        public const string UserDelete = \"user.delete\";\n        /// <summary>List users</summary>\n        public const string UserList = \"user.list\";\n        /// <summary>Get user</summary>\n        public const string UserGet = \"user.get\";\n\n        /// <summary>\n        /// Returns true if the value is a valid MethodKind\n        /// </summary>\n        public static bool IsValid(string value)\n        {\n            switch (value)\n            {\n                case \"ping\":\n                case \"subscribe\":\n                case \"unsubscribe\":\n                case \"user.create\":\n                case \"user.update\":\n                case \"user.delete\":\n                case \"user.list\":\n                case \"user.get\":\n                    return true;\n                default:\n                    return false;\n            }\n        }\n    }\n}\n",
+      "enumValues": [
+        {
+          "value": "ping",
+          "description": "Ping"
+        },
+        {
+          "value": "subscribe",
+          "description": "Subscribe"
+        },
+        {
+          "value": "unsubscribe",
+          "description": "Unsubscribe"
+        },
+        {
+          "value": "user.create",
+          "description": "Create user"
+        },
+        {
+          "value": "user.update",
+          "description": "Update user"
+        },
+        {
+          "value": "user.delete",
+          "description": "Delete user"
+        },
+        {
+          "value": "user.list",
+          "description": "List users"
+        },
+        {
+          "value": "user.get",
+          "description": "Get user"
+        }
+      ]
+    },
+    "PingResult": {
+      "description": "Result for the Ping method",
+      "kind": "object",
+      "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Ping method\",\n  \"fields\": [\n    {\n      \"name\": \"message\",\n      \"description\": \"A message describing the result\",\n      \"type\": \"string\"\n    },\n    {\n      \"name\": \"status\",\n      \"description\": \"The status of the ping\",\n      \"$ref\": \"PingStatus\"\n    }\n  ]\n}",
+      "goRepresentation": "package rpcapi\n\n// PingResult - Result for the Ping method\ntype PingResult struct {\n\t// A message describing the result\n\tMessage string `json:\"message\"`\n\t// The status of the ping\n\tStatus PingStatus `json:\"status\"`\n}\n",
+      "tsRepresentation": "// Result for the Ping method\nexport type PingResult = {\n  /** A message describing the result */\n  message: string;\n  /** The status of the ping */\n  status: PingStatus;\n};\n",
+      "csharpRepresentation": "using System.Text.Json.Serialization;\n\nnamespace rpcapi\n{\n    /// <summary>\n    /// Result for the Ping method\n    /// </summary>\n    public class PingResult\n    {\n        /// <summary>A message describing the result</summary>\n        [JsonPropertyName(\"message\")]\n        public string Message { get; set; }\n\n        /// <summary>The status of the ping</summary>\n        [JsonPropertyName(\"status\")]\n        public PingStatus Status { get; set; }\n    }\n}\n",
+      "fields": [
+        {
+          "name": "message",
+          "description": "A message describing the result",
+          "type": "string",
+          "optional": false,
+          "nullable": false,
+          "isRef": false
+        },
+        {
+          "name": "status",
+          "description": "The status of the ping",
+          "type": "PingStatus",
+          "optional": false,
+          "nullable": false,
+          "isRef": true,
+          "refTypeName": "PingStatus"
+        }
+      ],
+      "references": [
+        "PingStatus"
+      ],
+      "referencedBy": [
+        "StatusResult"
+      ]
+    },
+    "PingStatus": {
+      "description": "Status for the Ping method",
+      "kind": "enum",
+      "jsonRepresentation": "",
+      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"Status for the Ping method\",\n  \"values\": [\n    {\n      \"Value\": \"success\",\n      \"Description\": \"Success\"\n    },\n    {\n      \"Value\": \"error\",\n      \"Description\": \"Error\"\n    }\n  ]\n}",
+      "goRepresentation": "package rpcapi\n\n// PingStatus - Status for the Ping method\ntype PingStatus string\n\nconst (\n\t// Success\n\tPingStatusSuccess PingStatus = \"success\"\n\t// Error\n\tPingStatusError PingStatus = \"error\"\n)\n\n// Valid returns true if the PingStatus value is valid\nfunc (e PingStatus) Valid() bool {\n\tswitch e {\n\tcase PingStatusSuccess, PingStatusError:\n\t\treturn true\n\tdefault:\n\t\treturn false\n\t}\n}\n",
+      "tsRepresentation": "// Status for the Ping method\nexport const PingStatus = {\n  /** Success */\n  Success: \"success\",\n  /** Error */\n  Error: \"error\",\n} as const;\n\nexport type PingStatus = typeof PingStatus[keyof typeof PingStatus];\n\nexport function isPingStatus(value: unknown): value is PingStatus {\n\tswitch (value) {\n\t\tcase \"success\":\n\t\tcase \"error\":\n\t\t\treturn true;\n\t\tdefault:\n\t\t\treturn false;\n\t}\n}\n",
+      "csharpRepresentation": "namespace rpcapi\n{\n    /// <summary>\n    /// Status for the Ping method\n    /// </summary>\n    public static class PingStatus\n    {\n        /// <summary>Success</summary>\n        public const string Success = \"success\";\n        /// <summary>Error</summary>\n        public const string Error = \"error\";\n\n        /// <summary>\n        /// Returns true if the value is a valid PingStatus\n        /// </summary>\n        public static bool IsValid(string value)\n        {\n            switch (value)\n            {\n                case \"success\":\n                case \"error\":\n                    return true;\n                default:\n                    return false;\n            }\n        }\n    }\n}\n",
+      "enumValues": [
+        {
+          "value": "success",
+          "description": "Success"
+        },
+        {
+          "value": "error",
+          "description": "Error"
+        }
+      ],
+      "referencedBy": [
+        "PingResult"
+      ]
+    },
+    "SomeEvent": {
+      "description": "Result for the SomeEvent method",
+      "kind": "object",
+      "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the SomeEvent method\",\n  \"fields\": [\n    {\n      \"name\": \"id\",\n      \"description\": \"The unique identifier for the result\",\n      \"type\": \"string\",\n      \"format\": \"uuid\"\n    }\n  ]\n}",
+      "goRepresentation": "package rpcapi\n\nimport (\n\t\"github.com/google/uuid\"\n)\n\n// SomeEvent - Result for the SomeEvent method\ntype SomeEvent struct {\n\t// The unique identifier for the result\n\tID uuid.UUID `json:\"id\"`\n}\n",
+      "tsRepresentation": "// Result for the SomeEvent method\nexport type SomeEvent = {\n  /** The unique identifier for the result */\n  id: string;\n};\n",
+      "csharpRepresentation": "using System.Text.Json.Serialization;\n\nnamespace rpcapi\n{\n    /// <summary>\n    /// Result for the SomeEvent method\n    /// </summary>\n    public class SomeEvent\n    {\n        /// <summary>The unique identifier for the result</summary>\n        [JsonPropertyName(\"id\")]\n        public Guid ID { get; set; }\n    }\n}\n",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The unique identifier for the result",
+          "type": "string",
+          "format": "uuid",
+          "optional": false,
+          "nullable": false,
+          "isRef": false
+        }
+      ],
+      "referencedBy": [
+        "EventDataMap"
+      ]
+    },
+    "StatusResult": {
+      "description": "Result for the Status method",
+      "kind": "alias",
+      "jsonRepresentation": "",
+      "typeDefinition": "{\n  \"kind\": \"alias\",\n  \"description\": \"Result for the Status method\",\n  \"target\": {\n    \"$ref\": \"PingResult\"\n  }\n}",
+      "goRepresentation": "package rpcapi\n\n// StatusResult - Result for the Status method\ntype StatusResult PingResult\n",
+      "tsRepresentation": "// Result for the Status method\nexport type StatusResult = PingResult;\n",
+      "csharpRepresentation": "namespace rpcapi\n{\n    /// <summary>\n    /// Result for the Status method\n    /// </summary>\n    public class StatusResult\n    {\n        public PingResult Value { get; set; }\n    }\n}\n",
+      "aliasTarget": "PingResult",
+      "references": [
+        "PingResult"
+      ]
+    },
+    "StringMap": {
+      "description": "A map with string values for storing key-value pairs",
+      "kind": "map",
+      "jsonRepresentation": "",
+      "typeDefinition": "{\n  \"kind\": \"map\",\n  \"description\": \"A map with string values for storing key-value pairs\",\n  \"keyType\": \"string\",\n  \"valueType\": {\n    \"type\": \"string\"\n  }\n}",
+      "goRepresentation": "package rpcapi\n\n// StringMap - A map with string values for storing key-value pairs\ntype StringMap map[string]string\n",
+      "tsRepresentation": "// A map with string values for storing key-value pairs\nexport type StringMap = Record<string, string>;\n",
+      "csharpRepresentation": "namespace rpcapi\n{\n    /// <summary>\n    /// A map with string values for storing key-value pairs\n    /// </summary>\n    public class StringMap : Dictionary<string, string> { }\n}\n",
+      "mapValueType": "string"
+    },
+    "SubscribeParams": {
+      "description": "Parameters for the Subscribe method",
+      "kind": "object",
+      "jsonRepresentation": "{\n  \"event\": \"\"\n}",
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Parameters for the Subscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"event\",\n      \"description\": \"The event topic to subscribe to\",\n      \"$ref\": \"EventKind\"\n    }\n  ]\n}",
+      "goRepresentation": "package rpcapi\n\n// SubscribeParams - Parameters for the Subscribe method\ntype SubscribeParams struct {\n\t// The event topic to subscribe to\n\tEvent EventKind `json:\"event\"`\n}\n",
+      "tsRepresentation": "// Parameters for the Subscribe method\nexport type SubscribeParams = {\n  /** The event topic to subscribe to */\n  event: EventKind;\n};\n",
+      "csharpRepresentation": "using System.Text.Json.Serialization;\n\nnamespace rpcapi\n{\n    /// <summary>\n    /// Parameters for the Subscribe method\n    /// </summary>\n    public class SubscribeParams\n    {\n        /// <summary>The event topic to subscribe to</summary>\n        [JsonPropertyName(\"event\")]\n        public EventKind Event { get; set; }\n    }\n}\n",
+      "fields": [
+        {
+          "name": "event",
+          "description": "The event topic to subscribe to",
+          "type": "EventKind",
+          "optional": false,
+          "nullable": false,
+          "isRef": true,
+          "refTypeName": "EventKind"
+        }
+      ],
+      "references": [
+        "EventKind"
+      ]
+    },
+    "SubscribeResult": {
+      "description": "Result for the Subscribe method",
+      "kind": "object",
+      "jsonRepresentation": "{\n  \"success\": false\n}",
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Subscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"success\",\n      \"description\": \"Whether the subscribe was successful\",\n      \"type\": \"boolean\"\n    }\n  ]\n}",
+      "goRepresentation": "package rpcapi\n\n// SubscribeResult - Result for the Subscribe method\ntype SubscribeResult struct {\n\t// Whether the subscribe was successful\n\tSuccess bool `json:\"success\"`\n}\n",
+      "tsRepresentation": "// Result for the Subscribe method\nexport type SubscribeResult = {\n  /** Whether the subscribe was successful */\n  success: boolean;\n};\n",
+      "csharpRepresentation": "using System.Text.Json.Serialization;\n\nnamespace rpcapi\n{\n    /// <summary>\n    /// Result for the Subscribe method\n    /// </summary>\n    public class SubscribeResult\n    {\n        /// <summary>Whether the subscribe was successful</summary>\n        [JsonPropertyName(\"success\")]\n        public bool Success { get; set; }\n    }\n}\n",
+      "fields": [
+        {
+          "name": "success",
+          "description": "Whether the subscribe was successful",
+          "type": "boolean",
+          "optional": false,
+          "nullable": false,
+          "isRef": false
+        }
+      ]
+    },
+    "UnsubscribeParams": {
+      "description": "Parameters for the Unsubscribe method",
+      "kind": "object",
+      "jsonRepresentation": "{\n  \"event\": \"\"\n}",
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Parameters for the Unsubscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"event\",\n      \"description\": \"The event topic to unsubscribe from\",\n      \"$ref\": \"EventKind\"\n    }\n  ]\n}",
+      "goRepresentation": "package rpcapi\n\n// UnsubscribeParams - Parameters for the Unsubscribe method\ntype UnsubscribeParams struct {\n\t// The event topic to unsubscribe from\n\tEvent EventKind `json:\"event\"`\n}\n",
+      "tsRepresentation": "// Parameters for the Unsubscribe method\nexport type UnsubscribeParams = {\n  /** The event topic to unsubscribe from */\n  event: EventKind;\n};\n",
+      "csharpRepresentation": "using System.Text.Json.Serialization;\n\nnamespace rpcapi\n{\n    /// <summary>\n    /// Parameters for the Unsubscribe method\n    /// </summary>\n    public class UnsubscribeParams\n    {\n        /// <summary>The event topic to unsubscribe from</summary>\n        [JsonPropertyName(\"event\")]\n        public EventKind Event { get; set; }\n    }\n}\n",
+      "fields": [
+        {
+          "name": "event",
+          "description": "The event topic to unsubscribe from",
+          "type": "EventKind",
+          "optional": false,
+          "nullable": false,
+          "isRef": true,
+          "refTypeName": "EventKind"
+        }
+      ],
+      "references": [
+        "EventKind"
+      ]
+    },
+    "UnsubscribeResult": {
+      "description": "Result for the Unsubscribe method",
+      "kind": "object",
+      "jsonRepresentation": "{\n  \"success\": false\n}",
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Unsubscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"success\",\n      \"description\": \"Whether the unsubscribe was successful\",\n      \"type\": \"boolean\"\n    }\n  ]\n}",
+      "goRepresentation": "package rpcapi\n\n// UnsubscribeResult - Result for the Unsubscribe method\ntype UnsubscribeResult struct {\n\t// Whether the unsubscribe was successful\n\tSuccess bool `json:\"success\"`\n}\n",
+      "tsRepresentation": "// Result for the Unsubscribe method\nexport type UnsubscribeResult = {\n  /** Whether the unsubscribe was successful */\n  success: boolean;\n};\n",
+      "csharpRepresentation": "using System.Text.Json.Serialization;\n\nnamespace rpcapi\n{\n    /// <summary>\n    /// Result for the Unsubscribe method\n    /// </summary>\n    public class UnsubscribeResult\n    {\n        /// <summary>Whether the unsubscribe was successful</summary>\n        [JsonPropertyName(\"success\")]\n        public bool Success { get; set; }\n    }\n}\n",
+      "fields": [
+        {
+          "name": "success",
+          "description": "Whether the unsubscribe was successful",
+          "type": "boolean",
+          "optional": false,
+          "nullable": false,
+          "isRef": false
+        }
+      ]
+    }
+  },
+  "databaseSchema": "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (version varchar(128) primary key);\nCREATE TABLE IF NOT EXISTS \"user\" (\n  \"id\" INTEGER PRIMARY KEY,\n  \"name\" TEXT NOT NULL,\n  \"email\" TEXT NOT NULL,\n  \"password\" TEXT NOT NULL,\n  \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, \"last_login\" TIMESTAMP);\n-- Dbmate schema migrations\nINSERT INTO \"schema_migrations\" (version) VALUES\n  ('20251009092116'),\n  ('20251009104248');"
+}

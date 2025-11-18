@@ -1,0 +1,21 @@
+{
+    "$schema": "../../../../../../type-schema.json",
+    "Color": {
+        "kind": "enum",
+        "description": "Available colors",
+        "values": [
+            {
+                "value": "red",
+                "description": "Red color"
+            },
+            {
+                "value": "green",
+                "description": "Green color"
+            },
+            {
+                "value": "blue",
+                "description": "Blue color"
+            }
+        ]
+    }
+}
