@@ -10,11 +10,7 @@ const HeaderRow = ({ children }: Props) => {
 };
 
 const DataRow = ({ children }: Props) => {
-    return (
-        <td className='p-3 border-b border-border-primary text-sm text-text-tertiary'>
-            {children}
-        </td>
-    );
+    return <td className='p-3 border-b border-border-primary text-sm text-text-tertiary'>{children}</td>;
 };
 
 type ErrorsProps = {
@@ -40,9 +36,7 @@ export const Errors = ({ errors }: ErrorsProps) => {
                         <tr key={error.code}>
                             <DataRow>{error.title}</DataRow>
                             <DataRow>
-                                <span className='text-error-accent font-mono font-semibold'>
-                                    {error.code}
-                                </span>
+                                <span className='text-error-accent font-mono font-semibold'>{error.code}</span>
                             </DataRow>
                             <DataRow>{error.message}</DataRow>
                             <DataRow>{error.description}</DataRow>

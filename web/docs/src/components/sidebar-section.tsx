@@ -37,9 +37,7 @@ export const SidebarSection = ({ title, type, overviewHref }: SidebarSectionProp
             <Link
                 href={overviewHref}
                 className='inline-flex items-center gap-1.5 mb-3 p-1.5 rounded-lg hover:bg-bg-hover transition-all duration-200 group'>
-                <h2 className='text-sm font-bold text-text-secondary uppercase transition-colors'>
-                    {title}
-                </h2>
+                <h2 className='text-sm font-bold text-text-secondary uppercase transition-colors'>{title}</h2>
                 <BiLinkExternal className='w-3.5 h-3.5 text-text-muted transition-colors' />
             </Link>
             {sortedGroups.map((groupName) => {

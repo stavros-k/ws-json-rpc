@@ -87,9 +87,7 @@ export function EventSubscriber({ eventName }: EventSubscriberProps) {
         <div className='mt-6 p-4 border border-border-primary rounded-lg'>
             <div className='flex items-center justify-between mb-4'>
                 <div className='flex items-center gap-3'>
-                    <h3 className='text-lg font-semibold text-text-primary'>
-                        Event History (Max {maxResults})
-                    </h3>
+                    <h3 className='text-lg font-semibold text-text-primary'>Event History (Max {maxResults})</h3>
                     {events.length > 0 && (
                         <span className='text-sm text-text-tertiary'>
                             ({events.length} event
@@ -114,9 +112,7 @@ export function EventSubscriber({ eventName }: EventSubscriberProps) {
             </div>
 
             {error && (
-                <div className='mb-4 p-3 bg-red-500/10 border border-red-500 rounded text-red-500 text-sm'>
-                    {error}
-                </div>
+                <div className='mb-4 p-3 bg-red-500/10 border border-red-500 rounded text-red-500 text-sm'>{error}</div>
             )}
 
             <div className='space-y-4'>
@@ -126,9 +122,7 @@ export function EventSubscriber({ eventName }: EventSubscriberProps) {
                             key={event.timestamp}
                             className='pb-4 border-b border-border-primary last:border-b-0 last:pb-0 animate-slide-down-fade-in'>
                             <div className='flex items-center justify-between mb-2'>
-                                <span className='text-xs text-text-tertiary'>
-                                    Event #{events.length - index}
-                                </span>
+                                <span className='text-xs text-text-tertiary'>Event #{events.length - index}</span>
                                 <span className='text-xs text-text-tertiary'>
                                     {new Date(event.timestamp).toLocaleTimeString()}
                                 </span>

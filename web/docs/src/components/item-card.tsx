@@ -32,11 +32,7 @@ export const ItemCard = ({
             <div className='flex items-start justify-between mb-3'>
                 <div className='flex-1'>
                     <h3 className='text-xl font-bold text-text-primary mb-2'>{title}</h3>
-                    {subtitle && (
-                        <p className={`text-base font-semibold mb-3 ${subtitleColor}`}>
-                            {subtitle}
-                        </p>
-                    )}
+                    {subtitle && <p className={`text-base font-semibold mb-3 ${subtitleColor}`}>{subtitle}</p>}
                     <p className='text-text-secondary text-sm leading-relaxed'>{description}</p>
                 </div>
                 {badges && <div className='flex gap-2 ml-4 flex-shrink-0'>{badges}</div>}

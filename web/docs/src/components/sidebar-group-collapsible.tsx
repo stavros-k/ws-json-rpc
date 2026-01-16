@@ -21,11 +21,7 @@ export const SidebarGroupCollapsible = ({ groupName, children }: SidebarGroupCol
                     {groupName}
                 </h3>
                 <span className='text-text-dim group-hover:text-text-primary transition-colors'>
-                    {isOpen ? (
-                        <MdExpandLess className='w-4 h-4' />
-                    ) : (
-                        <MdExpandMore className='w-4 h-4' />
-                    )}
+                    {isOpen ? <MdExpandLess className='w-4 h-4' /> : <MdExpandMore className='w-4 h-4' />}
                 </span>
             </button>
             {isOpen && <div className='mt-1'>{children}</div>}

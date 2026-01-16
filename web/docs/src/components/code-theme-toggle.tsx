@@ -59,9 +59,7 @@ export const CodeThemeToggle = () => {
     };
 
     // Filter themes based on UI theme
-    const filteredThemes = Object.entries(THEMES).filter(
-        ([_, theme]) => theme.category === uiTheme
-    );
+    const filteredThemes = Object.entries(THEMES).filter(([_, theme]) => theme.category === uiTheme);
 
     return (
         <div className='px-3 py-2 rounded-lg border border-border-primary bg-bg-secondary'>

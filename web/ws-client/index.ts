@@ -1,3 +1,6 @@
+import type { ApiEvents, EventKind } from "./events";
+import type { ApiMethods, Method, MethodKind } from "./methods";
+
 // Basic types
 type UUID = ReturnType<typeof crypto.randomUUID>;
 
@@ -11,15 +14,14 @@ const RPC_ERROR_CODE = {
 } as const;
 
 // Base constraint types
-type MethodsRecord = Record<string, { req: unknown; res: unknown }>;
 type EventsRecord = Record<string, unknown>;
 
 // Request message sent to the server
-type RequestMessage<Methods extends MethodsRecord, Method extends keyof Methods> = {
+type RequestMessage = {
     jsonrpc: "2.0";
     id: UUID;
-    method: Method;
-    params: Methods[Method]["req"];
+    method: MethodKind;
+    params: ApiMethods[MethodKind]["req"];
 };
 
 // Response message with either result or error
@@ -76,10 +78,7 @@ const loggers = {
 type LogLevel = keyof typeof loggers;
 
 // Client
-export class WebSocketClient<
-    Methods extends MethodsRecord = MethodsRecord,
-    Events extends EventsRecord = EventsRecord,
-> {
+export class WebSocketClient {
     private ws: WebSocket | null = null;
     private url: string;
     private clientId: string;
@@ -101,9 +100,9 @@ export class WebSocketClient<
     private pendingRequests = new Map<string, PendingRequest>();
 
     // Event handlers - multiple handlers per event
-    private eventHandlers = new Map<keyof Events, Set<EventHandler<Events[keyof Events]>>>();
+    private eventHandlers = new Map<EventKind, Set<EventHandler<ApiEvents[EventKind]>>>();
     // Track events we've subscribed to on the server (separate from local handlers)
-    private serverSubscriptions = new Set<keyof Events>();
+    private serverSubscriptions = new Set<EventKind>();
     private connectionHandlers: {
         onConnect?: () => void;
         onDisconnect?: () => void;
@@ -285,7 +284,7 @@ export class WebSocketClient<
         }, delay);
     }
 
-    private handleEvent(message: EventMessage<Events, keyof Events>) {
+    private handleEvent(message: EventMessage<ApiEvents, EventKind>) {
         const handlers = this.eventHandlers.get(message.event);
         if (!handlers || handlers.size === 0) {
             this.logger("warn", `No handler registered for event: ${String(message.event)}`);
@@ -316,7 +315,7 @@ export class WebSocketClient<
     // Message handling
     private handleMessage(data: string): void {
         try {
-            const message: IncomingMessage<Events> = JSON.parse(data, this.jsonReviver);
+            const message: IncomingMessage<ApiEvents> = JSON.parse(data, this.jsonReviver);
 
             // Handle response
             if ("id" in message) {
@@ -349,28 +348,20 @@ export class WebSocketClient<
 
     // Public API methods
     // For methods without parameters
-    async call<Method extends keyof Methods>(
-        method: Methods[Method]["req"] extends undefined ? Method : never
-    ): Promise<ResponseMessage<Methods[Method]["res"]>>;
+    async call(method: MethodKind): Promise<ResponseMessage<Method["res"]>>;
 
     // For methods with parameters
-    async call<Method extends keyof Methods>(
-        method: Methods[Method]["req"] extends undefined ? never : Method,
-        params: Methods[Method]["req"]
-    ): Promise<ResponseMessage<Methods[Method]["res"]>>;
+    async call(method: MethodKind, params: Method["req"]): Promise<ResponseMessage<Method["res"]>>;
 
     // Implementation
-    async call<Method extends keyof Methods>(
-        method: Method,
-        params?: Methods[Method]["req"]
-    ): Promise<ResponseMessage<Methods[Method]["res"]>> {
+    async call(method: MethodKind, params?: Method["req"]): Promise<ResponseMessage<Method["res"]>> {
         // Handle regular method calls
         const id = crypto.randomUUID();
-        const message: RequestMessage<Methods, Method> = {
+        const message: RequestMessage = {
             jsonrpc: "2.0",
             id,
             method,
-            params: params as Methods[Method]["req"],
+            params: params as Method["req"],
         };
 
         function createErrorResponse(msg: string): ResponseMessage<never> {
@@ -413,32 +404,32 @@ export class WebSocketClient<
     }
 
     // Event subscription
-    on<Event extends keyof Events>(event: Event, handler: EventHandler<Events[Event]>): void {
+    on(event: EventKind, handler: EventHandler<ApiEvents[EventKind]>): void {
         let handlers = this.eventHandlers.get(event);
         if (!handlers) {
             handlers = new Set();
             this.eventHandlers.set(event, handlers);
         }
-        handlers.add(handler as EventHandler<Events[keyof Events]>);
+        handlers.add(handler as EventHandler<ApiEvents[EventKind]>);
     }
 
-    off<Event extends keyof Events>(event: Event, handler: EventHandler<Events[Event]>): void {
+    off<Event extends keyof ApiEvents>(event: Event, handler: EventHandler<ApiEvents[Event]>): void {
         const handlers = this.eventHandlers.get(event);
         if (!handlers) return;
 
         // Remove specific handler
-        handlers.delete(handler as EventHandler<Events[keyof Events]>);
+        handlers.delete(handler as EventHandler<ApiEvents[EventKind]>);
         // If no more handlers for this event, remove the entry
         if (handlers.size === 0) this.eventHandlers.delete(event);
     }
 
     // Server-side subscription management
-    async subscribe<Event extends keyof Events>(event: Event): Promise<ResponseMessage> {
+    async subscribe(event: EventKind): Promise<ResponseMessage> {
         // Track this subscription
         this.serverSubscriptions.add(event);
 
         // Call subscribe on the server
-        const response = await this.call("subscribe" as any, { event } as any);
+        const response = await this.call("subscribe", { event });
 
         if (response.error) {
             this.logger("error", `Failed to subscribe to ${String(event)}: ${response.error.message}`);
@@ -449,12 +440,12 @@ export class WebSocketClient<
         return response;
     }
 
-    async unsubscribe<Event extends keyof Events>(event: Event): Promise<ResponseMessage> {
+    async unsubscribe(event: EventKind): Promise<ResponseMessage> {
         // Remove from tracked subscriptions
         this.serverSubscriptions.delete(event);
 
         // Call unsubscribe on the server
-        const response = await this.call("unsubscribe" as any, { event } as any);
+        const response = await this.call("unsubscribe", { event });
 
         if (response.error) {
             this.logger("error", `Failed to unsubscribe from ${String(event)}: ${response.error.message}`);
@@ -473,7 +464,7 @@ export class WebSocketClient<
         // Resubscribe to all tracked events
         const subscriptions = Array.from(this.serverSubscriptions).map(async (event) => {
             try {
-                const response = await this.call("subscribe" as any, { event } as any);
+                const response = await this.call("subscribe", { event });
 
                 if (response.error) {
                     this.logger("warn", `Failed to resubscribe to ${String(event)}: ${response.error.message}`);

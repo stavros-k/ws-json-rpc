@@ -183,9 +183,7 @@ export function MethodCaller({ methodName, defaultParams = "{}" }: MethodCallerP
                             value={params}
                             onChange={handleParamsChange}
                             className={`absolute inset-0 w-full h-full px-3 py-2 font-mono text-sm rounded border ${
-                                isValidJson
-                                    ? "border-border-primary bg-bg-secondary"
-                                    : "border-red-500 bg-red-500/5"
+                                isValidJson ? "border-border-primary bg-bg-secondary" : "border-red-500 bg-red-500/5"
                             } text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden min-h-10`}
                             placeholder='{"key": "value"}'
                         />
@@ -210,9 +208,7 @@ export function MethodCaller({ methodName, defaultParams = "{}" }: MethodCallerP
                             className='pb-4 border-b border-border-primary last:border-b-0 last:pb-0 animate-slide-down-fade-in'>
                             <div className='flex items-center justify-between mb-2'>
                                 <div className='flex items-center gap-2'>
-                                    <span className='text-xs text-text-tertiary'>
-                                        Result #{results.length - index}
-                                    </span>
+                                    <span className='text-xs text-text-tertiary'>Result #{results.length - index}</span>
                                     <span
                                         className={`text-xs px-2 py-0.5 rounded ${
                                             result.success

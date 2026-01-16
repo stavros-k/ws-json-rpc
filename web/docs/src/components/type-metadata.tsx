@@ -24,8 +24,7 @@ const FORMAT_DESCRIPTIONS: Record<string, Array<string>> = {
 export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
     const hasFields = "fields" in data && data.fields && data.fields.length > 0;
     const hasReferences = "references" in data && data.references && data.references.length > 0;
-    const hasReferencedBy =
-        "referencedBy" in data && data.referencedBy && data.referencedBy.length > 0;
+    const hasReferencedBy = "referencedBy" in data && data.referencedBy && data.referencedBy.length > 0;
     const hasEnumValues = "enumValues" in data && data.enumValues && data.enumValues.length > 0;
     const hasAliasTarget = "aliasTarget" in data && data.aliasTarget;
     const hasMapValueType = "mapValueType" in data && data.mapValueType;
@@ -62,9 +61,7 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
             {/* Enum Values Section */}
             {hasEnumValues && (
                 <div>
-                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>
-                        Possible Values
-                    </h2>
+                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>Possible Values</h2>
                     <div className='space-y-2'>
                         {data.enumValues.map((enumValue) => (
                             <div
@@ -74,9 +71,7 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
                                     {enumValue.value}
                                 </code>
                                 {enumValue.description && (
-                                    <p className='text-sm text-text-tertiary mt-1'>
-                                        {enumValue.description}
-                                    </p>
+                                    <p className='text-sm text-text-tertiary mt-1'>{enumValue.description}</p>
                                 )}
                             </div>
                         ))}
@@ -169,24 +164,20 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
                                     </div>
                                 </div>
                                 {field.description && (
-                                    <p className='text-sm text-text-tertiary mt-2'>
-                                        {field.description}
-                                    </p>
+                                    <p className='text-sm text-text-tertiary mt-2'>{field.description}</p>
                                 )}
-                                {"format" in field &&
-                                    field.format &&
-                                    FORMAT_DESCRIPTIONS[field.format] && (
-                                        <div className='mt-2 p-2 rounded bg-purple-500/5 border border-purple-500/10'>
-                                            <p className='text-xs text-purple-300'>
-                                                {FORMAT_DESCRIPTIONS[field.format].map((line) => (
-                                                    <span key={line}>
-                                                        {line}
-                                                        <br />
-                                                    </span>
-                                                ))}
-                                            </p>
-                                        </div>
-                                    )}
+                                {"format" in field && field.format && FORMAT_DESCRIPTIONS[field.format] && (
+                                    <div className='mt-2 p-2 rounded bg-purple-500/5 border border-purple-500/10'>
+                                        <p className='text-xs text-purple-300'>
+                                            {FORMAT_DESCRIPTIONS[field.format].map((line) => (
+                                                <span key={line}>
+                                                    {line}
+                                                    <br />
+                                                </span>
+                                            ))}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

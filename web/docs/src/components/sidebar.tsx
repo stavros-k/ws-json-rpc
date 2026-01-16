@@ -32,9 +32,7 @@ export const Sidebar = () => {
                             <IoHome className='w-8 h-8 shrink-0' />
                             <div className='flex flex-col'>
                                 <span>{docs.info.title}</span>
-                                <span className='text-xs text-text-muted font-normal'>
-                                    v{docs.info.version}
-                                </span>
+                                <span className='text-xs text-text-muted font-normal'>v{docs.info.version}</span>
                             </div>
                         </Link>
                     </h1>

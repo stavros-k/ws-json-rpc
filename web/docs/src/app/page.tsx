@@ -32,9 +32,7 @@ export default function Home() {
 
             {/* Features Section */}
             <div className='w-full px-6 py-16 lg:px-8'>
-                <h2 className='text-3xl font-bold text-text-primary text-center mb-12'>
-                    Protocol Support
-                </h2>
+                <h2 className='text-3xl font-bold text-text-primary text-center mb-12'>Protocol Support</h2>
                 <div className='grid md:grid-cols-2 gap-8 max-w-6xl mx-auto'>
                     <div className='bg-bg-secondary p-8 rounded-2xl border-2 border-success-border shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300'>
                         <div className='w-14 h-14 bg-protocol-http rounded-xl flex items-center justify-center mb-5 shadow-md'>
@@ -50,9 +48,7 @@ export default function Home() {
                         <div className='w-14 h-14 bg-protocol-ws rounded-xl flex items-center justify-center mb-5 shadow-md'>
                             <MdOutlineBolt className='w-8 h-8 text-text-primary' />
                         </div>
-                        <h3 className='text-2xl font-bold text-text-primary mb-3'>
-                            WebSocket Support
-                        </h3>
+                        <h3 className='text-2xl font-bold text-text-primary mb-3'>WebSocket Support</h3>
                         <p className='text-text-secondary text-base leading-relaxed'>
                             Real-time bidirectional communication with event subscriptions
                         </p>
@@ -63,9 +59,7 @@ export default function Home() {
             {/* Quick Stats */}
             <div className='w-full px-6 py-16 lg:px-8 mb-8'>
                 <div className='w-full px-6 lg:px-8'>
-                    <h2 className='text-3xl font-bold text-text-primary text-center mb-12'>
-                        API Overview
-                    </h2>
+                    <h2 className='text-3xl font-bold text-text-primary text-center mb-12'>API Overview</h2>
                     <div className='grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto'>
                         <Link
                             href='/api/methods'
