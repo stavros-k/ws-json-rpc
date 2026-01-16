@@ -1,8 +1,6 @@
-import type { ApiEvents, EventKind } from "./events";
-import type { ApiMethods, Method, MethodKind } from "./methods";
-
-// Basic types
-type UUID = ReturnType<typeof crypto.randomUUID>;
+import type { APIEvents, EventKind } from "./events";
+import type { APIMethods, MethodKind } from "./methods";
+import type { EventHandler, EventMessage, IncomingMessage, RequestMessage, ResponseMessage } from "./types";
 
 // JSON-RPC error codes (https://www.jsonrpc.org/specification#error_object)
 const RPC_ERROR_CODE = {
@@ -12,41 +10,6 @@ const RPC_ERROR_CODE = {
     INVALID_PARAMS: -32602,
     INTERNAL_ERROR: -32603,
 } as const;
-
-// Base constraint types
-type EventsRecord = Record<string, unknown>;
-
-// Request message sent to the server
-type RequestMessage = {
-    jsonrpc: "2.0";
-    id: UUID;
-    method: MethodKind;
-    params: ApiMethods[MethodKind]["req"];
-};
-
-// Response message with either result or error
-type ResponseMessage<Result = unknown> = {
-    jsonrpc: "2.0";
-    id: UUID;
-} & (
-    | { result: Result; error?: never }
-    | {
-          result?: never;
-          error: { code: number; message: string; data?: unknown };
-      }
-);
-
-// Event message is an object containing the event name and its data
-type EventMessage<Events extends EventsRecord, Event extends keyof Events> = {
-    event: Event;
-    data: Events[Event];
-};
-
-// Incoming message is either a response or an event
-type IncomingMessage<Events extends EventsRecord> = ResponseMessage | EventMessage<Events, keyof Events>;
-
-// Event handler function type
-type EventHandler<T> = (data: T) => void;
 
 // Client options
 export interface WebSocketClientOptions {
@@ -100,7 +63,7 @@ export class WebSocketClient {
     private pendingRequests = new Map<string, PendingRequest>();
 
     // Event handlers - multiple handlers per event
-    private eventHandlers = new Map<EventKind, Set<EventHandler<ApiEvents[EventKind]>>>();
+    private eventHandlers = new Map<EventKind, Set<EventHandler<APIEvents[EventKind]>>>();
     // Track events we've subscribed to on the server (separate from local handlers)
     private serverSubscriptions = new Set<EventKind>();
     private connectionHandlers: {
@@ -245,7 +208,7 @@ export class WebSocketClient {
         if (pendingCount > 0) {
             this.logger("warn", `Rejecting ${pendingCount} pending requests`);
         }
-        for (const [_, pending] of this.pendingRequests) {
+        for (const pending of this.pendingRequests.values()) {
             clearTimeout(pending.timeout);
             pending.reject(new Error("Connection closed"));
         }
@@ -284,7 +247,7 @@ export class WebSocketClient {
         }, delay);
     }
 
-    private handleEvent(message: EventMessage<ApiEvents, EventKind>) {
+    private handleEvent(message: EventMessage) {
         const handlers = this.eventHandlers.get(message.event);
         if (!handlers || handlers.size === 0) {
             this.logger("warn", `No handler registered for event: ${String(message.event)}`);
@@ -315,7 +278,7 @@ export class WebSocketClient {
     // Message handling
     private handleMessage(data: string): void {
         try {
-            const message: IncomingMessage<ApiEvents> = JSON.parse(data, this.jsonReviver);
+            const message: IncomingMessage = JSON.parse(data, this.jsonReviver);
 
             // Handle response
             if ("id" in message) {
@@ -346,22 +309,15 @@ export class WebSocketClient {
         this.ws.send(JSON.stringify(message, this.jsonReplacer));
     }
 
-    // Public API methods
-    // For methods without parameters
-    async call(method: MethodKind): Promise<ResponseMessage<Method["res"]>>;
-
-    // For methods with parameters
-    async call(method: MethodKind, params: Method["req"]): Promise<ResponseMessage<Method["res"]>>;
-
-    // Implementation
-    async call(method: MethodKind, params?: Method["req"]): Promise<ResponseMessage<Method["res"]>> {
+    // Private implementation that accepts all methods
+    private async _call(method: MethodKind, params?: unknown): Promise<ResponseMessage<unknown>> {
         // Handle regular method calls
         const id = crypto.randomUUID();
         const message: RequestMessage = {
             jsonrpc: "2.0",
             id,
             method,
-            params: params as Method["req"],
+            params: params as APIMethods[MethodKind]["req"],
         };
 
         function createErrorResponse(msg: string): ResponseMessage<never> {
@@ -403,33 +359,52 @@ export class WebSocketClient {
         });
     }
 
+    // Public API methods
+    // Exclude subscribe/unsubscribe as they have dedicated methods
+    // For methods without parameters (where req is never)
+    async call<M extends Exclude<MethodKind, "subscribe" | "unsubscribe">>(
+        method: APIMethods[M]["req"] extends never ? M : never
+    ): Promise<ResponseMessage<APIMethods[M]["res"]>>;
+
+    // For methods with parameters
+    async call<M extends Exclude<MethodKind, "subscribe" | "unsubscribe">>(
+        method: M,
+        params: APIMethods[M]["req"]
+    ): Promise<ResponseMessage<APIMethods[M]["res"]>>;
+
+    // Implementation
+    async call(method: MethodKind, params?: unknown): Promise<ResponseMessage<unknown>> {
+        return this._call(method, params);
+    }
+
     // Event subscription
-    on(event: EventKind, handler: EventHandler<ApiEvents[EventKind]>): void {
+    on<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): void {
         let handlers = this.eventHandlers.get(event);
         if (!handlers) {
             handlers = new Set();
             this.eventHandlers.set(event, handlers);
         }
-        handlers.add(handler as EventHandler<ApiEvents[EventKind]>);
+        // Cast needed due to TypeScript variance with Set
+        handlers.add(handler as EventHandler<APIEvents[EventKind]>);
     }
 
-    off<Event extends keyof ApiEvents>(event: Event, handler: EventHandler<ApiEvents[Event]>): void {
+    off<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): void {
         const handlers = this.eventHandlers.get(event);
         if (!handlers) return;
 
-        // Remove specific handler
-        handlers.delete(handler as EventHandler<ApiEvents[EventKind]>);
+        // Cast needed due to TypeScript variance with Set
+        handlers.delete(handler as EventHandler<APIEvents[EventKind]>);
         // If no more handlers for this event, remove the entry
         if (handlers.size === 0) this.eventHandlers.delete(event);
     }
 
     // Server-side subscription management
-    async subscribe(event: EventKind): Promise<ResponseMessage> {
+    async subscribe(event: EventKind): Promise<ResponseMessage<APIMethods["subscribe"]["res"]>> {
         // Track this subscription
         this.serverSubscriptions.add(event);
 
         // Call subscribe on the server
-        const response = await this.call("subscribe", { event });
+        const response = (await this._call("subscribe", { event })) as ResponseMessage<APIMethods["subscribe"]["res"]>;
 
         if (response.error) {
             this.logger("error", `Failed to subscribe to ${String(event)}: ${response.error.message}`);
@@ -440,12 +415,14 @@ export class WebSocketClient {
         return response;
     }
 
-    async unsubscribe(event: EventKind): Promise<ResponseMessage> {
+    async unsubscribe(event: EventKind): Promise<ResponseMessage<APIMethods["unsubscribe"]["res"]>> {
         // Remove from tracked subscriptions
         this.serverSubscriptions.delete(event);
 
         // Call unsubscribe on the server
-        const response = await this.call("unsubscribe", { event });
+        const response = (await this._call("unsubscribe", { event })) as ResponseMessage<
+            APIMethods["unsubscribe"]["res"]
+        >;
 
         if (response.error) {
             this.logger("error", `Failed to unsubscribe from ${String(event)}: ${response.error.message}`);
@@ -464,7 +441,7 @@ export class WebSocketClient {
         // Resubscribe to all tracked events
         const subscriptions = Array.from(this.serverSubscriptions).map(async (event) => {
             try {
-                const response = await this.call("subscribe", { event });
+                const response = await this._call("subscribe", { event });
 
                 if (response.error) {
                     this.logger("warn", `Failed to resubscribe to ${String(event)}: ${response.error.message}`);

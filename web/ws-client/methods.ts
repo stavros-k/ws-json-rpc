@@ -1,8 +1,7 @@
 import type { EventKind } from "./events";
 
-export type MethodKind = keyof ApiMethods;
-export type Method = ApiMethods[MethodKind];
-export type ApiMethods = {
+export type MethodKind = keyof APIMethods;
+export type APIMethods = {
     ping: { req: never; res: PingResult };
     subscribe: { req: SubscribeParams; res: SubscribeResult };
     unsubscribe: { req: UnsubscribeParams; res: UnsubscribeResult };
