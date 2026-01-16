@@ -1,7 +1,7 @@
 export type EventKind = keyof APIEvents;
 export type APIEvents = {
-    "data.created": { data: DataCreatedEvent };
-    "data.deleted": { data: DataDeletedEvent };
+    "data.created": DataCreatedEvent;
+    "data.deleted": DataDeletedEvent;
 };
 
 export type DataCreatedEvent = {

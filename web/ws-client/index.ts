@@ -372,12 +372,17 @@ export class WebSocketClient {
         params: APIMethods[M]["req"]
     ): Promise<ResponseMessage<APIMethods[M]["res"]>>;
 
-    // Implementation
+    /**
+     * Call a method on the server.
+     */
     async call(method: MethodKind, params?: unknown): Promise<ResponseMessage<unknown>> {
         return this._call(method, params);
     }
 
-    // Event subscription
+    /**
+     * Add an event handler.
+     * Will automatically resubscribe if the connection is lost.
+     */
     on<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): void {
         let handlers = this.eventHandlers.get(event);
         if (!handlers) {
@@ -388,9 +393,22 @@ export class WebSocketClient {
         handlers.add(handler as EventHandler<APIEvents[EventKind]>);
     }
 
+    /**
+     * Remove an event handler.
+     */
     off<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): void {
         const handlers = this.eventHandlers.get(event);
         if (!handlers) return;
+
+        if (!handlers.has(handler as EventHandler<APIEvents[EventKind]>)) {
+            const reasons = [
+                "You passed an inline function instead of a bound function, ie `() => {}` vs `myFunction`",
+                "You called off() twice with the same handler",
+                "You never registered the handler with on()",
+            ];
+            this.logger("warn", `Handler not found for event: ${String(event)}. Reasons: ${reasons.join("\n")}`);
+            return;
+        }
 
         // Cast needed due to TypeScript variance with Set
         handlers.delete(handler as EventHandler<APIEvents[EventKind]>);
@@ -398,7 +416,10 @@ export class WebSocketClient {
         if (handlers.size === 0) this.eventHandlers.delete(event);
     }
 
-    // Server-side subscription management
+    /**
+     * Subscribe to an event.
+     * Will automatically resubscribe if the connection is lost.
+     */
     async subscribe(event: EventKind): Promise<ResponseMessage<APIMethods["subscribe"]["res"]>> {
         // Track this subscription
         this.serverSubscriptions.add(event);
@@ -415,9 +436,14 @@ export class WebSocketClient {
         return response;
     }
 
+    /**
+     * Unsubscribe from an event.
+     * Will also remove any handlers for the event.
+     */
     async unsubscribe(event: EventKind): Promise<ResponseMessage<APIMethods["unsubscribe"]["res"]>> {
         // Remove from tracked subscriptions
         this.serverSubscriptions.delete(event);
+        this.eventHandlers.delete(event);
 
         // Call unsubscribe on the server
         const response = (await this._call("unsubscribe", { event })) as ResponseMessage<
@@ -456,28 +482,44 @@ export class WebSocketClient {
         await Promise.allSettled(subscriptions);
     }
 
-    // Connection event handlers
+    /**
+     * Called when the connection is established.
+     */
     onConnect(handler: () => void): void {
         this.connectionHandlers.onConnect = handler;
     }
 
+    /**
+     * Called when the connection is lost.
+     */
     onDisconnect(handler: () => void): void {
         this.connectionHandlers.onDisconnect = handler;
     }
 
+    /**
+     * Called when an error occurs.
+     */
     onError(handler: (error: Event) => void): void {
         this.connectionHandlers.onError = handler;
     }
 
+    /**
+     * Called when a reconnect attempt is made.
+     */
     onReconnectAttempt(handler: (attempt: number) => void): void {
         this.connectionHandlers.onReconnectAttempt = handler;
     }
 
-    // Utility methods
+    /**
+     * Check if the client is connected to the server.
+     */
     get isConnected(): boolean {
         return this.ws?.readyState === WebSocket.OPEN;
     }
 
+    /**
+     * Get the current connection state.
+     */
     get connectionState(): "connecting" | "open" | "closing" | "closed" {
         if (!this.ws) return "closed";
 
