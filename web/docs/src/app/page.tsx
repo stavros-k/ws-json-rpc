@@ -40,12 +40,9 @@ export default function Home() {
                         <div className='w-14 h-14 bg-protocol-http rounded-xl flex items-center justify-center mb-5 shadow-md'>
                             <TbWorld className='w-8 h-8 text-text-primary' />
                         </div>
-                        <h3 className='text-2xl font-bold text-text-primary mb-3'>
-                            HTTP Support
-                        </h3>
+                        <h3 className='text-2xl font-bold text-text-primary mb-3'>HTTP Support</h3>
                         <p className='text-text-secondary text-base leading-relaxed'>
-                            Make JSON-RPC calls over HTTP for simple
-                            request-response patterns
+                            Make JSON-RPC calls over HTTP for simple request-response patterns
                         </p>
                     </div>
 
@@ -57,8 +54,7 @@ export default function Home() {
                             WebSocket Support
                         </h3>
                         <p className='text-text-secondary text-base leading-relaxed'>
-                            Real-time bidirectional communication with event
-                            subscriptions
+                            Real-time bidirectional communication with event subscriptions
                         </p>
                     </div>
                 </div>
@@ -81,9 +77,7 @@ export default function Home() {
                                 <div className='text-xl font-bold text-text-primary group-hover:text-accent-blue transition-colors mb-2'>
                                     Methods
                                 </div>
-                                <p className='text-sm text-text-secondary'>
-                                    Available RPC methods
-                                </p>
+                                <p className='text-sm text-text-secondary'>Available RPC methods</p>
                             </div>
                         </Link>
 
@@ -97,9 +91,7 @@ export default function Home() {
                                 <div className='text-xl font-bold text-text-primary group-hover:text-info-text transition-colors mb-2'>
                                     Events
                                 </div>
-                                <p className='text-sm text-text-secondary'>
-                                    Subscribable events
-                                </p>
+                                <p className='text-sm text-text-secondary'>Subscribable events</p>
                             </div>
                         </Link>
 
@@ -113,9 +105,7 @@ export default function Home() {
                                 <div className='text-xl font-bold text-text-primary group-hover:text-accent-blue-light transition-colors mb-2'>
                                     Types
                                 </div>
-                                <p className='text-sm text-text-secondary'>
-                                    Type definitions
-                                </p>
+                                <p className='text-sm text-text-secondary'>Type definitions</p>
                             </div>
                         </Link>
                     </div>

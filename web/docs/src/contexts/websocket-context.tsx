@@ -25,10 +25,7 @@ function getHost() {
 }
 
 export function WebSocketProvider({ children }: WebSocketProviderProps) {
-    const [client, setClient] = useState<WebSocketClient<
-        ApiMethods,
-        ApiEvents
-    > | null>(null);
+    const [client, setClient] = useState<WebSocketClient<ApiMethods, ApiEvents> | null>(null);
     const [connected, setConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const initializedRef = useRef(false);

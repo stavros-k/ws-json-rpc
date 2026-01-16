@@ -28,9 +28,7 @@ export const CodeThemeToggle = () => {
     useEffect(() => {
         // Track UI theme changes
         const updateUiTheme = () => {
-            const theme = document.documentElement.dataset.theme as
-                | Theme
-                | undefined;
+            const theme = document.documentElement.dataset.theme as Theme | undefined;
             const newTheme = theme || "dark";
             setUiTheme(newTheme);
             // Resolve appropriate code theme when UI theme changes

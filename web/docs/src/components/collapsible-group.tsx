@@ -9,11 +9,7 @@ type CollapsibleGroupProps = {
     defaultOpen?: boolean;
 };
 
-export function CollapsibleGroup({
-    title,
-    children,
-    defaultOpen = true,
-}: CollapsibleGroupProps) {
+export function CollapsibleGroup({ title, children, defaultOpen = true }: CollapsibleGroupProps) {
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
@@ -22,9 +18,7 @@ export function CollapsibleGroup({
                 type='button'
                 onClick={() => setIsOpen(!isOpen)}
                 className='w-full flex items-center justify-between text-2xl font-bold text-text-primary mb-6 pb-3 border-b-2 border-border-primary hover:text-accent-blue hover:border-accent-blue transition-all duration-200 group'>
-                <h2 className='group-hover:scale-105 transition-transform'>
-                    {title}
-                </h2>
+                <h2 className='group-hover:scale-105 transition-transform'>{title}</h2>
                 <span className='text-text-muted group-hover:text-accent-blue transition-colors'>
                     {isOpen ? (
                         <MdExpandLess className='w-7 h-7' />
@@ -60,13 +54,9 @@ export function CollapsibleCard({
                 onClick={() => setIsOpen(!isOpen)}
                 className='w-full bg-bg-tertiary p-5 font-bold cursor-pointer flex justify-between items-center hover:bg-bg-hover text-text-primary transition-colors duration-200 group'>
                 <div className='text-left'>
-                    <div className='group-hover:text-accent-blue transition-colors'>
-                        {title}
-                    </div>
+                    <div className='group-hover:text-accent-blue transition-colors'>{title}</div>
                     {subtitle && (
-                        <div className='text-sm text-text-muted mt-1.5 font-normal'>
-                            {subtitle}
-                        </div>
+                        <div className='text-sm text-text-muted mt-1.5 font-normal'>{subtitle}</div>
                     )}
                 </div>
                 <span className='text-text-muted group-hover:text-accent-blue transition-colors'>

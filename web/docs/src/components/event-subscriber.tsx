@@ -43,17 +43,11 @@ export function EventSubscriber({ eventName }: EventSubscriberProps) {
                 if (!res.error) {
                     setIsSubscribed(true);
                 } else {
-                    console.error(
-                        `[${eventName}] Failed to subscribe:`,
-                        res.error
-                    );
+                    console.error(`[${eventName}] Failed to subscribe:`, res.error);
                 }
             })
             .catch((err) => {
-                console.error(
-                    `[${eventName}] Network or client error while subscribing:`,
-                    err
-                );
+                console.error(`[${eventName}] Network or client error while subscribing:`, err);
             });
 
         // Subscribe to the event - use ref to access current maxResults
@@ -76,16 +70,10 @@ export function EventSubscriber({ eventName }: EventSubscriberProps) {
                     .call("unsubscribe", { event: eventName })
                     .then((res) => {
                         if (!res.error) return;
-                        console.error(
-                            `[${eventName}] Failed to unsubscribe:`,
-                            res.error
-                        );
+                        console.error(`[${eventName}] Failed to unsubscribe:`, res.error);
                     })
                     .catch((err) => {
-                        console.error(
-                            `[${eventName}] Promise rejection while unsubscribing:`,
-                            err
-                        );
+                        console.error(`[${eventName}] Promise rejection while unsubscribing:`, err);
                     });
             }
         };
@@ -111,9 +99,7 @@ export function EventSubscriber({ eventName }: EventSubscriberProps) {
                     {isSubscribed && (
                         <div className='flex items-center gap-1.5'>
                             <div className='w-2 h-2 rounded-full bg-green-500 animate-pulse' />
-                            <span className='text-xs text-text-tertiary'>
-                                Subscribed
-                            </span>
+                            <span className='text-xs text-text-tertiary'>Subscribed</span>
                         </div>
                     )}
                 </div>
@@ -144,9 +130,7 @@ export function EventSubscriber({ eventName }: EventSubscriberProps) {
                                     Event #{events.length - index}
                                 </span>
                                 <span className='text-xs text-text-tertiary'>
-                                    {new Date(
-                                        event.timestamp
-                                    ).toLocaleTimeString()}
+                                    {new Date(event.timestamp).toLocaleTimeString()}
                                 </span>
                             </div>
                             <CodeWrapperClient

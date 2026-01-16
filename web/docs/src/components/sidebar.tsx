@@ -1,13 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { IoHome } from "react-icons/io5";
-import {
-    docs,
-    type EventKeys,
-    type ItemType,
-    type MethodKeys,
-    type TypeKeys,
-} from "@/data/api";
+import { docs, type EventKeys, type ItemType, type MethodKeys, type TypeKeys } from "@/data/api";
 import { AutoSubscribeToggle } from "./auto-subscribe-toggle";
 import { CodeThemeToggle } from "./code-theme-toggle";
 import { ConnectionIndicator } from "./connection-indicator";

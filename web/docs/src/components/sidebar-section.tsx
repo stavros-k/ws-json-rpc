@@ -1,13 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
-import {
-    docs,
-    type EventKeys,
-    type ItemType,
-    type MethodKeys,
-    type TypeKeys,
-} from "@/data/api";
+import { docs, type EventKeys, type ItemType, type MethodKeys, type TypeKeys } from "@/data/api";
 import { groupBy } from "@/data/utils";
 import { getItemData } from "./sidebar";
 import { SidebarGroupCollapsible } from "./sidebar-group-collapsible";
@@ -30,16 +24,9 @@ type SidebarSectionProps = Readonly<{
     overviewHref: Route;
 }>;
 
-export const SidebarSection = ({
-    title,
-    type,
-    overviewHref,
-}: SidebarSectionProps) => {
+export const SidebarSection = ({ title, type, overviewHref }: SidebarSectionProps) => {
     const items = getItems(type);
-    const groupedItems = groupBy(
-        items,
-        (itemName) => getItemData({ type, itemName }).group
-    );
+    const groupedItems = groupBy(items, (itemName) => getItemData({ type, itemName }).group);
 
     const sortedGroups = Object.keys(groupedItems).sort();
 

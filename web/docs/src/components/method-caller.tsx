@@ -18,10 +18,7 @@ type CallResult = {
     error?: string;
 };
 
-export function MethodCaller({
-    methodName,
-    defaultParams = "{}",
-}: MethodCallerProps) {
+export function MethodCaller({ methodName, defaultParams = "{}" }: MethodCallerProps) {
     const { client, connected, error: connectionError } = useWebSocket();
     const { maxResults } = useMaxResults();
     const [params, setParams] = useState(defaultParams);
@@ -153,15 +150,11 @@ export function MethodCaller({
     return (
         <div className='mt-6 p-4 border border-border-primary rounded-lg'>
             <div className='flex items-center justify-between mb-4'>
-                <h3 className='text-lg font-semibold text-text-primary'>
-                    Call Method
-                </h3>
+                <h3 className='text-lg font-semibold text-text-primary'>Call Method</h3>
                 {connected && (
                     <div className='flex items-center gap-1.5'>
                         <div className='w-2 h-2 rounded-full bg-green-500' />
-                        <span className='text-xs text-text-tertiary'>
-                            Connected
-                        </span>
+                        <span className='text-xs text-text-tertiary'>Connected</span>
                     </div>
                 )}
             </div>
@@ -197,11 +190,7 @@ export function MethodCaller({
                             placeholder='{"key": "value"}'
                         />
                     </div>
-                    {!isValidJson && (
-                        <p className='text-xs text-red-500'>
-                            Invalid JSON syntax
-                        </p>
-                    )}
+                    {!isValidJson && <p className='text-xs text-red-500'>Invalid JSON syntax</p>}
                 </div>
             )}
 
@@ -234,9 +223,7 @@ export function MethodCaller({
                                     </span>
                                 </div>
                                 <span className='text-xs text-text-tertiary'>
-                                    {new Date(
-                                        result.timestamp
-                                    ).toLocaleTimeString()}
+                                    {new Date(result.timestamp).toLocaleTimeString()}
                                 </span>
                             </div>
                             {result.error && (
@@ -244,13 +231,12 @@ export function MethodCaller({
                                     {result.error}
                                 </div>
                             )}
-                            {result.data !== null &&
-                                result.data !== undefined && (
-                                    <CodeWrapperClient
-                                        code={JSON.stringify(result.data)}
-                                        lang='json'
-                                    />
-                                )}
+                            {result.data !== null && result.data !== undefined && (
+                                <CodeWrapperClient
+                                    code={JSON.stringify(result.data)}
+                                    lang='json'
+                                />
+                            )}
                         </div>
                     ))
                 ) : (

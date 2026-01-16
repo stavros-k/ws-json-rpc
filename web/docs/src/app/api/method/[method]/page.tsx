@@ -15,9 +15,7 @@ export function generateStaticParams() {
     }));
 }
 
-export async function generateMetadata(
-    props: PageProps<"/api/method/[method]">
-) {
+export async function generateMetadata(props: PageProps<"/api/method/[method]">) {
     const params = await props.params;
     const { method } = params as { method: MethodKeys };
     return {
@@ -34,9 +32,7 @@ export default async function Method(props: PageProps<"/api/method/[method]">) {
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
             <div>
-                <h1 className='text-4xl font-bold mb-3 text-text-primary'>
-                    {method}
-                </h1>
+                <h1 className='text-4xl font-bold mb-3 text-text-primary'>{method}</h1>
                 <h2 className='text-xl text-text-primary mb-4'>{data.title}</h2>
 
                 <Deprecation

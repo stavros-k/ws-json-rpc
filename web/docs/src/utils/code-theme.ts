@@ -118,10 +118,7 @@ const DarkThemes: Record<string, ThemeItem> = {
     "vitesse-dark": { id: "vitesse-dark", label: "Vitesse Dark" },
 };
 
-function getThemesAs(
-    themes: Record<string, ThemeItem>,
-    category: ThemeCategory
-) {
+function getThemesAs(themes: Record<string, ThemeItem>, category: ThemeCategory) {
     const result: Record<string, ThemeItem & { category: ThemeCategory }> = {};
     for (const [id, theme] of Object.entries(themes)) {
         result[id] = {

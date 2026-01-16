@@ -6,11 +6,7 @@ type Props = {
 };
 
 const HeaderRow = ({ children }: Props) => {
-    return (
-        <th className='text-left p-3 text-sm font-semibold text-text-secondary'>
-            {children}
-        </th>
-    );
+    return <th className='text-left p-3 text-sm font-semibold text-text-secondary'>{children}</th>;
 };
 
 const DataRow = ({ children }: Props) => {

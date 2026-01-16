@@ -23,14 +23,10 @@ const FORMAT_DESCRIPTIONS: Record<string, Array<string>> = {
 
 export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
     const hasFields = "fields" in data && data.fields && data.fields.length > 0;
-    const hasReferences =
-        "references" in data && data.references && data.references.length > 0;
+    const hasReferences = "references" in data && data.references && data.references.length > 0;
     const hasReferencedBy =
-        "referencedBy" in data &&
-        data.referencedBy &&
-        data.referencedBy.length > 0;
-    const hasEnumValues =
-        "enumValues" in data && data.enumValues && data.enumValues.length > 0;
+        "referencedBy" in data && data.referencedBy && data.referencedBy.length > 0;
+    const hasEnumValues = "enumValues" in data && data.enumValues && data.enumValues.length > 0;
     const hasAliasTarget = "aliasTarget" in data && data.aliasTarget;
     const hasMapValueType = "mapValueType" in data && data.mapValueType;
 
@@ -54,9 +50,7 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
         <div className='space-y-6'>
             {/* Type Kind Badge */}
             <div className='flex items-center gap-3'>
-                <span className='text-sm font-medium text-text-secondary'>
-                    Kind:
-                </span>
+                <span className='text-sm font-medium text-text-secondary'>Kind:</span>
                 <span
                     className={`px-3 py-1 rounded-md font-mono text-sm font-semibold border ${getBadgeColor(
                         data.kind
@@ -93,12 +87,8 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
             {/* Alias Target Section */}
             {hasAliasTarget && (
                 <div>
-                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>
-                        Alias For
-                    </h2>
-                    <p className='text-sm text-text-tertiary mb-3'>
-                        This type is an alias for:
-                    </p>
+                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>Alias For</h2>
+                    <p className='text-sm text-text-tertiary mb-3'>This type is an alias for:</p>
                     <Link
                         href={`/api/type/${data.aliasTarget}`}
                         className='inline-block px-4 py-2 rounded-md bg-type-alias-bg text-type-alias hover:brightness-110 transition-colors font-mono text-base font-semibold border border-type-alias-border'>
@@ -110,12 +100,8 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
             {/* Map Value Type Section */}
             {hasMapValueType && (
                 <div>
-                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>
-                        Map Value Type
-                    </h2>
-                    <p className='text-sm text-text-tertiary mb-3'>
-                        This map has values of type:
-                    </p>
+                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>Map Value Type</h2>
+                    <p className='text-sm text-text-tertiary mb-3'>This map has values of type:</p>
                     {"mapValueIsRef" in data && data.mapValueIsRef ? (
                         <Link
                             href={`/api/type/${data.mapValueType}`}
@@ -133,9 +119,7 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
             {/* Fields Section (for objects) */}
             {hasFields && (
                 <div>
-                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>
-                        Fields
-                    </h2>
+                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>Fields</h2>
                     <div className='space-y-3'>
                         {data.fields.map((field) => (
                             <div
@@ -194,9 +178,7 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
                                     FORMAT_DESCRIPTIONS[field.format] && (
                                         <div className='mt-2 p-2 rounded bg-purple-500/5 border border-purple-500/10'>
                                             <p className='text-xs text-purple-300'>
-                                                {FORMAT_DESCRIPTIONS[
-                                                    field.format
-                                                ].map((line) => (
+                                                {FORMAT_DESCRIPTIONS[field.format].map((line) => (
                                                     <span key={line}>
                                                         {line}
                                                         <br />
@@ -214,12 +196,8 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
             {/* References Section */}
             {hasReferences && (
                 <div>
-                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>
-                        References
-                    </h2>
-                    <p className='text-sm text-text-tertiary mb-3'>
-                        Types used by {typeName}:
-                    </p>
+                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>References</h2>
+                    <p className='text-sm text-text-tertiary mb-3'>Types used by {typeName}:</p>
                     <div className='flex flex-wrap gap-2'>
                         {data.references.map((ref) => (
                             <Link
@@ -236,12 +214,8 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
             {/* Referenced By Section (Back-references) */}
             {hasReferencedBy && (
                 <div>
-                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>
-                        Referenced By
-                    </h2>
-                    <p className='text-sm text-text-tertiary mb-3'>
-                        Types that use {typeName}:
-                    </p>
+                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>Referenced By</h2>
+                    <p className='text-sm text-text-tertiary mb-3'>Types that use {typeName}:</p>
                     <div className='flex flex-wrap gap-2'>
                         {data.referencedBy.map((ref) => (
                             <Link

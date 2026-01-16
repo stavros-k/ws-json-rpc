@@ -37,9 +37,7 @@ export function FilterControls({ onFilterChange }: FilterControlsProps) {
     return (
         <div className='flex flex-col sm:flex-row sm:items-center gap-6 mb-8 p-4 bg-bg-secondary rounded-xl border-2 border-border-primary'>
             <div className='flex items-center gap-3'>
-                <span className='text-sm text-text-primary font-bold'>
-                    Protocol:
-                </span>
+                <span className='text-sm text-text-primary font-bold'>Protocol:</span>
                 <div className='flex gap-2'>
                     {filterOptions.map((option) => (
                         <button

@@ -14,9 +14,7 @@ export const ThemeToggle = () => {
             document.documentElement.dataset.theme = saved;
         } else {
             // Only use system preference if no saved preference exists
-            const isDark = window.matchMedia(
-                "(prefers-color-scheme: dark)"
-            ).matches;
+            const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
             const systemTheme = isDark ? "dark" : "light";
             setTheme(systemTheme);
             document.documentElement.dataset.theme = systemTheme;

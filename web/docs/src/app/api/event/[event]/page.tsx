@@ -32,9 +32,7 @@ export default async function Event(props: PageProps<"/api/event/[event]">) {
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
             <div>
-                <h1 className='text-4xl font-bold mb-3 text-text-primary'>
-                    {event}
-                </h1>
+                <h1 className='text-4xl font-bold mb-3 text-text-primary'>{event}</h1>
                 <h2 className='text-xl text-text-primary mb-4'>{data.title}</h2>
 
                 <Deprecation

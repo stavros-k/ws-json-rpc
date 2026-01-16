@@ -38,10 +38,7 @@ export function MethodsList() {
     });
 
     // Group filtered methods by their group property
-    const groupedMethods = groupBy(
-        filteredMethods,
-        ([, method]) => method.group
-    );
+    const groupedMethods = groupBy(filteredMethods, ([, method]) => method.group);
 
     return (
         <>

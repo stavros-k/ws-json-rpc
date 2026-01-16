@@ -8,10 +8,7 @@ type SidebarGroupCollapsibleProps = {
     children: React.ReactNode;
 };
 
-export const SidebarGroupCollapsible = ({
-    groupName,
-    children,
-}: SidebarGroupCollapsibleProps) => {
+export const SidebarGroupCollapsible = ({ groupName, children }: SidebarGroupCollapsibleProps) => {
     const [isOpen, setIsOpen] = useState(true);
 
     return (

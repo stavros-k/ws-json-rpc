@@ -8,17 +8,13 @@ type AutoSubscribeContextValue = {
     toggleAutoSubscribe: () => void;
 };
 
-const AutoSubscribeContext = createContext<AutoSubscribeContextValue | null>(
-    null
-);
+const AutoSubscribeContext = createContext<AutoSubscribeContextValue | null>(null);
 
 type AutoSubscribeProviderProps = {
     children: ReactNode;
 };
 
-export function AutoSubscribeProvider({
-    children,
-}: AutoSubscribeProviderProps) {
+export function AutoSubscribeProvider({ children }: AutoSubscribeProviderProps) {
     const [autoSubscribe, setAutoSubscribe] = useState(true);
 
     const toggleAutoSubscribe = () => {
@@ -39,9 +35,7 @@ export function AutoSubscribeProvider({
 export function useAutoSubscribe() {
     const context = useContext(AutoSubscribeContext);
     if (!context) {
-        throw new Error(
-            "useAutoSubscribe must be used within AutoSubscribeProvider"
-        );
+        throw new Error("useAutoSubscribe must be used within AutoSubscribeProvider");
     }
     return context;
 }

@@ -8,10 +8,7 @@ import { CopyButton } from "./copy-button";
 type Props = {
     label: { text: string; href?: Route };
     lang: BundledLanguage;
-} & (
-    | { code: string; noCodeMessage?: never }
-    | { code: string | null; noCodeMessage: string }
-);
+} & ({ code: string; noCodeMessage?: never } | { code: string | null; noCodeMessage: string });
 
 export const CodeWrapper = ({ label, code, lang, noCodeMessage }: Props) => {
     return (

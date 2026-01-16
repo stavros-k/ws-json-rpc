@@ -27,9 +27,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
             <div>
-                <h1 className='text-4xl font-bold mb-3 text-text-primary'>
-                    {type}
-                </h1>
+                <h1 className='text-4xl font-bold mb-3 text-text-primary'>{type}</h1>
 
                 <div className='text-text-tertiary mb-8 pb-6 border-b-2 border-border-primary'>
                     <p>{data.description}</p>
@@ -40,9 +38,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                 tabs={[
                     {
                         title: "Overview",
-                        icon: (
-                            <TbInfoCircle className='w-8 h-8 text-accent-primary' />
-                        ),
+                        icon: <TbInfoCircle className='w-8 h-8 text-accent-primary' />,
                         code: (
                             <TypeMetadata
                                 typeName={type}
@@ -63,9 +59,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                     },
                     {
                         title: "Type Definition",
-                        icon: (
-                            <BsFileEarmarkCode className='w-8 h-8 text-lang-schema' />
-                        ),
+                        icon: <BsFileEarmarkCode className='w-8 h-8 text-lang-schema' />,
                         code: (
                             <CodeWrapper
                                 code={data.typeDefinition}
@@ -87,9 +81,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                     },
                     {
                         title: "TypeScript",
-                        icon: (
-                            <SiTypescript className='w-8 h-8 text-lang-typescript' />
-                        ),
+                        icon: <SiTypescript className='w-8 h-8 text-lang-typescript' />,
                         code: (
                             <CodeWrapper
                                 code={data.tsRepresentation}
@@ -100,9 +92,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                     },
                     {
                         title: "C#",
-                        icon: (
-                            <TbBrandCSharp className='w-8 h-8 text-lang-csharp' />
-                        ),
+                        icon: <TbBrandCSharp className='w-8 h-8 text-lang-csharp' />,
                         code: (
                             <CodeWrapper
                                 code={data.csharpRepresentation}

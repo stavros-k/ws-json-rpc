@@ -15,10 +15,7 @@ type MethodsRecord = Record<string, { req: unknown; res: unknown }>;
 type EventsRecord = Record<string, unknown>;
 
 // Request message sent to the server
-type RequestMessage<
-    Methods extends MethodsRecord,
-    Method extends keyof Methods,
-> = {
+type RequestMessage<Methods extends MethodsRecord, Method extends keyof Methods> = {
     jsonrpc: "2.0";
     id: UUID;
     method: Method;
@@ -44,14 +41,10 @@ type EventMessage<Events extends EventsRecord, Event extends keyof Events> = {
 };
 
 // Incoming message is either a response or an event
-type IncomingMessage<Events extends EventsRecord> =
-    | ResponseMessage
-    | EventMessage<Events, keyof Events>;
+type IncomingMessage<Events extends EventsRecord> = ResponseMessage | EventMessage<Events, keyof Events>;
 
-// Event handlers map
-type EventHandlers<Events extends EventsRecord> = {
-    [Event in keyof Events]?: (data: Events[Event]) => void;
-};
+// Event handler function type
+type EventHandler<T> = (data: T) => void;
 
 // Client options
 export interface WebSocketClientOptions {
@@ -107,8 +100,10 @@ export class WebSocketClient<
     // Request tracking
     private pendingRequests = new Map<string, PendingRequest>();
 
-    // Event handlers
-    private eventHandlers: EventHandlers<Events> = {};
+    // Event handlers - multiple handlers per event
+    private eventHandlers = new Map<keyof Events, Set<EventHandler<Events[keyof Events]>>>();
+    // Track events we've subscribed to on the server (separate from local handlers)
+    private serverSubscriptions = new Set<keyof Events>();
     private connectionHandlers: {
         onConnect?: () => void;
         onDisconnect?: () => void;
@@ -155,10 +150,7 @@ export class WebSocketClient<
         }
     }
 
-    private setupWebSocketHandlers(
-        resolve: () => void,
-        reject: (error: Error) => void
-    ): void {
+    private setupWebSocketHandlers(resolve: () => void, reject: (error: Error) => void): void {
         if (!this.ws) return;
 
         this.ws.onopen = () => {
@@ -167,6 +159,12 @@ export class WebSocketClient<
             this.reconnectAttempts = 0;
             this.logger("info", "Connection established");
             this.connectionHandlers.onConnect?.();
+
+            // Resubscribe to all events (async, don't block connection)
+            this.resubscribeAll().catch((error) => {
+                this.logger("error", `Error during resubscription: ${error}`);
+            });
+
             resolve();
         };
 
@@ -257,10 +255,7 @@ export class WebSocketClient<
 
     private scheduleReconnect(): void {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            this.logger(
-                "warn",
-                `Max reconnect attempts (${this.maxReconnectAttempts}) reached. Giving up.`
-            );
+            this.logger("warn", `Max reconnect attempts (${this.maxReconnectAttempts}) reached. Giving up.`);
             return;
         }
 
@@ -276,44 +271,40 @@ export class WebSocketClient<
         const baseDelay = this.reconnectDelay * 2 ** exponent;
         const delay = Math.min(baseDelay, maxDelay);
 
-        this.logger(
-            "info",
-            `Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`
-        );
+        const msg = `Scheduling reconnect attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`;
+        this.logger("info", msg);
 
         this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null;
             if (!this.isManualClose) {
                 this.connect().catch(() => {
                     // Reconnection failed, will retry if attempts remaining
-                    this.logger(
-                        "warn",
-                        `Reconnect attempt ${this.reconnectAttempts} failed`
-                    );
+                    this.logger("warn", `Reconnect attempt ${this.reconnectAttempts} failed`);
                 });
             }
         }, delay);
     }
 
     private handleEvent(message: EventMessage<Events, keyof Events>) {
-        const handler = this.eventHandlers[message.event];
-        if (!handler) {
-            this.logger(
-                "warn",
-                `No handler registered for event: ${String(message.event)}`
-            );
+        const handlers = this.eventHandlers.get(message.event);
+        if (!handlers || handlers.size === 0) {
+            this.logger("warn", `No handler registered for event: ${String(message.event)}`);
             return;
         }
-        handler(message.data);
+        // Call all handlers for this event
+        for (const handler of handlers) {
+            try {
+                handler(message.data);
+            } catch (error) {
+                this.logger("error", `Error in event handler for ${String(message.event)}: ${error}`);
+            }
+        }
     }
 
     private handleResponse(message: ResponseMessage) {
         const pending = this.pendingRequests.get(message.id);
         if (!pending) {
-            this.logger(
-                "warn",
-                `No pending request found for id: ${message.id}`
-            );
+            this.logger("warn", `No pending request found for id: ${message.id}`);
             return;
         }
         this.pendingRequests.delete(message.id);
@@ -325,10 +316,7 @@ export class WebSocketClient<
     // Message handling
     private handleMessage(data: string): void {
         try {
-            const message: IncomingMessage<Events> = JSON.parse(
-                data,
-                this.jsonReviver
-            );
+            const message: IncomingMessage<Events> = JSON.parse(data, this.jsonReviver);
 
             // Handle response
             if ("id" in message) {
@@ -341,13 +329,9 @@ export class WebSocketClient<
                 this.handleEvent(message);
                 return;
             }
-            this.logger(
-                "warn",
-                `Received invalid message: ${JSON.stringify(message)}`
-            );
+            this.logger("warn", `Received invalid message: ${JSON.stringify(message)}`);
         } catch (error) {
-            const err =
-                error instanceof Error ? error : new Error(String(error));
+            const err = error instanceof Error ? error : new Error(String(error));
             this.logger("error", `Failed to parse message: ${err}`);
             this.onMessageParseError?.(err, data);
         }
@@ -421,10 +405,7 @@ export class WebSocketClient<
             } catch (error) {
                 clearTimeout(timeout);
                 this.pendingRequests.delete(id);
-                const msg =
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to send message";
+                const msg = error instanceof Error ? error.message : "Failed to send message";
                 this.logger("error", `[${String(method)}] ${msg}`);
                 resolve(createErrorResponse(msg));
             }
@@ -432,15 +413,79 @@ export class WebSocketClient<
     }
 
     // Event subscription
-    on<Event extends keyof Events>(
-        event: Event,
-        handler: (data: Events[Event]) => void
-    ): void {
-        this.eventHandlers[event] = handler;
+    on<Event extends keyof Events>(event: Event, handler: EventHandler<Events[Event]>): void {
+        let handlers = this.eventHandlers.get(event);
+        if (!handlers) {
+            handlers = new Set();
+            this.eventHandlers.set(event, handlers);
+        }
+        handlers.add(handler as EventHandler<Events[keyof Events]>);
     }
 
-    off<Event extends keyof Events>(event: Event): void {
-        delete this.eventHandlers[event];
+    off<Event extends keyof Events>(event: Event, handler: EventHandler<Events[Event]>): void {
+        const handlers = this.eventHandlers.get(event);
+        if (!handlers) return;
+
+        // Remove specific handler
+        handlers.delete(handler as EventHandler<Events[keyof Events]>);
+        // If no more handlers for this event, remove the entry
+        if (handlers.size === 0) this.eventHandlers.delete(event);
+    }
+
+    // Server-side subscription management
+    async subscribe<Event extends keyof Events>(event: Event): Promise<ResponseMessage> {
+        // Track this subscription
+        this.serverSubscriptions.add(event);
+
+        // Call subscribe on the server
+        const response = await this.call("subscribe" as any, { event } as any);
+
+        if (response.error) {
+            this.logger("error", `Failed to subscribe to ${String(event)}: ${response.error.message}`);
+        } else {
+            this.logger("debug", `Subscribed to event: ${String(event)}`);
+        }
+
+        return response;
+    }
+
+    async unsubscribe<Event extends keyof Events>(event: Event): Promise<ResponseMessage> {
+        // Remove from tracked subscriptions
+        this.serverSubscriptions.delete(event);
+
+        // Call unsubscribe on the server
+        const response = await this.call("unsubscribe" as any, { event } as any);
+
+        if (response.error) {
+            this.logger("error", `Failed to unsubscribe from ${String(event)}: ${response.error.message}`);
+        } else {
+            this.logger("debug", `Unsubscribed from event: ${String(event)}`);
+        }
+
+        return response;
+    }
+
+    private async resubscribeAll(): Promise<void> {
+        if (this.serverSubscriptions.size === 0) return;
+
+        this.logger("info", `Resubscribing to ${this.serverSubscriptions.size} event(s)`);
+
+        // Resubscribe to all tracked events
+        const subscriptions = Array.from(this.serverSubscriptions).map(async (event) => {
+            try {
+                const response = await this.call("subscribe" as any, { event } as any);
+
+                if (response.error) {
+                    this.logger("warn", `Failed to resubscribe to ${String(event)}: ${response.error.message}`);
+                } else {
+                    this.logger("debug", `Resubscribed to event: ${String(event)}`);
+                }
+            } catch (error) {
+                this.logger("error", `Error resubscribing to ${String(event)}: ${error}`);
+            }
+        });
+
+        await Promise.allSettled(subscriptions);
     }
 
     // Connection event handlers
