@@ -135,11 +135,33 @@
         "SubscribeParams"
       ]
     },
+    "EventKind": {
+      "description": "",
+      "jsonRepresentation": "",
+      "jsonSchema": "",
+      "tsType": "// From rpctypes/coretypes.go\nexport type EventKind = \"data.created\" | \"data.updated\";",
+      "referencedBy": [
+        "SubscribeParams",
+        "UnsubscribeParams"
+      ]
+    },
     "PingResult": {
       "description": "",
       "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
       "jsonSchema": "{\n  \"properties\": {\n    \"message\": {\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
-      "tsType": "// From rpctypes/types.go\nexport type PingResult = {\n    /**\n     * A message describing the result\n     */\n    message: string;\n    /**\n     * The status of the ping\n     */\n    status: PingStatus;\n};"
+      "tsType": "// From rpctypes/types.go\nexport type PingResult = {\n    /**\n     * A message describing the result\n     */\n    message: string;\n    /**\n     * The status of the ping\n     */\n    status: PingStatus;\n};",
+      "references": [
+        "PingStatus"
+      ]
+    },
+    "PingStatus": {
+      "description": "",
+      "jsonRepresentation": "",
+      "jsonSchema": "",
+      "tsType": "// From rpctypes/types.go\nexport type PingStatus = \"error\" | \"success\";",
+      "referencedBy": [
+        "PingResult"
+      ]
     },
     "SubscribeParams": {
       "description": "",
@@ -147,7 +169,8 @@
       "jsonSchema": "{\n  \"properties\": {\n    \"data\": {\n      \"$ref\": \"#/components/schemas/DataCreated\"\n    },\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
       "tsType": "// From rpctypes/types.go\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n    data: DataCreated;\n};",
       "references": [
-        "DataCreated"
+        "DataCreated",
+        "EventKind"
       ]
     },
     "SubscribeResult": {
@@ -160,7 +183,10 @@
       "description": "",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
       "jsonSchema": "{\n  \"properties\": {\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
-      "tsType": "// From rpctypes/types.go\nexport type UnsubscribeParams = {\n    /**\n     * The event topic to unsubscribe from\n     */\n    event: EventKind;\n};"
+      "tsType": "// From rpctypes/types.go\nexport type UnsubscribeParams = {\n    /**\n     * The event topic to unsubscribe from\n     */\n    event: EventKind;\n};",
+      "references": [
+        "EventKind"
+      ]
     },
     "UnsubscribeResult": {
       "description": "",

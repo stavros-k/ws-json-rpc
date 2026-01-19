@@ -2,6 +2,7 @@ package generate
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -292,12 +293,16 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 		g.fatalIfErr(fmt.Errorf("failed to serialize TypeScript AST node: %w", err))
 	}
 
+	// Extract references from TypeScript AST
+	references, err := g.guts.ExtractReferences(name)
+	if err != nil {
+		g.l.Warn("Failed to extract references from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+		references = []string{}
+	}
+
 	// Generate JSON schema from Go type
 	jsonSchema, schemaRef, err := g.getJsonSchema(name, v)
 	g.fatalIfErr(err)
-
-	// Extract references from schema
-	references := g.extractReferencesFromSchema(schemaRef)
 
 	// Create new type docs with JSON instance and schema
 	typeDocs := TypeDocs{
@@ -309,6 +314,70 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 	}
 
 	g.d.Types[name] = typeDocs
+
+	// Recursively register any referenced types that haven't been registered yet
+	for _, refName := range references {
+		if _, exists := g.d.Types[refName]; !exists {
+			g.registerDiscoveredType(refName)
+		}
+	}
+}
+
+// registerDiscoveredType registers a type that was discovered through references
+// but wasn't explicitly registered via AddHandlerType or AddEventType.
+// These types only have TypeScript definitions and possibly JSON schemas from componentSchemas.
+func (g *GeneratorImpl) registerDiscoveredType(name string) {
+	// Check if already registered (prevent infinite recursion)
+	if _, exists := g.d.Types[name]; exists {
+		return
+	}
+
+	g.l.Debug("Registering discovered type", slog.String("type", name))
+
+	// Get TypeScript type from AST
+	tsType, err := g.guts.SerializeNode(name)
+	if err != nil {
+		g.l.Warn("Failed to serialize discovered type", slog.String("type", name), slog.String("error", err.Error()))
+		return
+	}
+
+	// Extract references from this type
+	references, err := g.guts.ExtractReferences(name)
+	if err != nil {
+		g.l.Warn("Failed to extract references from discovered type", slog.String("type", name), slog.String("error", err.Error()))
+		references = []string{}
+	}
+
+	// Try to get JSON schema from componentSchemas
+	var jsonSchema string
+	var description string
+	if schemaRef, exists := g.componentSchemas[name]; exists {
+		description = schemaRef.Value.Description
+		schemaBytes, err := schemaRef.Value.MarshalJSON()
+		if err == nil {
+			var buf bytes.Buffer
+			if err := json.Indent(&buf, schemaBytes, "", "  "); err == nil {
+				jsonSchema = buf.String()
+			}
+		}
+	}
+
+	// Create type docs with available data (no JSON representation since we don't have Go instance)
+	typeDocs := TypeDocs{
+		Description: description,
+		JsonSchema:  jsonSchema,
+		References:  references,
+		TSType:      tsType,
+	}
+
+	g.d.Types[name] = typeDocs
+
+	// Recursively register any referenced types
+	for _, refName := range references {
+		if _, exists := g.d.Types[refName]; !exists {
+			g.registerDiscoveredType(refName)
+		}
+	}
 }
 
 // fatalIfErr logs the error and exits the program if err is not nil.

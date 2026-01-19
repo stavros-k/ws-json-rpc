@@ -3,6 +3,7 @@ package generate
 import (
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/coder/guts"
 	"github.com/coder/guts/bindings"
@@ -88,4 +89,88 @@ func (g *GutsGenerator) SerializeNode(name string) (string, error) {
 	}
 
 	return serializedNode, nil
+}
+
+// ExtractReferences extracts all type references from a TypeScript node.
+// Returns a deduplicated sorted list of referenced type names.
+func (g *GutsGenerator) ExtractReferences(name string) ([]string, error) {
+	node, exists := g.tsParser.Node(name)
+	if !exists {
+		return nil, fmt.Errorf("node %s not found in TypeScript AST", name)
+	}
+
+	refs := make(map[string]struct{})
+	g.collectTypeReferences(node, refs)
+
+	// Convert to sorted slice
+	refList := make([]string, 0, len(refs))
+	for ref := range refs {
+		refList = append(refList, ref)
+	}
+
+	// Sort for deterministic output
+	sort.Strings(refList)
+
+	return refList, nil
+}
+
+// collectTypeReferences recursively collects all type references from a node
+func (g *GutsGenerator) collectTypeReferences(node bindings.Node, refs map[string]struct{}) {
+	switch n := node.(type) {
+	case *bindings.Alias:
+		// Type alias: type Foo = Bar
+		g.collectExpressionTypeReferences(n.Type, refs)
+
+	case *bindings.Interface:
+		// Interface: interface Foo { bar: Bar }
+		for _, field := range n.Fields {
+			g.collectExpressionTypeReferences(field.Type, refs)
+		}
+	}
+}
+
+// collectExpressionTypeReferences recursively collects references from an expression type
+func (g *GutsGenerator) collectExpressionTypeReferences(expr bindings.ExpressionType, refs map[string]struct{}) {
+	if expr == nil {
+		return
+	}
+
+	switch e := expr.(type) {
+	case *bindings.ReferenceType:
+		// Direct reference to another type
+		refs[e.Name.String()] = struct{}{}
+
+		// Check generic arguments
+		for _, arg := range e.Arguments {
+			g.collectExpressionTypeReferences(arg, refs)
+		}
+
+	case *bindings.UnionType:
+		// Union: A | B
+		for _, member := range e.Types {
+			g.collectExpressionTypeReferences(member, refs)
+		}
+
+	case *bindings.TypeIntersection:
+		// Intersection: A & B
+		for _, member := range e.Types {
+			g.collectExpressionTypeReferences(member, refs)
+		}
+
+	case *bindings.ArrayLiteralType:
+		// Array: T[]
+		for _, elem := range e.Elements {
+			g.collectExpressionTypeReferences(elem, refs)
+		}
+
+	case *bindings.TypeLiteralNode:
+		// Inline object: { foo: Bar }
+		for _, member := range e.Members {
+			g.collectExpressionTypeReferences(member.Type, refs)
+		}
+
+	// Primitive types - no references to collect
+	case *bindings.LiteralKeyword:
+	case *bindings.LiteralType:
+	}
 }

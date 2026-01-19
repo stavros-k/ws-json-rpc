@@ -2,11 +2,10 @@
 
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import type { ApiEvents, ApiMethods } from "@/../../artifacts/types";
 import { WebSocketClient } from "@/../../ws-client";
 
 type WebSocketContextValue = {
-    client: WebSocketClient<ApiMethods, ApiEvents> | null;
+    client: WebSocketClient | null;
     connected: boolean;
     error: string | null;
 };
@@ -25,7 +24,7 @@ function getHost() {
 }
 
 export function WebSocketProvider({ children }: WebSocketProviderProps) {
-    const [client, setClient] = useState<WebSocketClient<ApiMethods, ApiEvents> | null>(null);
+    const [client, setClient] = useState<WebSocketClient | null>(null);
     const [connected, setConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const initializedRef = useRef(false);
@@ -40,7 +39,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         const WS_URL = `ws://${getHost()}/ws`;
 
         // Initialize client
-        const newClient = new WebSocketClient<ApiMethods, ApiEvents>({
+        const newClient = new WebSocketClient({
             url: WS_URL,
             clientId: `docs-client-${Date.now()}`,
             reconnectDelay: 1000,
