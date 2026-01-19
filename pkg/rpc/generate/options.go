@@ -6,18 +6,6 @@ import (
 	"sort"
 )
 
-// GoOptions contains options for Go code generation.
-type GoOptions struct {
-	PackageName string   // Go package name
-	OutputFile  string   // Output file path
-	AddImports  []string // Additional imports to include
-}
-
-// TSOptions contains options for TypeScript code generation.
-type TSOptions struct {
-	OutputFile string // Output file path
-}
-
 // MethodMapping represents a method's request/response types for API client type generation.
 type MethodMapping struct {
 	Name       string // Method name (e.g., "user.create")

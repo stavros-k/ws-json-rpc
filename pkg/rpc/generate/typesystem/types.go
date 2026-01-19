@@ -6,9 +6,6 @@ type TypeNode interface {
 	GetDescription() string
 	GetKind() TypeKind
 	GetRawDefinition() string // Returns the raw JSON definition from .type.json
-	ToGoString() (string, error)
-	ToTypeScriptString() (string, error)
-	GetGoImports() []string
 }
 
 // PropertyType represents the type of a property or field.

@@ -1,5 +1,4 @@
 import { BsFileEarmarkCode } from "react-icons/bs";
-import { SiGo, SiTypescript } from "react-icons/si";
 import { TbInfoCircle, TbJson } from "react-icons/tb";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
@@ -64,28 +63,6 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                             <CodeWrapper
                                 code={data.typeDefinition}
                                 lang='json'
-                                label={{ text: type }}
-                            />
-                        ),
-                    },
-                    {
-                        title: "Go",
-                        icon: <SiGo className='w-8 h-8 text-lang-go' />,
-                        code: (
-                            <CodeWrapper
-                                code={data.goRepresentation}
-                                lang='go'
-                                label={{ text: type }}
-                            />
-                        ),
-                    },
-                    {
-                        title: "TypeScript",
-                        icon: <SiTypescript className='w-8 h-8 text-lang-typescript' />,
-                        code: (
-                            <CodeWrapper
-                                code={data.tsRepresentation}
-                                lang='typescript'
                                 label={{ text: type }}
                             />
                         ),

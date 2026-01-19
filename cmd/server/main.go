@@ -227,13 +227,5 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 			Title:       "Local API",
 			Description: "A JSON-RPC API over HTTP and Websockets",
 		},
-		GoOptions: generate.GoOptions{
-			PackageName: "rpcapi",
-			OutputFile:  "internal/rpcapi/types.go",
-			AddImports:  []string{},
-		},
-		TSOptions: generate.TSOptions{
-			OutputFile: "artifacts/types.ts",
-		},
 	})
 }

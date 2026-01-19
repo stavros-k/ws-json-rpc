@@ -98,8 +98,6 @@ html[data-theme="light"] {
     /* Language/Icon Colors */
     --color-lang-json: light-dark(#f59e0b, #fbbf24);
     --color-lang-schema: #6b7280;
-    --color-lang-go: #00add8;
-    --color-lang-typescript: #3178c6;
 
     /* Type System - Enum */
     --color-type-enum: light-dark(#7c3aed, #c084fc);

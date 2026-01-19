@@ -713,8 +713,6 @@ The generator exports rich metadata for documentation in `api_docs.json`:
 - **description** - Type description
 - **typeDefinition** - Raw JSON definition from `.type.json`
 - **jsonRepresentation** - Example JSON instance
-- **goRepresentation** - Generated Go code
-- **tsRepresentation** - Generated TypeScript code
 
 ### Enum Metadata
 

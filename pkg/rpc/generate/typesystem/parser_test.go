@@ -43,45 +43,6 @@ func TestCodeGeneration(t *testing.T) {
 					t.Fatalf("Failed to register type %s: %v", name, err)
 				}
 			}
-
-			// Test Go code generation if expected file exists
-			if tc.hasGoExpected {
-				t.Run("Go", func(t *testing.T) {
-					generated, err := parser.GenerateCompleteGo(testGoPackage)
-					if err != nil {
-						t.Fatalf("Failed to generate Go code: %v", err)
-					}
-
-					expected, err := os.ReadFile(filepath.Join(tc.dir, "expected.go"))
-					if err != nil {
-						t.Fatalf("Failed to read expected Go file: %v", err)
-					}
-
-					if !compareCode(generated, string(expected)) {
-						t.Errorf("Go code mismatch\nExpected:\n%s\n\nGot:\n%s", string(expected), generated)
-					}
-				})
-			}
-
-			// Test TypeScript code generation if expected file exists
-			if tc.hasTSExpected {
-				t.Run("TypeScript", func(t *testing.T) {
-					generated, err := parser.GenerateCompleteTypeScript()
-					if err != nil {
-						t.Fatalf("Failed to generate TypeScript code: %v", err)
-					}
-
-					expected, err := os.ReadFile(filepath.Join(tc.dir, "expected.ts"))
-					if err != nil {
-						t.Fatalf("Failed to read expected TypeScript file: %v", err)
-					}
-
-					if !compareCode(generated, string(expected)) {
-						t.Errorf("TypeScript code mismatch\nExpected:\n%s\n\nGot:\n%s", string(expected), generated)
-					}
-				})
-			}
-
 		})
 	}
 }

@@ -130,255 +130,73 @@
       "description": "A map of event data indexed by event ID",
       "kind": "map",
       "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"map\",\n  \"description\": \"A map of event data indexed by event ID\",\n  \"keyType\": \"string\",\n  \"valueType\": {\n    \"$ref\": \"SomeEvent\"\n  }\n}",
-      "goRepresentation": "package rpcapi\n\n// EventDataMap - A map of event data indexed by event ID\ntype EventDataMap map[string]SomeEvent\n",
-      "tsRepresentation": "// A map of event data indexed by event ID\nexport type EventDataMap = Record<string, SomeEvent>;\n",
-      "mapValueType": "SomeEvent",
-      "mapValueIsRef": true,
-      "references": [
-        "SomeEvent"
-      ]
+      "typeDefinition": "{\n  \"kind\": \"map\",\n  \"description\": \"A map of event data indexed by event ID\",\n  \"keyType\": \"string\",\n  \"valueType\": {\n    \"$ref\": \"SomeEvent\"\n  }\n}"
     },
     "EventKind": {
       "description": "All the available event topics",
       "kind": "enum",
       "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"All the available event topics\",\n  \"values\": [\n    {\n      \"Value\": \"data.created\",\n      \"Description\": \"Data created\"\n    },\n    {\n      \"Value\": \"data.updated\",\n      \"Description\": \"Data updated\"\n    }\n  ]\n}",
-      "goRepresentation": "package rpcapi\n\n// EventKind - All the available event topics\ntype EventKind string\n\nconst (\n\t// Data created\n\tEventKindDataCreated EventKind = \"data.created\"\n\t// Data updated\n\tEventKindDataUpdated EventKind = \"data.updated\"\n)\n\n// Valid returns true if the EventKind value is valid\nfunc (e EventKind) Valid() bool {\n\tswitch e {\n\tcase EventKindDataCreated, EventKindDataUpdated:\n\t\treturn true\n\tdefault:\n\t\treturn false\n\t}\n}\n",
-      "tsRepresentation": "// All the available event topics\nexport const EventKind = {\n  /** Data created */\n  DataCreated: \"data.created\",\n  /** Data updated */\n  DataUpdated: \"data.updated\",\n} as const;\n\nexport type EventKind = typeof EventKind[keyof typeof EventKind];\n\nexport function isEventKind(value: unknown): value is EventKind {\n\tswitch (value) {\n\t\tcase \"data.created\":\n\t\tcase \"data.updated\":\n\t\t\treturn true;\n\t\tdefault:\n\t\t\treturn false;\n\t}\n}\n",
-      "enumValues": [
-        {
-          "value": "data.created",
-          "description": "Data created"
-        },
-        {
-          "value": "data.updated",
-          "description": "Data updated"
-        }
-      ],
-      "referencedBy": [
-        "SubscribeParams",
-        "UnsubscribeParams"
-      ]
+      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"All the available event topics\",\n  \"values\": [\n    {\n      \"Value\": \"data.created\",\n      \"Description\": \"Data created\"\n    },\n    {\n      \"Value\": \"data.updated\",\n      \"Description\": \"Data updated\"\n    }\n  ]\n}"
     },
     "MethodKind": {
       "description": "All the available RPC methods",
       "kind": "enum",
       "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"All the available RPC methods\",\n  \"values\": [\n    {\n      \"Value\": \"ping\",\n      \"Description\": \"Ping\"\n    },\n    {\n      \"Value\": \"subscribe\",\n      \"Description\": \"Subscribe\"\n    },\n    {\n      \"Value\": \"unsubscribe\",\n      \"Description\": \"Unsubscribe\"\n    },\n    {\n      \"Value\": \"user.create\",\n      \"Description\": \"Create user\"\n    },\n    {\n      \"Value\": \"user.update\",\n      \"Description\": \"Update user\"\n    },\n    {\n      \"Value\": \"user.delete\",\n      \"Description\": \"Delete user\"\n    },\n    {\n      \"Value\": \"user.list\",\n      \"Description\": \"List users\"\n    },\n    {\n      \"Value\": \"user.get\",\n      \"Description\": \"Get user\"\n    }\n  ]\n}",
-      "goRepresentation": "package rpcapi\n\n// MethodKind - All the available RPC methods\ntype MethodKind string\n\nconst (\n\t// Ping\n\tMethodKindPing MethodKind = \"ping\"\n\t// Subscribe\n\tMethodKindSubscribe MethodKind = \"subscribe\"\n\t// Unsubscribe\n\tMethodKindUnsubscribe MethodKind = \"unsubscribe\"\n\t// Create user\n\tMethodKindUserCreate MethodKind = \"user.create\"\n\t// Update user\n\tMethodKindUserUpdate MethodKind = \"user.update\"\n\t// Delete user\n\tMethodKindUserDelete MethodKind = \"user.delete\"\n\t// List users\n\tMethodKindUserList MethodKind = \"user.list\"\n\t// Get user\n\tMethodKindUserGet MethodKind = \"user.get\"\n)\n\n// Valid returns true if the MethodKind value is valid\nfunc (e MethodKind) Valid() bool {\n\tswitch e {\n\tcase MethodKindPing, MethodKindSubscribe, MethodKindUnsubscribe, MethodKindUserCreate, MethodKindUserUpdate, MethodKindUserDelete, MethodKindUserList, MethodKindUserGet:\n\t\treturn true\n\tdefault:\n\t\treturn false\n\t}\n}\n",
-      "tsRepresentation": "// All the available RPC methods\nexport const MethodKind = {\n  /** Ping */\n  Ping: \"ping\",\n  /** Subscribe */\n  Subscribe: \"subscribe\",\n  /** Unsubscribe */\n  Unsubscribe: \"unsubscribe\",\n  /** Create user */\n  UserCreate: \"user.create\",\n  /** Update user */\n  UserUpdate: \"user.update\",\n  /** Delete user */\n  UserDelete: \"user.delete\",\n  /** List users */\n  UserList: \"user.list\",\n  /** Get user */\n  UserGet: \"user.get\",\n} as const;\n\nexport type MethodKind = typeof MethodKind[keyof typeof MethodKind];\n\nexport function isMethodKind(value: unknown): value is MethodKind {\n\tswitch (value) {\n\t\tcase \"ping\":\n\t\tcase \"subscribe\":\n\t\tcase \"unsubscribe\":\n\t\tcase \"user.create\":\n\t\tcase \"user.update\":\n\t\tcase \"user.delete\":\n\t\tcase \"user.list\":\n\t\tcase \"user.get\":\n\t\t\treturn true;\n\t\tdefault:\n\t\t\treturn false;\n\t}\n}\n",
-      "enumValues": [
-        {
-          "value": "ping",
-          "description": "Ping"
-        },
-        {
-          "value": "subscribe",
-          "description": "Subscribe"
-        },
-        {
-          "value": "unsubscribe",
-          "description": "Unsubscribe"
-        },
-        {
-          "value": "user.create",
-          "description": "Create user"
-        },
-        {
-          "value": "user.update",
-          "description": "Update user"
-        },
-        {
-          "value": "user.delete",
-          "description": "Delete user"
-        },
-        {
-          "value": "user.list",
-          "description": "List users"
-        },
-        {
-          "value": "user.get",
-          "description": "Get user"
-        }
-      ]
+      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"All the available RPC methods\",\n  \"values\": [\n    {\n      \"Value\": \"ping\",\n      \"Description\": \"Ping\"\n    },\n    {\n      \"Value\": \"subscribe\",\n      \"Description\": \"Subscribe\"\n    },\n    {\n      \"Value\": \"unsubscribe\",\n      \"Description\": \"Unsubscribe\"\n    },\n    {\n      \"Value\": \"user.create\",\n      \"Description\": \"Create user\"\n    },\n    {\n      \"Value\": \"user.update\",\n      \"Description\": \"Update user\"\n    },\n    {\n      \"Value\": \"user.delete\",\n      \"Description\": \"Delete user\"\n    },\n    {\n      \"Value\": \"user.list\",\n      \"Description\": \"List users\"\n    },\n    {\n      \"Value\": \"user.get\",\n      \"Description\": \"Get user\"\n    }\n  ]\n}"
     },
     "PingResult": {
       "description": "Result for the Ping method",
       "kind": "object",
       "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Ping method\",\n  \"fields\": [\n    {\n      \"name\": \"message\",\n      \"description\": \"A message describing the result\",\n      \"type\": \"string\"\n    },\n    {\n      \"name\": \"status\",\n      \"description\": \"The status of the ping\",\n      \"$ref\": \"PingStatus\"\n    }\n  ]\n}",
-      "goRepresentation": "package rpcapi\n\n// PingResult - Result for the Ping method\ntype PingResult struct {\n\t// A message describing the result\n\tMessage string `json:\"message\"`\n\t// The status of the ping\n\tStatus PingStatus `json:\"status\"`\n}\n",
-      "tsRepresentation": "// Result for the Ping method\nexport type PingResult = {\n  /** A message describing the result */\n  message: string;\n  /** The status of the ping */\n  status: PingStatus;\n};\n",
-      "fields": [
-        {
-          "name": "message",
-          "description": "A message describing the result",
-          "type": "string",
-          "optional": false,
-          "nullable": false,
-          "isRef": false
-        },
-        {
-          "name": "status",
-          "description": "The status of the ping",
-          "type": "PingStatus",
-          "optional": false,
-          "nullable": false,
-          "isRef": true,
-          "refTypeName": "PingStatus"
-        }
-      ],
-      "references": [
-        "PingStatus"
-      ],
-      "referencedBy": [
-        "StatusResult"
-      ]
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Ping method\",\n  \"fields\": [\n    {\n      \"name\": \"message\",\n      \"description\": \"A message describing the result\",\n      \"type\": \"string\"\n    },\n    {\n      \"name\": \"status\",\n      \"description\": \"The status of the ping\",\n      \"$ref\": \"PingStatus\"\n    }\n  ]\n}"
     },
     "PingStatus": {
       "description": "Status for the Ping method",
       "kind": "enum",
       "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"Status for the Ping method\",\n  \"values\": [\n    {\n      \"Value\": \"success\",\n      \"Description\": \"Success\"\n    },\n    {\n      \"Value\": \"error\",\n      \"Description\": \"Error\"\n    }\n  ]\n}",
-      "goRepresentation": "package rpcapi\n\n// PingStatus - Status for the Ping method\ntype PingStatus string\n\nconst (\n\t// Success\n\tPingStatusSuccess PingStatus = \"success\"\n\t// Error\n\tPingStatusError PingStatus = \"error\"\n)\n\n// Valid returns true if the PingStatus value is valid\nfunc (e PingStatus) Valid() bool {\n\tswitch e {\n\tcase PingStatusSuccess, PingStatusError:\n\t\treturn true\n\tdefault:\n\t\treturn false\n\t}\n}\n",
-      "tsRepresentation": "// Status for the Ping method\nexport const PingStatus = {\n  /** Success */\n  Success: \"success\",\n  /** Error */\n  Error: \"error\",\n} as const;\n\nexport type PingStatus = typeof PingStatus[keyof typeof PingStatus];\n\nexport function isPingStatus(value: unknown): value is PingStatus {\n\tswitch (value) {\n\t\tcase \"success\":\n\t\tcase \"error\":\n\t\t\treturn true;\n\t\tdefault:\n\t\t\treturn false;\n\t}\n}\n",
-      "enumValues": [
-        {
-          "value": "success",
-          "description": "Success"
-        },
-        {
-          "value": "error",
-          "description": "Error"
-        }
-      ],
-      "referencedBy": [
-        "PingResult"
-      ]
+      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"Status for the Ping method\",\n  \"values\": [\n    {\n      \"Value\": \"success\",\n      \"Description\": \"Success\"\n    },\n    {\n      \"Value\": \"error\",\n      \"Description\": \"Error\"\n    }\n  ]\n}"
     },
     "SomeEvent": {
       "description": "Result for the SomeEvent method",
       "kind": "object",
       "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the SomeEvent method\",\n  \"fields\": [\n    {\n      \"name\": \"id\",\n      \"description\": \"The unique identifier for the result\",\n      \"type\": \"string\",\n      \"format\": \"uuid\"\n    }\n  ]\n}",
-      "goRepresentation": "package rpcapi\n\nimport (\n\t\"github.com/google/uuid\"\n)\n\n// SomeEvent - Result for the SomeEvent method\ntype SomeEvent struct {\n\t// The unique identifier for the result\n\tID uuid.UUID `json:\"id\"`\n}\n",
-      "tsRepresentation": "// Result for the SomeEvent method\nexport type SomeEvent = {\n  /** The unique identifier for the result */\n  id: string;\n};\n",
-      "fields": [
-        {
-          "name": "id",
-          "description": "The unique identifier for the result",
-          "type": "string",
-          "format": "uuid",
-          "optional": false,
-          "nullable": false,
-          "isRef": false
-        }
-      ],
-      "referencedBy": [
-        "EventDataMap"
-      ]
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the SomeEvent method\",\n  \"fields\": [\n    {\n      \"name\": \"id\",\n      \"description\": \"The unique identifier for the result\",\n      \"type\": \"string\",\n      \"format\": \"uuid\"\n    }\n  ]\n}"
     },
     "StatusResult": {
       "description": "Result for the Status method",
       "kind": "alias",
       "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"alias\",\n  \"description\": \"Result for the Status method\",\n  \"target\": {\n    \"$ref\": \"PingResult\"\n  }\n}",
-      "goRepresentation": "package rpcapi\n\n// StatusResult - Result for the Status method\ntype StatusResult PingResult\n",
-      "tsRepresentation": "// Result for the Status method\nexport type StatusResult = PingResult;\n",
-      "aliasTarget": "PingResult",
-      "references": [
-        "PingResult"
-      ]
+      "typeDefinition": "{\n  \"kind\": \"alias\",\n  \"description\": \"Result for the Status method\",\n  \"target\": {\n    \"$ref\": \"PingResult\"\n  }\n}"
     },
     "StringMap": {
       "description": "A map with string values for storing key-value pairs",
       "kind": "map",
       "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"map\",\n  \"description\": \"A map with string values for storing key-value pairs\",\n  \"keyType\": \"string\",\n  \"valueType\": {\n    \"type\": \"string\"\n  }\n}",
-      "goRepresentation": "package rpcapi\n\n// StringMap - A map with string values for storing key-value pairs\ntype StringMap map[string]string\n",
-      "tsRepresentation": "// A map with string values for storing key-value pairs\nexport type StringMap = Record<string, string>;\n",
-      "mapValueType": "string"
+      "typeDefinition": "{\n  \"kind\": \"map\",\n  \"description\": \"A map with string values for storing key-value pairs\",\n  \"keyType\": \"string\",\n  \"valueType\": {\n    \"type\": \"string\"\n  }\n}"
     },
     "SubscribeParams": {
       "description": "Parameters for the Subscribe method",
       "kind": "object",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Parameters for the Subscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"event\",\n      \"description\": \"The event topic to subscribe to\",\n      \"$ref\": \"EventKind\"\n    }\n  ]\n}",
-      "goRepresentation": "package rpcapi\n\n// SubscribeParams - Parameters for the Subscribe method\ntype SubscribeParams struct {\n\t// The event topic to subscribe to\n\tEvent EventKind `json:\"event\"`\n}\n",
-      "tsRepresentation": "// Parameters for the Subscribe method\nexport type SubscribeParams = {\n  /** The event topic to subscribe to */\n  event: EventKind;\n};\n",
-      "fields": [
-        {
-          "name": "event",
-          "description": "The event topic to subscribe to",
-          "type": "EventKind",
-          "optional": false,
-          "nullable": false,
-          "isRef": true,
-          "refTypeName": "EventKind"
-        }
-      ],
-      "references": [
-        "EventKind"
-      ]
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Parameters for the Subscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"event\",\n      \"description\": \"The event topic to subscribe to\",\n      \"$ref\": \"EventKind\"\n    }\n  ]\n}"
     },
     "SubscribeResult": {
       "description": "Result for the Subscribe method",
       "kind": "object",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Subscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"success\",\n      \"description\": \"Whether the subscribe was successful\",\n      \"type\": \"boolean\"\n    }\n  ]\n}",
-      "goRepresentation": "package rpcapi\n\n// SubscribeResult - Result for the Subscribe method\ntype SubscribeResult struct {\n\t// Whether the subscribe was successful\n\tSuccess bool `json:\"success\"`\n}\n",
-      "tsRepresentation": "// Result for the Subscribe method\nexport type SubscribeResult = {\n  /** Whether the subscribe was successful */\n  success: boolean;\n};\n",
-      "fields": [
-        {
-          "name": "success",
-          "description": "Whether the subscribe was successful",
-          "type": "boolean",
-          "optional": false,
-          "nullable": false,
-          "isRef": false
-        }
-      ]
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Subscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"success\",\n      \"description\": \"Whether the subscribe was successful\",\n      \"type\": \"boolean\"\n    }\n  ]\n}"
     },
     "UnsubscribeParams": {
       "description": "Parameters for the Unsubscribe method",
       "kind": "object",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Parameters for the Unsubscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"event\",\n      \"description\": \"The event topic to unsubscribe from\",\n      \"$ref\": \"EventKind\"\n    }\n  ]\n}",
-      "goRepresentation": "package rpcapi\n\n// UnsubscribeParams - Parameters for the Unsubscribe method\ntype UnsubscribeParams struct {\n\t// The event topic to unsubscribe from\n\tEvent EventKind `json:\"event\"`\n}\n",
-      "tsRepresentation": "// Parameters for the Unsubscribe method\nexport type UnsubscribeParams = {\n  /** The event topic to unsubscribe from */\n  event: EventKind;\n};\n",
-      "fields": [
-        {
-          "name": "event",
-          "description": "The event topic to unsubscribe from",
-          "type": "EventKind",
-          "optional": false,
-          "nullable": false,
-          "isRef": true,
-          "refTypeName": "EventKind"
-        }
-      ],
-      "references": [
-        "EventKind"
-      ]
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Parameters for the Unsubscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"event\",\n      \"description\": \"The event topic to unsubscribe from\",\n      \"$ref\": \"EventKind\"\n    }\n  ]\n}"
     },
     "UnsubscribeResult": {
       "description": "Result for the Unsubscribe method",
       "kind": "object",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Unsubscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"success\",\n      \"description\": \"Whether the unsubscribe was successful\",\n      \"type\": \"boolean\"\n    }\n  ]\n}",
-      "goRepresentation": "package rpcapi\n\n// UnsubscribeResult - Result for the Unsubscribe method\ntype UnsubscribeResult struct {\n\t// Whether the unsubscribe was successful\n\tSuccess bool `json:\"success\"`\n}\n",
-      "tsRepresentation": "// Result for the Unsubscribe method\nexport type UnsubscribeResult = {\n  /** Whether the unsubscribe was successful */\n  success: boolean;\n};\n",
-      "fields": [
-        {
-          "name": "success",
-          "description": "Whether the unsubscribe was successful",
-          "type": "boolean",
-          "optional": false,
-          "nullable": false,
-          "isRef": false
-        }
-      ]
+      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Unsubscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"success\",\n      \"description\": \"Whether the unsubscribe was successful\",\n      \"type\": \"boolean\"\n    }\n  ]\n}"
     }
   },
   "databaseSchema": "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (version varchar(128) primary key);\nCREATE TABLE IF NOT EXISTS \"user\" (\n  \"id\" INTEGER PRIMARY KEY,\n  \"name\" TEXT NOT NULL,\n  \"email\" TEXT NOT NULL,\n  \"password\" TEXT NOT NULL,\n  \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, \"last_login\" TIMESTAMP);\n-- Dbmate schema migrations\nINSERT INTO \"schema_migrations\" (version) VALUES\n  ('20251009092116'),\n  ('20251009104248');"

@@ -34,8 +34,6 @@ type GeneratorImpl struct {
 	l                *slog.Logger           // Logger for debugging and error reporting
 	d                *Docs                  // API documentation structure
 	parser           *typesystem.TypeParser // Type system parser
-	goOptions        GoOptions              // Go code generation options
-	tsOptions        TSOptions              // TypeScript code generation options
 	docsFilePath     string                 // Output path for API docs JSON
 	dbSchemaFilePath string                 // Output path for database schema SQL
 	schemasDirectory string                 // Directory containing .type.json files
@@ -47,8 +45,6 @@ type GeneratorOptions struct {
 	DocsFileOutputPath    string      // Path for generated API docs JSON file
 	SchemaFileOutputPath  string      // Path for generated database schema SQL file
 	SchemasInputDirectory string      // Directory containing JSON schema files
-	GoOptions             GoOptions   // Go code generation options
-	TSOptions             TSOptions   // TypeScript code generation options
 	DocsOptions           DocsOptions // Docs options
 }
 
@@ -77,8 +73,6 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 		l:                l.With(slog.String("component", "generator")),
 		d:                NewDocs(opts.DocsOptions),
 		parser:           parser,
-		goOptions:        opts.GoOptions,
-		tsOptions:        opts.TSOptions,
 		docsFilePath:     opts.DocsFileOutputPath,
 		dbSchemaFilePath: opts.SchemaFileOutputPath,
 		schemasDirectory: opts.SchemasInputDirectory,
@@ -146,16 +140,6 @@ func (g *GeneratorImpl) Generate() error {
 	// Compute back-references for all types
 	g.computeBackReferences()
 
-	// Generate and write type files for all languages
-	if err := g.generateTypeFiles(); err != nil {
-		return fmt.Errorf("failed to generate type files: %w", err)
-	}
-
-	// Generate and append TypeScript API mappings to the TypeScript output file
-	if err := g.generateTypeScriptAPIMappings(); err != nil {
-		return fmt.Errorf("failed to generate typescript API mappings: %w", err)
-	}
-
 	// Write API docs to file
 	docsFile, err := os.Create(g.docsFilePath)
 	if err != nil {
@@ -210,91 +194,6 @@ func (g *GeneratorImpl) computeBackReferences() {
 	}
 
 	g.l.Debug("Computed back-references for all types")
-}
-
-// generateTypeFiles generates and writes complete type files for Go, TypeScript, and C#.
-// This uses the parser's complete file generation methods to create properly formatted
-// type definition files with all necessary imports and scaffolding.
-func (g *GeneratorImpl) generateTypeFiles() error {
-	// Generate Go types if output file is configured
-	if g.goOptions.OutputFile != "" {
-		goCode, err := g.parser.GenerateCompleteGo(g.goOptions.PackageName)
-		if err != nil {
-			return fmt.Errorf("failed to generate Go types: %w", err)
-		}
-
-		if err := os.WriteFile(g.goOptions.OutputFile, []byte(goCode), 0644); err != nil {
-			return fmt.Errorf("failed to write Go types file: %w", err)
-		}
-
-		g.l.Info("Go types generated", slog.String("file", g.goOptions.OutputFile))
-	} else {
-		g.l.Info("Skipping Go type generation (no output file configured)")
-	}
-
-	// Generate TypeScript types if output file is configured
-	if g.tsOptions.OutputFile != "" {
-		tsCode, err := g.parser.GenerateCompleteTypeScript()
-		if err != nil {
-			return fmt.Errorf("failed to generate TypeScript types: %w", err)
-		}
-
-		if err := os.WriteFile(g.tsOptions.OutputFile, []byte(tsCode), 0644); err != nil {
-			return fmt.Errorf("failed to write TypeScript types file: %w", err)
-		}
-
-		g.l.Info("TypeScript types generated", slog.String("file", g.tsOptions.OutputFile))
-	} else {
-		g.l.Info("Skipping TypeScript type generation (no output file configured)")
-	}
-
-	return nil
-}
-
-// generateTypeScriptAPIMappings generates and appends TypeScript API mappings to the output file.
-// This creates ApiMethods and ApiEvents types for fully-typed API clients.
-func (g *GeneratorImpl) generateTypeScriptAPIMappings() error {
-	// Skip if no TypeScript output file is configured
-	if g.tsOptions.OutputFile == "" {
-		return nil
-	}
-
-	// Collect method mappings
-	methods := make([]MethodMapping, 0, len(g.d.Methods))
-	for name, method := range g.d.Methods {
-		methods = append(methods, MethodMapping{
-			Name:       name,
-			ParamType:  method.ParamType.Ref,
-			ResultType: method.ResultType.Ref,
-		})
-	}
-
-	// Collect event mappings
-	events := make([]EventMapping, 0, len(g.d.Events))
-	for name, event := range g.d.Events {
-		events = append(events, EventMapping{
-			Name:       name,
-			ResultType: event.ResultType.Ref,
-		})
-	}
-
-	// Generate API mappings
-	mappings := GenerateTypeScriptAPIMappings(methods, events)
-
-	// Append to TypeScript output file
-	f, err := os.OpenFile(g.tsOptions.OutputFile, os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to open typescript file for appending: %w", err)
-	}
-	defer f.Close()
-
-	if _, err := f.WriteString("\n" + mappings); err != nil {
-		return fmt.Errorf("failed to append API mappings to typescript file: %w", err)
-	}
-
-	g.l.Info("TypeScript API mappings generated", slog.String("file", g.tsOptions.OutputFile))
-
-	return nil
 }
 
 // AddEventType registers a WebSocket event with its response type and documentation.
@@ -398,89 +297,12 @@ func (g *GeneratorImpl) registerTypeFromDefinition(name string) error {
 		return fmt.Errorf("type %q not found in parsed schemas", name)
 	}
 
-	// Generate standalone code with package/namespace wrappers
-	tsStr, err := typesystem.ToStandaloneTypeScript(node)
-	if err != nil {
-		return fmt.Errorf("failed to generate typescript for type %q: %w", name, err)
-	}
-
-	goStr, err := typesystem.ToStandaloneGo(node, "rpcapi")
-	if err != nil {
-		return fmt.Errorf("failed to generate go for type %q: %w", name, err)
-	}
-
 	// Extract metadata from type node
 	typeDocs := TypeDocs{
 		Description:        node.GetDescription(),
 		Kind:               string(node.GetKind()),
 		JsonRepresentation: "", // Set later via setTypeJsonInstance
 		TypeDefinition:     node.GetRawDefinition(),
-		GoRepresentation:   goStr,
-		TsRepresentation:   tsStr,
-	}
-
-	// Add type-specific metadata based on node type
-	switch n := node.(type) {
-	case *typesystem.EnumNode:
-		// Add enum values
-		values := n.GetValues()
-		typeDocs.EnumValues = make([]EnumValue, len(values))
-		for i, val := range values {
-			typeDocs.EnumValues[i] = EnumValue{
-				Value:       val.Value,
-				Description: val.Description,
-			}
-		}
-		// Enums have no type references
-		typeDocs.References = []string{}
-
-	case *typesystem.AliasNode:
-		// Add alias target
-		targetType := n.GetTargetType()
-		typeDocs.AliasTarget = targetType
-		// Alias references the target type if it's a reference
-		if n.IsTargetRef() {
-			typeDocs.References = []string{targetType}
-		} else {
-			typeDocs.References = []string{}
-		}
-
-	case *typesystem.MapNode:
-		// Add map metadata
-		typeDocs.MapValueType = n.GetValueType()
-		typeDocs.MapValueIsRef = n.IsValueRef()
-		typeDocs.References = n.GetReferences()
-
-	case *typesystem.ObjectNode:
-		// Add object field metadata
-		tsFields := n.GetFields()
-		typeDocs.Fields = make([]FieldMetadata, len(tsFields))
-		for i, field := range tsFields {
-			// Determine the base type for the field
-			var baseType string
-			if field.Type.Ref != "" {
-				// Reference to another type
-				baseType = field.Type.Ref
-			} else if field.Type.Primitive != "" {
-				// Primitive type (string, number, integer, boolean)
-				baseType = string(field.Type.Primitive)
-			} else {
-				// Fallback: use ToGoType() for complex types (arrays, maps)
-				baseType = field.Type.ToGoType()
-			}
-
-			typeDocs.Fields[i] = FieldMetadata{
-				Name:        field.Name,
-				Description: field.Description,
-				Type:        baseType,
-				Format:      string(field.Type.Format),
-				Optional:    field.Optional,
-				Nullable:    field.Nullable,
-				IsRef:       field.Type.Ref != "",
-				RefTypeName: field.Type.Ref,
-			}
-		}
-		typeDocs.References = n.GetReferences()
 	}
 
 	g.d.Types[name] = typeDocs
@@ -606,8 +428,6 @@ func isNamedStruct(t reflect.Type) bool {
 // Types: {
 //   "PingParams": {
 //     "description": "Parameters for the Ping method",
-//     "goRepresentation": "struct { }", # The string representation of the Go struct
-//     "tsRepresentation": "interface PingParams { }", # The string representation of the TypeScript interface
 //     "jsonRepresentation": "{ }", # The string representation of the JSON object
 //     "jsonSchemaRepresentation": "{ }", # The string representation of the JSON schema
 //     "fields": [ # List of fields with their types and descriptions
@@ -619,12 +439,3 @@ func isNamedStruct(t reflect.Type) bool {
 //     ],
 //   },
 // },
-
-// We might need to keep track of nested types, for example if PingResult has a field of type Status
-// Then the document for the webpage should know that it should also include the Status type in the "types" section
-
-// We can start doing most of the work, and finally when we use our own generator to generate the types, we can then
-// populate the "goRepresentation", "tsRepresentation", fields.
-// jsonRepresentation and jsonSchemaRepresentation can be populated now since we have the schema files.
-
-// We probably shouldn't allow non-$ref types for params and result, to make it easier to generate the types and docs.

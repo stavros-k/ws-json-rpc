@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"ws-json-rpc/pkg/utils"
 )
@@ -388,78 +387,4 @@ func (p *TypeParser) registerArray(name string, def TypeDefinition, rawJSON stri
 // GetRegistry returns the type registry.
 func (p *TypeParser) GetRegistry() *TypeRegistry {
 	return p.registry
-}
-
-// GenerateCompleteGo generates a complete Go file with all types, package declaration, and imports.
-func (p *TypeParser) GenerateCompleteGo(packageName string) (string, error) {
-	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("package %s\n\n", packageName))
-
-	// Collect all imports from all types
-	importsMap := make(map[string]struct{})
-	allTypes := p.registry.GetAll()
-	for _, node := range allTypes {
-		for _, imp := range node.GetGoImports() {
-			importsMap[imp] = struct{}{}
-		}
-	}
-
-	// Write imports if any
-	if len(importsMap) > 0 {
-		imports := make([]string, 0, len(importsMap))
-		for imp := range importsMap {
-			imports = append(imports, imp)
-		}
-		sort.Strings(imports)
-
-		buf.WriteString("import (\n")
-		for _, imp := range imports {
-			buf.WriteString(fmt.Sprintf("\t\"%s\"\n", imp))
-		}
-		buf.WriteString(")\n\n")
-	}
-
-	// Get sorted type names
-	typeNames := make([]string, 0, len(allTypes))
-	for name := range allTypes {
-		typeNames = append(typeNames, name)
-	}
-	sort.Strings(typeNames)
-
-	// Generate all type definitions
-	for _, name := range typeNames {
-		node := allTypes[name]
-		code, err := node.ToGoString()
-		if err != nil {
-			return "", fmt.Errorf("failed to generate Go code for %s: %w", name, err)
-		}
-		buf.WriteString(code)
-		buf.WriteString("\n")
-	}
-
-	return buf.String(), nil
-}
-
-// GenerateCompleteTypeScript generates a complete TypeScript file with all types.
-func (p *TypeParser) GenerateCompleteTypeScript() (string, error) {
-	var buf strings.Builder
-
-	allTypes := p.registry.GetAll()
-	typeNames := make([]string, 0, len(allTypes))
-	for name := range allTypes {
-		typeNames = append(typeNames, name)
-	}
-	sort.Strings(typeNames)
-
-	for _, name := range typeNames {
-		node := allTypes[name]
-		code, err := node.ToTypeScriptString()
-		if err != nil {
-			return "", fmt.Errorf("failed to generate TypeScript code for %s: %w", name, err)
-		}
-		buf.WriteString(code)
-		buf.WriteString("\n")
-	}
-
-	return buf.String(), nil
 }
