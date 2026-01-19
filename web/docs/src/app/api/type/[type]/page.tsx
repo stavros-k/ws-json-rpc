@@ -71,7 +71,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                     },
                     {
                         title: "References",
-                        icon: <TbLink className='w-8 h-8 text-blue-400' />,
+                        icon: <TbLink className='w-8 h-8 text-lang-references' />,
                         code: (
                             <TypeReferences
                                 typeName={type}
