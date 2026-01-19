@@ -36,14 +36,13 @@ type Generator interface {
 // It manages type registration and documentation generation.
 // Types are registered as methods/events are added during server startup.
 type GeneratorImpl struct {
-	l                *slog.Logger                   // Logger for debugging and error reporting
-	d                *Docs                          // API documentation structure
-	schemaGen        *openapi3gen.Generator         // OpenAPI schema generator for JSON schemas
-	componentSchemas openapi3.Schemas               // Shared component schemas for all types
-	schemaRegistry   map[string]*openapi3.SchemaRef // Registry of all generated schemas for reference extraction
-	tsParser         *guts.Typescript               // TypeScript AST parser
-	docsFilePath     string                         // Output path for API docs JSON
-	dbSchemaFilePath string                         // Output path for database schema SQL
+	l                *slog.Logger           // Logger for debugging and error reporting
+	d                *Docs                  // API documentation structure
+	schemaGen        *openapi3gen.Generator // OpenAPI schema generator for JSON schemas
+	componentSchemas openapi3.Schemas       // Shared component schemas for all types
+	tsParser         *guts.Typescript       // TypeScript AST parser
+	docsFilePath     string                 // Output path for API docs JSON
+	dbSchemaFilePath string                 // Output path for database schema SQL
 }
 
 // GeneratorOptions contains all configuration needed to create a Generator.
@@ -84,7 +83,6 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 		d:                NewDocs(opts.DocsOptions),
 		schemaGen:        newOpenAPISchemaGenerator(),
 		componentSchemas: make(openapi3.Schemas),
-		schemaRegistry:   make(map[string]*openapi3.SchemaRef),
 		tsParser:         ts,
 		docsFilePath:     opts.DocsFileOutputPath,
 		dbSchemaFilePath: opts.DatabaseSchemaFileOutputPath,
@@ -299,9 +297,6 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 	// Generate JSON schema from Go type
 	jsonSchema, schemaRef, err := g.getJsonSchema(name, v)
 	g.fatalIfErr(err)
-
-	// Store schema in registry for later reference extraction
-	g.schemaRegistry[name] = schemaRef
 
 	// Extract references from schema
 	references := g.extractReferencesFromSchema(schemaRef)

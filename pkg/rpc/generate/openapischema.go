@@ -1,8 +1,9 @@
 package generate
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
-	"ws-json-rpc/pkg/utils"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3gen"
@@ -58,8 +59,9 @@ func (g *GeneratorImpl) getJsonSchema(name string, v any) (string, *openapi3.Sch
 	if err != nil {
 		return "", nil, err
 	}
-
-	schema := utils.MustFromJSON[map[string]any](schemaBytes)
-	indented, err := utils.ToJSONIndent(schema)
-	return string(indented), resolvedRef, err
+	var buf bytes.Buffer
+	if err := json.Indent(&buf, schemaBytes, "", "  "); err != nil {
+		return "", nil, err
+	}
+	return string(buf.Bytes()), resolvedRef, err
 }
