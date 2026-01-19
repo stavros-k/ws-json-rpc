@@ -57,11 +57,11 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                         ),
                     },
                     {
-                        title: "Type Definition",
+                        title: "JSON Schema",
                         icon: <BsFileEarmarkCode className='w-8 h-8 text-lang-schema' />,
                         code: (
                             <CodeWrapper
-                                code={data.typeDefinition}
+                                code={data.jsonSchema}
                                 lang='json'
                                 label={{ text: type }}
                             />

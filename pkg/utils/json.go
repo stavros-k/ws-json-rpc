@@ -26,6 +26,15 @@ func FromJSONStream[T any](r io.Reader) (T, error) {
 	return result, err
 }
 
+func MustFromJSON[T any](data []byte) T {
+	result, err := FromJSON[T](data)
+	if err != nil {
+		slog.Error("failed to unmarshal JSON", ErrAttr(err))
+		os.Exit(1)
+	}
+	return result
+}
+
 // newJsonEncoder creates a new JSON encoder with the default settings
 func newJsonEncoder(w io.Writer) *json.Encoder {
 	encoder := json.NewEncoder(w)

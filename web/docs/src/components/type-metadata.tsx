@@ -25,89 +25,17 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
     const hasFields = "fields" in data && data.fields && data.fields.length > 0;
     const hasReferences = "references" in data && data.references && data.references.length > 0;
     const hasReferencedBy = "referencedBy" in data && data.referencedBy && data.referencedBy.length > 0;
-    const hasEnumValues = "enumValues" in data && data.enumValues && data.enumValues.length > 0;
-    const hasAliasTarget = "aliasTarget" in data && data.aliasTarget;
-    const hasMapValueType = "mapValueType" in data && data.mapValueType;
-
-    // Get badge color based on kind
-    const getBadgeColor = (kind: string) => {
-        switch (kind) {
-            case "enum":
-                return "bg-type-enum-bg text-type-enum border-type-enum-border";
-            case "object":
-                return "bg-type-object-bg text-type-object border-type-object-border";
-            case "alias":
-                return "bg-type-alias-bg text-type-alias border-type-alias-border";
-            case "map":
-                return "bg-type-map-bg text-type-map border-type-map-border";
-            default:
-                return "bg-gray-500/10 text-gray-400 border-gray-500/20";
-        }
-    };
+    const hasJsonSchema = "jsonSchema" in data && data.jsonSchema;
 
     return (
         <div className='space-y-6'>
-            {/* Type Kind Badge */}
-            <div className='flex items-center gap-3'>
-                <span className='text-sm font-medium text-text-secondary'>Kind:</span>
-                <span
-                    className={`px-3 py-1 rounded-md font-mono text-sm font-semibold border ${getBadgeColor(
-                        data.kind
-                    )}`}>
-                    {data.kind}
-                </span>
-            </div>
-
-            {/* Enum Values Section */}
-            {hasEnumValues && (
+            {/* JSON Schema Section */}
+            {hasJsonSchema && (
                 <div>
-                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>Possible Values</h2>
-                    <div className='space-y-2'>
-                        {data.enumValues.map((enumValue) => (
-                            <div
-                                key={enumValue.value}
-                                className='p-3 rounded-lg bg-background-secondary border border-border-primary'>
-                                <code className='text-base font-mono font-semibold text-type-alias'>
-                                    {enumValue.value}
-                                </code>
-                                {enumValue.description && (
-                                    <p className='text-sm text-text-tertiary mt-1'>{enumValue.description}</p>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Alias Target Section */}
-            {hasAliasTarget && (
-                <div>
-                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>Alias For</h2>
-                    <p className='text-sm text-text-tertiary mb-3'>This type is an alias for:</p>
-                    <Link
-                        href={`/api/type/${data.aliasTarget}`}
-                        className='inline-block px-4 py-2 rounded-md bg-type-alias-bg text-type-alias hover:brightness-110 transition-colors font-mono text-base font-semibold border border-type-alias-border'>
-                        {data.aliasTarget}
-                    </Link>
-                </div>
-            )}
-
-            {/* Map Value Type Section */}
-            {hasMapValueType && (
-                <div>
-                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>Map Value Type</h2>
-                    <p className='text-sm text-text-tertiary mb-3'>This map has values of type:</p>
-                    {"mapValueIsRef" in data && data.mapValueIsRef ? (
-                        <Link
-                            href={`/api/type/${data.mapValueType}`}
-                            className='inline-block px-4 py-2 rounded-md bg-type-map-bg text-type-map hover:brightness-110 transition-colors font-mono text-base font-semibold border border-type-map-border'>
-                            {data.mapValueType}
-                        </Link>
-                    ) : (
-                        <span className='inline-block px-4 py-2 rounded-md bg-type-map-bg text-type-map font-mono text-base font-semibold border border-type-map-border'>
-                            {data.mapValueType}
-                        </span>
-                    )}
+                    <h2 className='text-xl font-semibold mb-4 text-text-primary'>JSON Schema</h2>
+                    <pre className='p-4 rounded-lg bg-background-secondary border border-border-primary overflow-x-auto'>
+                        <code className='text-sm text-text-secondary'>{JSON.stringify(JSON.parse(data.jsonSchema), null, 2)}</code>
+                    </pre>
                 </div>
             )}
 
@@ -221,16 +149,11 @@ export function TypeMetadata({ typeName, data }: TypeMetadataProps) {
             )}
 
             {/* Empty State */}
-            {!hasEnumValues &&
-                !hasAliasTarget &&
-                !hasMapValueType &&
-                !hasFields &&
-                !hasReferences &&
-                !hasReferencedBy && (
-                    <div className='text-center py-8 text-text-tertiary'>
-                        <p>No additional metadata available for this type.</p>
-                    </div>
-                )}
+            {!hasJsonSchema && !hasFields && !hasReferences && !hasReferencedBy && (
+                <div className='text-center py-8 text-text-tertiary'>
+                    <p>No additional metadata available for this type.</p>
+                </div>
+            )}
         </div>
     );
 }

@@ -10,6 +10,9 @@ import (
 	"slices"
 	"sort"
 	"time"
+
+	"github.com/getkin/kin-openapi/openapi3gen"
+
 	"ws-json-rpc/internal/database/sqlite"
 	"ws-json-rpc/pkg/database"
 	"ws-json-rpc/pkg/utils"
@@ -30,10 +33,11 @@ type Generator interface {
 // It manages type registration and documentation generation.
 // Types are registered as methods/events are added during server startup.
 type GeneratorImpl struct {
-	l                *slog.Logger // Logger for debugging and error reporting
-	d                *Docs        // API documentation structure
-	docsFilePath     string       // Output path for API docs JSON
-	dbSchemaFilePath string       // Output path for database schema SQL
+	l                *slog.Logger           // Logger for debugging and error reporting
+	d                *Docs                  // API documentation structure
+	schemaGen        *openapi3gen.Generator // OpenAPI schema generator for JSON schemas
+	docsFilePath     string                 // Output path for API docs JSON
+	dbSchemaFilePath string                 // Output path for database schema SQL
 }
 
 // GeneratorOptions contains all configuration needed to create a Generator.
@@ -61,6 +65,7 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 	g := &GeneratorImpl{
 		l:                l.With(slog.String("component", "generator")),
 		d:                NewDocs(opts.DocsOptions),
+		schemaGen:        openapi3gen.NewGenerator(),
 		docsFilePath:     opts.DocsFileOutputPath,
 		dbSchemaFilePath: opts.DatabaseSchemaFileOutputPath,
 	}
@@ -247,9 +252,9 @@ func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs Meth
 	g.d.Methods[name] = docs
 }
 
-// registerType registers a type with its JSON instance.
+// registerType registers a type with its JSON instance and JSON schema.
 // Creates a new type entry if it doesn't exist, or updates an existing one.
-// JSON schema and field metadata will be populated later via type parsing.
+// Field metadata and references will be populated later via type parsing.
 func (g *GeneratorImpl) registerType(name string, v any) {
 	if name == "null" {
 		return
@@ -266,15 +271,38 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 
 	g.l.Debug("Registering type", slog.String("type", name))
 
-	// Create new type docs with JSON instance
-	// Description, JsonSchema, Fields, and References will be populated during type parsing
+	// Generate JSON schema from Go type
+	jsonSchema, err := g.getJsonSchema(name, v)
+	g.fatalIfErr(fmt.Errorf("failed to generate JSON schema for type %s: %w", name, err))
+
+	// Create new type docs with JSON instance and schema
+	// Description, Fields, and References will be populated during type parsing
 	typeDocs := TypeDocs{
 		Description:        "",
 		JsonRepresentation: string(utils.MustToJSONIndent(v)),
-		JsonSchema:         "", // Will be generated from Go type using kin-openapi
+		JsonSchema:         jsonSchema,
 	}
 
 	g.d.Types[name] = typeDocs
+}
+
+func (g *GeneratorImpl) getJsonSchema(name string, v any) (string, error) {
+	schemaRef, err := g.schemaGen.NewSchemaRefForValue(v, nil)
+	if err != nil {
+		g.l.Warn("Failed to generate JSON schema for type", slog.String("type", name), utils.ErrAttr(err))
+		// Continue without schema rather than failing
+	}
+
+	if schemaRef == nil || schemaRef.Value == nil {
+		return "", nil
+	}
+	schemaBytes, err := schemaRef.Value.MarshalJSON()
+	if err != nil {
+		return "", err
+	}
+	schema := utils.MustFromJSON[map[string]any](schemaBytes)
+	indented, err := utils.ToJSONIndent(schema)
+	return string(indented), err
 }
 
 // fatalIfErr logs the error and exits the program if err is not nil.

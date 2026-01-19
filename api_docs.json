@@ -126,77 +126,35 @@
     }
   },
   "types": {
-    "EventDataMap": {
-      "description": "A map of event data indexed by event ID",
-      "kind": "map",
-      "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"map\",\n  \"description\": \"A map of event data indexed by event ID\",\n  \"keyType\": \"string\",\n  \"valueType\": {\n    \"$ref\": \"SomeEvent\"\n  }\n}"
-    },
-    "EventKind": {
-      "description": "All the available event topics",
-      "kind": "enum",
-      "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"All the available event topics\",\n  \"values\": [\n    {\n      \"Value\": \"data.created\",\n      \"Description\": \"Data created\"\n    },\n    {\n      \"Value\": \"data.updated\",\n      \"Description\": \"Data updated\"\n    }\n  ]\n}"
-    },
-    "MethodKind": {
-      "description": "All the available RPC methods",
-      "kind": "enum",
-      "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"All the available RPC methods\",\n  \"values\": [\n    {\n      \"Value\": \"ping\",\n      \"Description\": \"Ping\"\n    },\n    {\n      \"Value\": \"subscribe\",\n      \"Description\": \"Subscribe\"\n    },\n    {\n      \"Value\": \"unsubscribe\",\n      \"Description\": \"Unsubscribe\"\n    },\n    {\n      \"Value\": \"user.create\",\n      \"Description\": \"Create user\"\n    },\n    {\n      \"Value\": \"user.update\",\n      \"Description\": \"Update user\"\n    },\n    {\n      \"Value\": \"user.delete\",\n      \"Description\": \"Delete user\"\n    },\n    {\n      \"Value\": \"user.list\",\n      \"Description\": \"List users\"\n    },\n    {\n      \"Value\": \"user.get\",\n      \"Description\": \"Get user\"\n    }\n  ]\n}"
-    },
     "PingResult": {
-      "description": "Result for the Ping method",
-      "kind": "object",
+      "description": "",
       "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Ping method\",\n  \"fields\": [\n    {\n      \"name\": \"message\",\n      \"description\": \"A message describing the result\",\n      \"type\": \"string\"\n    },\n    {\n      \"name\": \"status\",\n      \"description\": \"The status of the ping\",\n      \"$ref\": \"PingStatus\"\n    }\n  ]\n}"
-    },
-    "PingStatus": {
-      "description": "Status for the Ping method",
-      "kind": "enum",
-      "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"enum\",\n  \"description\": \"Status for the Ping method\",\n  \"values\": [\n    {\n      \"Value\": \"success\",\n      \"Description\": \"Success\"\n    },\n    {\n      \"Value\": \"error\",\n      \"Description\": \"Error\"\n    }\n  ]\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"message\": {\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}"
     },
     "SomeEvent": {
-      "description": "Result for the SomeEvent method",
-      "kind": "object",
+      "description": "",
       "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the SomeEvent method\",\n  \"fields\": [\n    {\n      \"name\": \"id\",\n      \"description\": \"The unique identifier for the result\",\n      \"type\": \"string\",\n      \"format\": \"uuid\"\n    }\n  ]\n}"
-    },
-    "StatusResult": {
-      "description": "Result for the Status method",
-      "kind": "alias",
-      "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"alias\",\n  \"description\": \"Result for the Status method\",\n  \"target\": {\n    \"$ref\": \"PingResult\"\n  }\n}"
-    },
-    "StringMap": {
-      "description": "A map with string values for storing key-value pairs",
-      "kind": "map",
-      "jsonRepresentation": "",
-      "typeDefinition": "{\n  \"kind\": \"map\",\n  \"description\": \"A map with string values for storing key-value pairs\",\n  \"keyType\": \"string\",\n  \"valueType\": {\n    \"type\": \"string\"\n  }\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"id\": {}\n  },\n  \"type\": \"object\"\n}"
     },
     "SubscribeParams": {
-      "description": "Parameters for the Subscribe method",
-      "kind": "object",
+      "description": "",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Parameters for the Subscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"event\",\n      \"description\": \"The event topic to subscribe to\",\n      \"$ref\": \"EventKind\"\n    }\n  ]\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}"
     },
     "SubscribeResult": {
-      "description": "Result for the Subscribe method",
-      "kind": "object",
+      "description": "",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Subscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"success\",\n      \"description\": \"Whether the subscribe was successful\",\n      \"type\": \"boolean\"\n    }\n  ]\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"success\": {\n      \"type\": \"boolean\"\n    }\n  },\n  \"type\": \"object\"\n}"
     },
     "UnsubscribeParams": {
-      "description": "Parameters for the Unsubscribe method",
-      "kind": "object",
+      "description": "",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Parameters for the Unsubscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"event\",\n      \"description\": \"The event topic to unsubscribe from\",\n      \"$ref\": \"EventKind\"\n    }\n  ]\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}"
     },
     "UnsubscribeResult": {
-      "description": "Result for the Unsubscribe method",
-      "kind": "object",
+      "description": "",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "typeDefinition": "{\n  \"kind\": \"object\",\n  \"description\": \"Result for the Unsubscribe method\",\n  \"fields\": [\n    {\n      \"name\": \"success\",\n      \"description\": \"Whether the unsubscribe was successful\",\n      \"type\": \"boolean\"\n    }\n  ]\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"success\": {\n      \"type\": \"boolean\"\n    }\n  },\n  \"type\": \"object\"\n}"
     }
   },
   "databaseSchema": "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (version varchar(128) primary key);\nCREATE TABLE IF NOT EXISTS \"user\" (\n  \"id\" INTEGER PRIMARY KEY,\n  \"name\" TEXT NOT NULL,\n  \"email\" TEXT NOT NULL,\n  \"password\" TEXT NOT NULL,\n  \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, \"last_login\" TIMESTAMP);\n-- Dbmate schema migrations\nINSERT INTO \"schema_migrations\" (version) VALUES\n  ('20251009092116'),\n  ('20251009104248');"
