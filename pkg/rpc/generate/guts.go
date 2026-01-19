@@ -5,8 +5,29 @@ import (
 	"os"
 
 	"github.com/coder/guts"
+	"github.com/coder/guts/bindings"
 	"github.com/coder/guts/config"
 )
+
+type GutsGenerator struct {
+	tsParser *guts.Typescript
+	vm       *bindings.Bindings
+}
+
+func NewGutsGenerator(goTypesDirPath string) (*GutsGenerator, error) {
+	var err error
+
+	gutsGenerator := &GutsGenerator{}
+	gutsGenerator.vm, err = bindings.New()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create bindings VM: %w", err)
+	}
+	gutsGenerator.tsParser, err = newTypescriptASTFromGoTypesDir(goTypesDirPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create TypeScript AST from go types dir: %w", err)
+	}
+	return gutsGenerator, nil
+}
 
 func newTypescriptASTFromGoTypesDir(goTypesDirPath string) (*guts.Typescript, error) {
 	// Initialize guts Go parser
@@ -38,7 +59,7 @@ func newTypescriptASTFromGoTypesDir(goTypesDirPath string) (*guts.Typescript, er
 	return ts, nil
 }
 
-func writeTypescriptASTToFile(ts *guts.Typescript, filePath string) error {
+func (g *GutsGenerator) WriteTypescriptASTToFile(ts *guts.Typescript, filePath string) error {
 	str, err := ts.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize TypeScript AST: %w", err)
@@ -48,4 +69,27 @@ func writeTypescriptASTToFile(ts *guts.Typescript, filePath string) error {
 		return fmt.Errorf("failed to write TypeScript AST to file: %w", err)
 	}
 	return nil
+}
+
+func (g *GutsGenerator) SerializeNode(name string) (string, error) {
+	node, exists := g.tsParser.Node(name)
+	if !exists {
+		return "", fmt.Errorf("node %s not found in TypeScript AST", name)
+	}
+	vm, err := bindings.New()
+	if err != nil {
+		return "", fmt.Errorf("failed to create bindings VM: %w", err)
+	}
+
+	typescriptNode, err := vm.ToTypescriptNode(node)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert node to TypeScript: %w", err)
+	}
+
+	serializedNode, err := vm.SerializeToTypescript(typescriptNode)
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize node to TypeScript: %w", err)
+	}
+
+	return serializedNode, nil
 }

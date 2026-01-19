@@ -1,5 +1,5 @@
 import { BsFileEarmarkCode } from "react-icons/bs";
-import { TbJson, TbLink } from "react-icons/tb";
+import { TbJson, TbLink, TbBrandTypescript } from "react-icons/tb";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
 import { TypeReferences } from "@/components/type-references";
@@ -59,9 +59,25 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                         ),
                     },
                     {
+                        title: "TypeScript",
+                        icon: <TbBrandTypescript className='w-8 h-8 text-lang-ts' />,
+                        code: (
+                            <CodeWrapper
+                                code={data.tsType}
+                                lang='typescript'
+                                label={{ text: type }}
+                            />
+                        ),
+                    },
+                    {
                         title: "References",
                         icon: <TbLink className='w-8 h-8 text-blue-400' />,
-                        code: <TypeReferences typeName={type} data={data} />,
+                        code: (
+                            <TypeReferences
+                                typeName={type}
+                                data={data}
+                            />
+                        ),
                     },
                 ]}
             />

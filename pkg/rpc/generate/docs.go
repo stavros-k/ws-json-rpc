@@ -17,6 +17,7 @@ type TypeDocs struct {
 	Description        string   `json:"description"`            // Human-readable type description
 	JsonRepresentation string   `json:"jsonRepresentation"`     // Example JSON instance
 	JsonSchema         string   `json:"jsonSchema"`             // JSON Schema generated from Go type
+	TSType             string   `json:"tsType"`                 // TypeScript type definition
 	References         []string `json:"references,omitempty"`   // Types this type references
 	ReferencedBy       []string `json:"referencedBy,omitempty"` // Types that reference this type (computed)
 }

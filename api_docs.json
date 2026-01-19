@@ -130,6 +130,7 @@
       "description": "User account information",
       "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
       "jsonSchema": "{\n  \"description\": \"User account information\",\n  \"properties\": {\n    \"id\": {}\n  },\n  \"type\": \"object\"\n}",
+      "tsType": "// From rpctypes/types.go\nexport type DataCreated = {\n    /**\n     * The unique identifier for the result\n     */\n    // this is likely an enum in an external package \"github.com/google/uuid.UUID\"\n    id: string;\n};",
       "referencedBy": [
         "SubscribeParams"
       ]
@@ -137,12 +138,14 @@
     "PingResult": {
       "description": "",
       "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"message\": {\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"message\": {\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
+      "tsType": "// From rpctypes/types.go\nexport type PingResult = {\n    /**\n     * A message describing the result\n     */\n    message: string;\n    /**\n     * The status of the ping\n     */\n    status: PingStatus;\n};"
     },
     "SubscribeParams": {
       "description": "",
       "jsonRepresentation": "{\n  \"event\": \"\",\n  \"data\": {\n    \"id\": \"00000000-0000-0000-0000-000000000000\"\n  }\n}",
       "jsonSchema": "{\n  \"properties\": {\n    \"data\": {\n      \"$ref\": \"#/components/schemas/DataCreated\"\n    },\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
+      "tsType": "// From rpctypes/types.go\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n    data: DataCreated;\n};",
       "references": [
         "DataCreated"
       ]
@@ -150,17 +153,20 @@
     "SubscribeResult": {
       "description": "",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"success\": {\n      \"type\": \"boolean\"\n    }\n  },\n  \"type\": \"object\"\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"success\": {\n      \"type\": \"boolean\"\n    }\n  },\n  \"type\": \"object\"\n}",
+      "tsType": "// From rpctypes/types.go\nexport type SubscribeResult = {\n    /**\n     * Whether the subscribe was successful\n     */\n    success: boolean;\n};"
     },
     "UnsubscribeParams": {
       "description": "",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
+      "tsType": "// From rpctypes/types.go\nexport type UnsubscribeParams = {\n    /**\n     * The event topic to unsubscribe from\n     */\n    event: EventKind;\n};"
     },
     "UnsubscribeResult": {
       "description": "",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"success\": {\n      \"type\": \"boolean\"\n    }\n  },\n  \"type\": \"object\"\n}"
+      "jsonSchema": "{\n  \"properties\": {\n    \"success\": {\n      \"type\": \"boolean\"\n    }\n  },\n  \"type\": \"object\"\n}",
+      "tsType": "// From rpctypes/types.go\nexport type UnsubscribeResult = {\n    /**\n     * Whether the unsubscribe was successful\n     */\n    success: boolean;\n};"
     }
   },
   "databaseSchema": "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (version varchar(128) primary key);\nCREATE TABLE IF NOT EXISTS \"user\" (\n  \"id\" INTEGER PRIMARY KEY,\n  \"name\" TEXT NOT NULL,\n  \"email\" TEXT NOT NULL,\n  \"password\" TEXT NOT NULL,\n  \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, \"last_login\" TIMESTAMP);\n-- Dbmate schema migrations\nINSERT INTO \"schema_migrations\" (version) VALUES\n  ('20251009092116'),\n  ('20251009104248');"
