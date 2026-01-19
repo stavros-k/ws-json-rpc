@@ -220,9 +220,8 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 		return &generate.MockGenerator{}, nil
 	}
 	return generate.NewGenerator(logger, generate.GeneratorOptions{
-		DocsFileOutputPath:    "api_docs.json",
-		SchemaFileOutputPath:  "schema.sql",
-		SchemasInputDirectory: "schemas",
+		DocsFileOutputPath:   "api_docs.json",
+		DatabaseSchemaFileOutputPath: "schema.sql",
 		DocsOptions: generate.DocsOptions{
 			Title:       "Local API",
 			Description: "A JSON-RPC API over HTTP and Websockets",

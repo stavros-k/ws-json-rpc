@@ -36,16 +36,14 @@ type GeneratorImpl struct {
 	parser           *typesystem.TypeParser // Type system parser
 	docsFilePath     string                 // Output path for API docs JSON
 	dbSchemaFilePath string                 // Output path for database schema SQL
-	schemasDirectory string                 // Directory containing .type.json files
 }
 
 // GeneratorOptions contains all configuration needed to create a Generator.
 // All paths must be provided for the generator to function properly.
 type GeneratorOptions struct {
-	DocsFileOutputPath    string      // Path for generated API docs JSON file
-	SchemaFileOutputPath  string      // Path for generated database schema SQL file
-	SchemasInputDirectory string      // Directory containing JSON schema files
-	DocsOptions           DocsOptions // Docs options
+	DocsFileOutputPath           string      // Path for generated API docs JSON file
+	DatabaseSchemaFileOutputPath string      // Path for generated database schema SQL file
+	DocsOptions                  DocsOptions // Docs options
 }
 
 // NewGenerator creates a new Generator instance with the given options.
@@ -53,18 +51,14 @@ type GeneratorOptions struct {
 // 1. Validates all required options are provided
 // 2. Creates a schema parser
 // 3. Parses all JSON schema files
-// 4. Registers all types from schemas (generating Go/TS/C# code, but not JSON instances)
 //
 // JSON instance representations are added later when methods/events are registered.
 func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 	if opts.DocsFileOutputPath == "" {
 		return nil, fmt.Errorf("docs file path is required")
 	}
-	if opts.SchemaFileOutputPath == "" {
+	if opts.DatabaseSchemaFileOutputPath == "" {
 		return nil, fmt.Errorf("schema file path is required")
-	}
-	if opts.SchemasInputDirectory == "" {
-		return nil, fmt.Errorf("schemas directory is required")
 	}
 
 	parser := typesystem.NewTypeParser(l)
@@ -74,13 +68,7 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 		d:                NewDocs(opts.DocsOptions),
 		parser:           parser,
 		docsFilePath:     opts.DocsFileOutputPath,
-		dbSchemaFilePath: opts.SchemaFileOutputPath,
-		schemasDirectory: opts.SchemasInputDirectory,
-	}
-
-	// Parse all .type.json files and register types immediately
-	if err := parser.ParseDirectory(opts.SchemasInputDirectory); err != nil {
-		return nil, fmt.Errorf("failed to parse schemas: %w", err)
+		dbSchemaFilePath: opts.DatabaseSchemaFileOutputPath,
 	}
 
 	// Register all parsed types from definitions
