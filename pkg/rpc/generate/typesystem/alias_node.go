@@ -106,21 +106,3 @@ func (a *AliasNode) ToTypeScriptString() (string, error) {
 
 	return buf.String(), nil
 }
-
-// ToCSharpString generates C# code for the alias type.
-func (a *AliasNode) ToCSharpString() (string, error) {
-	var buf bytes.Buffer
-
-	// Convert name to proper C# naming conventions (PascalCase)
-	csName := utils.ToPascalCase(a.name)
-
-	buf.WriteString(fmt.Sprintf("/// <summary>\n/// %s\n/// </summary>\n", a.desc))
-
-	targetTypeStr := a.targetType.ToCSharpType()
-	// C# doesn't have true type aliases, so we use a class wrapper
-	buf.WriteString(fmt.Sprintf("public class %s\n{\n", csName))
-	buf.WriteString(fmt.Sprintf("    public %s Value { get; set; }\n", targetTypeStr))
-	buf.WriteString("}\n")
-
-	return buf.String(), nil
-}

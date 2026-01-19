@@ -85,15 +85,3 @@ func (a *ArrayNode) ToTypeScriptString() (string, error) {
 
 	return buf.String(), nil
 }
-
-// ToCSharpString generates C# code for the array type.
-func (a *ArrayNode) ToCSharpString() (string, error) {
-	var buf bytes.Buffer
-
-	buf.WriteString(fmt.Sprintf("/// <summary>\n/// %s\n/// </summary>\n", a.desc))
-
-	itemTypeStr := a.itemType.ToCSharpType()
-	buf.WriteString(fmt.Sprintf("public class %s : List<%s> { }\n", a.name, itemTypeStr))
-
-	return buf.String(), nil
-}

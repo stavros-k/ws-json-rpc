@@ -18,12 +18,6 @@ type TSOptions struct {
 	OutputFile string // Output file path
 }
 
-// CSharpOptions contains options for C# code generation.
-type CSharpOptions struct {
-	Namespace  string // C# namespace
-	OutputFile string // Output file path
-}
-
 // MethodMapping represents a method's request/response types for API client type generation.
 type MethodMapping struct {
 	Name       string // Method name (e.g., "user.create")

@@ -32,20 +32,19 @@ type FieldMetadata struct {
 // TypeDocs contains all documentation and code representations for a single type.
 // This includes descriptions, examples, generated code, and metadata about the type structure.
 type TypeDocs struct {
-	Description          string          `json:"description"`             // Human-readable type description
-	Kind                 string          `json:"kind"`                    // Type category: "enum", "object", "alias", "map"
-	JsonRepresentation   string          `json:"jsonRepresentation"`      // Example JSON instance
-	TypeDefinition       string          `json:"typeDefinition"`          // Type definition from .type.json
-	GoRepresentation     string          `json:"goRepresentation"`        // Generated Go code
-	TsRepresentation     string          `json:"tsRepresentation"`        // Generated TypeScript code
-	CsharpRepresentation string          `json:"csharpRepresentation"`    // Generated C# code
-	EnumValues           []EnumValue     `json:"enumValues,omitempty"`    // Enum values (for enums only)
-	AliasTarget          string          `json:"aliasTarget,omitempty"`   // Target type name (for aliases only)
-	MapValueType         string          `json:"mapValueType,omitempty"`  // Value type string (for maps only, e.g., "string", "User")
-	MapValueIsRef        bool            `json:"mapValueIsRef,omitempty"` // Whether map value type is a reference (for maps only)
-	Fields               []FieldMetadata `json:"fields,omitempty"`        // Field metadata (for objects only)
-	References           []string        `json:"references,omitempty"`    // Types this type references
-	ReferencedBy         []string        `json:"referencedBy,omitempty"`  // Types that reference this type (computed)
+	Description        string          `json:"description"`             // Human-readable type description
+	Kind               string          `json:"kind"`                    // Type category: "enum", "object", "alias", "map"
+	JsonRepresentation string          `json:"jsonRepresentation"`      // Example JSON instance
+	TypeDefinition     string          `json:"typeDefinition"`          // Type definition from .type.json
+	GoRepresentation   string          `json:"goRepresentation"`        // Generated Go code
+	TsRepresentation   string          `json:"tsRepresentation"`        // Generated TypeScript code
+	EnumValues         []EnumValue     `json:"enumValues,omitempty"`    // Enum values (for enums only)
+	AliasTarget        string          `json:"aliasTarget,omitempty"`   // Target type name (for aliases only)
+	MapValueType       string          `json:"mapValueType,omitempty"`  // Value type string (for maps only, e.g., "string", "User")
+	MapValueIsRef      bool            `json:"mapValueIsRef,omitempty"` // Whether map value type is a reference (for maps only)
+	Fields             []FieldMetadata `json:"fields,omitempty"`        // Field metadata (for objects only)
+	References         []string        `json:"references,omitempty"`    // Types this type references
+	ReferencedBy       []string        `json:"referencedBy,omitempty"`  // Types that reference this type (computed)
 }
 
 // Protocols indicates which communication protocols support a method or event.

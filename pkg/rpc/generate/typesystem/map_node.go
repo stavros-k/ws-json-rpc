@@ -123,16 +123,3 @@ func (m *MapNode) ToTypeScriptString() (string, error) {
 
 	return buf.String(), nil
 }
-
-// ToCSharpString generates C# code for the map type.
-func (m *MapNode) ToCSharpString() (string, error) {
-	var buf bytes.Buffer
-
-	buf.WriteString(fmt.Sprintf("/// <summary>\n/// %s\n/// </summary>\n", m.desc))
-
-	keyTypeStr := m.keyType.ToCSharpType()
-	valueTypeStr := m.valueType.ToCSharpType()
-	buf.WriteString(fmt.Sprintf("public class %s : Dictionary<%s, %s> { }\n", m.name, keyTypeStr, valueTypeStr))
-
-	return buf.String(), nil
-}

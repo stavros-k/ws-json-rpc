@@ -235,9 +235,5 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 		TSOptions: generate.TSOptions{
 			OutputFile: "artifacts/types.ts",
 		},
-		CSharpOptions: generate.CSharpOptions{
-			Namespace:  "LocalAPI",
-			OutputFile: "artifacts/types.cs",
-		},
 	})
 }

@@ -100,7 +100,6 @@ html[data-theme="light"] {
     --color-lang-schema: #6b7280;
     --color-lang-go: #00add8;
     --color-lang-typescript: #3178c6;
-    --color-lang-csharp: #512bd4;
 
     /* Type System - Enum */
     --color-type-enum: light-dark(#7c3aed, #c084fc);

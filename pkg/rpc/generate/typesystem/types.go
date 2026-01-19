@@ -8,7 +8,6 @@ type TypeNode interface {
 	GetRawDefinition() string // Returns the raw JSON definition from .type.json
 	ToGoString() (string, error)
 	ToTypeScriptString() (string, error)
-	ToCSharpString() (string, error)
 	GetGoImports() []string
 }
 

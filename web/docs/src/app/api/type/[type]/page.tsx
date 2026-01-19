@@ -1,6 +1,6 @@
 import { BsFileEarmarkCode } from "react-icons/bs";
 import { SiGo, SiTypescript } from "react-icons/si";
-import { TbBrandCSharp, TbInfoCircle, TbJson } from "react-icons/tb";
+import { TbInfoCircle, TbJson } from "react-icons/tb";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
 import { TypeMetadata } from "@/components/type-metadata";
@@ -86,17 +86,6 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                             <CodeWrapper
                                 code={data.tsRepresentation}
                                 lang='typescript'
-                                label={{ text: type }}
-                            />
-                        ),
-                    },
-                    {
-                        title: "C#",
-                        icon: <TbBrandCSharp className='w-8 h-8 text-lang-csharp' />,
-                        code: (
-                            <CodeWrapper
-                                code={data.csharpRepresentation}
-                                lang='csharp'
                                 label={{ text: type }}
                             />
                         ),

@@ -142,35 +142,6 @@ func (e PingStatus) IsValid() bool {
 }
 ```
 
-**C#:**
-
-```csharp
-namespace rpcapi
-{
-    /// <summary>Status of a ping request</summary>
-    public static class PingStatus
-    {
-        /// <summary>Ping succeeded</summary>
-        public const string Success = "success";
-        /// <summary>Ping timed out</summary>
-        public const string Timeout = "timeout";
-        /// <summary>Ping failed with error</summary>
-        public const string Error = "error";
-
-        public static readonly string[] Values = [
-            Success,
-            Timeout,
-            Error
-        ];
-
-        public static bool IsValid(string value)
-        {
-            return System.Array.IndexOf(Values, value) != -1;
-        }
-    }
-}
-```
-
 ---
 
 ## 2. Objects
@@ -744,7 +715,6 @@ The generator exports rich metadata for documentation in `api_docs.json`:
 - **jsonRepresentation** - Example JSON instance
 - **goRepresentation** - Generated Go code
 - **tsRepresentation** - Generated TypeScript code
-- **csharpRepresentation** - Generated C# code
 
 ### Enum Metadata
 

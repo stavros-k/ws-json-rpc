@@ -143,48 +143,6 @@ func (e *EnumNode) ToTypeScriptString() (string, error) {
 	return buf.String(), nil
 }
 
-// ToCSharpString generates C# code for the enum type.
-func (e *EnumNode) ToCSharpString() (string, error) {
-	var buf bytes.Buffer
-
-	buf.WriteString(fmt.Sprintf("/// <summary>\n/// %s\n/// </summary>\n", e.desc))
-	buf.WriteString(fmt.Sprintf("public static class %s\n{\n", e.name))
-
-	// Generate constants
-	for _, val := range e.values {
-		constName := e.generateConstName(val.Value)
-		if val.Description != "" {
-			buf.WriteString(fmt.Sprintf("    /// <summary>%s</summary>\n", val.Description))
-		}
-		buf.WriteString(fmt.Sprintf("    public const string %s = %q;\n", constName, val.Value))
-	}
-
-	buf.WriteString("\n")
-
-	// Generate IsValid method
-	buf.WriteString("    /// <summary>\n")
-	buf.WriteString(fmt.Sprintf("    /// Returns true if the value is a valid %s\n", e.name))
-	buf.WriteString("    /// </summary>\n")
-	buf.WriteString("    public static bool IsValid(string value)\n")
-	buf.WriteString("    {\n")
-	buf.WriteString("        switch (value)\n")
-	buf.WriteString("        {\n")
-
-	for _, val := range e.values {
-		buf.WriteString(fmt.Sprintf("            case %q:\n", val.Value))
-	}
-
-	buf.WriteString("                return true;\n")
-	buf.WriteString("            default:\n")
-	buf.WriteString("                return false;\n")
-	buf.WriteString("        }\n")
-	buf.WriteString("    }\n")
-
-	buf.WriteString("}\n")
-
-	return buf.String(), nil
-}
-
 // generateConstName generates a constant name from an enum value without prefix.
 // Examples: "user.create" -> "UserCreate", "dark-blue" -> "DarkBlue"
 func (e *EnumNode) generateConstName(value string) string {

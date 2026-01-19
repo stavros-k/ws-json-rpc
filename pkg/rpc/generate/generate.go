@@ -36,7 +36,6 @@ type GeneratorImpl struct {
 	parser           *typesystem.TypeParser // Type system parser
 	goOptions        GoOptions              // Go code generation options
 	tsOptions        TSOptions              // TypeScript code generation options
-	csharpOptions    CSharpOptions          // C# code generation options
 	docsFilePath     string                 // Output path for API docs JSON
 	dbSchemaFilePath string                 // Output path for database schema SQL
 	schemasDirectory string                 // Directory containing .type.json files
@@ -45,13 +44,12 @@ type GeneratorImpl struct {
 // GeneratorOptions contains all configuration needed to create a Generator.
 // All paths must be provided for the generator to function properly.
 type GeneratorOptions struct {
-	DocsFileOutputPath    string        // Path for generated API docs JSON file
-	SchemaFileOutputPath  string        // Path for generated database schema SQL file
-	SchemasInputDirectory string        // Directory containing JSON schema files
-	CSharpOptions         CSharpOptions // C# code generation options
-	GoOptions             GoOptions     // Go code generation options
-	TSOptions             TSOptions     // TypeScript code generation options
-	DocsOptions           DocsOptions   // Docs options
+	DocsFileOutputPath    string      // Path for generated API docs JSON file
+	SchemaFileOutputPath  string      // Path for generated database schema SQL file
+	SchemasInputDirectory string      // Directory containing JSON schema files
+	GoOptions             GoOptions   // Go code generation options
+	TSOptions             TSOptions   // TypeScript code generation options
+	DocsOptions           DocsOptions // Docs options
 }
 
 // NewGenerator creates a new Generator instance with the given options.
@@ -81,7 +79,6 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 		parser:           parser,
 		goOptions:        opts.GoOptions,
 		tsOptions:        opts.TSOptions,
-		csharpOptions:    opts.CSharpOptions,
 		docsFilePath:     opts.DocsFileOutputPath,
 		dbSchemaFilePath: opts.SchemaFileOutputPath,
 		schemasDirectory: opts.SchemasInputDirectory,
@@ -251,22 +248,6 @@ func (g *GeneratorImpl) generateTypeFiles() error {
 		g.l.Info("Skipping TypeScript type generation (no output file configured)")
 	}
 
-	// Generate C# types if output file is configured
-	if g.csharpOptions.OutputFile != "" {
-		csharpCode, err := g.parser.GenerateCompleteCSharp(g.csharpOptions.Namespace)
-		if err != nil {
-			return fmt.Errorf("failed to generate C# types: %w", err)
-		}
-
-		if err := os.WriteFile(g.csharpOptions.OutputFile, []byte(csharpCode), 0644); err != nil {
-			return fmt.Errorf("failed to write C# types file: %w", err)
-		}
-
-		g.l.Info("C# types generated", slog.String("file", g.csharpOptions.OutputFile))
-	} else {
-		g.l.Info("Skipping C# type generation (no output file configured)")
-	}
-
 	return nil
 }
 
@@ -428,20 +409,14 @@ func (g *GeneratorImpl) registerTypeFromDefinition(name string) error {
 		return fmt.Errorf("failed to generate go for type %q: %w", name, err)
 	}
 
-	csharpStr, err := typesystem.ToStandaloneCSharp(node, "rpcapi")
-	if err != nil {
-		return fmt.Errorf("failed to generate csharp for type %q: %w", name, err)
-	}
-
 	// Extract metadata from type node
 	typeDocs := TypeDocs{
-		Description:          node.GetDescription(),
-		Kind:                 string(node.GetKind()),
-		JsonRepresentation:   "", // Set later via setTypeJsonInstance
-		TypeDefinition:       node.GetRawDefinition(),
-		GoRepresentation:     goStr,
-		TsRepresentation:     tsStr,
-		CsharpRepresentation: csharpStr,
+		Description:        node.GetDescription(),
+		Kind:               string(node.GetKind()),
+		JsonRepresentation: "", // Set later via setTypeJsonInstance
+		TypeDefinition:     node.GetRawDefinition(),
+		GoRepresentation:   goStr,
+		TsRepresentation:   tsStr,
 	}
 
 	// Add type-specific metadata based on node type
@@ -633,7 +608,6 @@ func isNamedStruct(t reflect.Type) bool {
 //     "description": "Parameters for the Ping method",
 //     "goRepresentation": "struct { }", # The string representation of the Go struct
 //     "tsRepresentation": "interface PingParams { }", # The string representation of the TypeScript interface
-//     "csharpRepresentation": "class PingParams { }", # The string representation of the C# class
 //     "jsonRepresentation": "{ }", # The string representation of the JSON object
 //     "jsonSchemaRepresentation": "{ }", # The string representation of the JSON schema
 //     "fields": [ # List of fields with their types and descriptions
@@ -650,7 +624,7 @@ func isNamedStruct(t reflect.Type) bool {
 // Then the document for the webpage should know that it should also include the Status type in the "types" section
 
 // We can start doing most of the work, and finally when we use our own generator to generate the types, we can then
-// populate the "goRepresentation", "tsRepresentation", "csharpRepresentation" fields.
+// populate the "goRepresentation", "tsRepresentation", fields.
 // jsonRepresentation and jsonSchemaRepresentation can be populated now since we have the schema files.
 
 // We probably shouldn't allow non-$ref types for params and result, to make it easier to generate the types and docs.

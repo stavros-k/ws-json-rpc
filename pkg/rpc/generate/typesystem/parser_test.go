@@ -82,24 +82,6 @@ func TestCodeGeneration(t *testing.T) {
 				})
 			}
 
-			// Test C# code generation if expected file exists
-			if tc.hasCSExpected {
-				t.Run("C#", func(t *testing.T) {
-					generated, err := parser.GenerateCompleteCSharp(testCSNamespace)
-					if err != nil {
-						t.Fatalf("Failed to generate C# code: %v", err)
-					}
-
-					expected, err := os.ReadFile(filepath.Join(tc.dir, "expected.cs"))
-					if err != nil {
-						t.Fatalf("Failed to read expected C# file: %v", err)
-					}
-
-					if !compareCode(generated, string(expected)) {
-						t.Errorf("C# code mismatch\nExpected:\n%s\n\nGot:\n%s", string(expected), generated)
-					}
-				})
-			}
 		})
 	}
 }
@@ -141,7 +123,6 @@ func discoverTestCases(testdataDir string) ([]TestCase, error) {
 			dir:           testDir,
 			hasGoExpected: utils.FileExists(filepath.Join(testDir, "expected.go")),
 			hasTSExpected: utils.FileExists(filepath.Join(testDir, "expected.ts")),
-			hasCSExpected: utils.FileExists(filepath.Join(testDir, "expected.cs")),
 		}
 
 		testCases = append(testCases, tc)
