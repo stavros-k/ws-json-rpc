@@ -10,8 +10,12 @@ import (
 
 func newOpenAPISchemaGenerator() *openapi3gen.Generator {
 	return openapi3gen.NewGenerator(
-		openapi3gen.ThrowErrorOnCycle(),
 		SmartCustomizer(),
+		openapi3gen.ThrowErrorOnCycle(),
+		openapi3gen.CreateComponentSchemas(openapi3gen.ExportComponentSchemasOptions{
+			ExportComponentSchemas: true,
+			ExportTopLevelSchema:   true,
+		}),
 	)
 }
 
