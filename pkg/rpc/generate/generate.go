@@ -9,9 +9,11 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/coder/guts"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3gen"
 
 	"ws-json-rpc/internal/database/sqlite"
@@ -34,12 +36,14 @@ type Generator interface {
 // It manages type registration and documentation generation.
 // Types are registered as methods/events are added during server startup.
 type GeneratorImpl struct {
-	l                *slog.Logger           // Logger for debugging and error reporting
-	d                *Docs                  // API documentation structure
-	schemaGen        *openapi3gen.Generator // OpenAPI schema generator for JSON schemas
-	tsParser         *guts.Typescript       // TypeScript AST parser
-	docsFilePath     string                 // Output path for API docs JSON
-	dbSchemaFilePath string                 // Output path for database schema SQL
+	l                *slog.Logger                   // Logger for debugging and error reporting
+	d                *Docs                          // API documentation structure
+	schemaGen        *openapi3gen.Generator         // OpenAPI schema generator for JSON schemas
+	componentSchemas openapi3.Schemas               // Shared component schemas for all types
+	schemaRegistry   map[string]*openapi3.SchemaRef // Registry of all generated schemas for reference extraction
+	tsParser         *guts.Typescript               // TypeScript AST parser
+	docsFilePath     string                         // Output path for API docs JSON
+	dbSchemaFilePath string                         // Output path for database schema SQL
 }
 
 // GeneratorOptions contains all configuration needed to create a Generator.
@@ -79,6 +83,8 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 		l:                l.With(slog.String("component", "generator")),
 		d:                NewDocs(opts.DocsOptions),
 		schemaGen:        newOpenAPISchemaGenerator(),
+		componentSchemas: make(openapi3.Schemas),
+		schemaRegistry:   make(map[string]*openapi3.SchemaRef),
 		tsParser:         ts,
 		docsFilePath:     opts.DocsFileOutputPath,
 		dbSchemaFilePath: opts.DatabaseSchemaFileOutputPath,
@@ -294,15 +300,88 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 	jsonSchema, schemaRef, err := g.getJsonSchema(name, v)
 	g.fatalIfErr(err)
 
+	// Store schema in registry for later reference extraction
+	g.schemaRegistry[name] = schemaRef
+
+	// Extract references from schema
+	references := g.extractReferencesFromSchema(schemaRef)
+
 	// Create new type docs with JSON instance and schema
 	typeDocs := TypeDocs{
 		Description:        schemaRef.Value.Description,
 		JsonRepresentation: string(utils.MustToJSONIndent(v)),
 		JsonSchema:         jsonSchema,
+		References:         references,
 		// TSType:             tsType, // Insert TS type here
 	}
 
 	g.d.Types[name] = typeDocs
+}
+
+// extractReferencesFromSchema finds all type references in a schema.
+// Returns a list of referenced type names.
+func (g *GeneratorImpl) extractReferencesFromSchema(schemaRef *openapi3.SchemaRef) []string {
+	if schemaRef == nil || schemaRef.Value == nil {
+		return nil
+	}
+
+	refs := make(map[string]struct{})
+	g.collectReferences(schemaRef, refs)
+
+	// Convert to sorted slice
+	refList := make([]string, 0, len(refs))
+	for ref := range refs {
+		refList = append(refList, ref)
+	}
+	sort.Strings(refList)
+
+	return refList
+}
+
+// collectReferences recursively collects all $ref entries in a schema.
+func (g *GeneratorImpl) collectReferences(schemaRef *openapi3.SchemaRef, refs map[string]struct{}) {
+	if schemaRef == nil {
+		return
+	}
+
+	// Check if this is a reference
+	if schemaRef.Ref != "" {
+		typeName := extractTypeNameFromRef(schemaRef.Ref)
+		refs[typeName] = struct{}{}
+		return
+	}
+
+	// No value, nothing to recurse
+	if schemaRef.Value == nil {
+		return
+	}
+
+	schema := schemaRef.Value
+
+	// Collect from properties
+	for _, propSchemaRef := range schema.Properties {
+		g.collectReferences(propSchemaRef, refs)
+	}
+
+	// Collect from array items
+	if schema.Items != nil {
+		g.collectReferences(schema.Items, refs)
+	}
+
+	for _, item := range []openapi3.SchemaRefs{schema.OneOf, schema.AnyOf, schema.AllOf} {
+		for _, s := range item {
+			g.collectReferences(s, refs)
+		}
+	}
+}
+
+// extractTypeNameFromRef extracts the type name from a $ref like "#/components/schemas/UserType".
+func extractTypeNameFromRef(ref string) string {
+	parts := strings.Split(ref, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return ref
 }
 
 // fatalIfErr logs the error and exits the program if err is not nil.

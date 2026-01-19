@@ -11,27 +11,14 @@ type Ref struct {
 	Ref string `json:"$ref"` // Type name (e.g., "PingParams")
 }
 
-// FieldMetadata contains metadata about an object field for documentation.
-type FieldMetadata struct {
-	Name        string `json:"name"`                  // Field name
-	Description string `json:"description"`           // Field description
-	Type        string `json:"type"`                  // Base type: "string", "integer", "number", "boolean", or type name
-	Format      string `json:"format,omitempty"`      // String format: "date-time", "uuid", etc.
-	Optional    bool   `json:"optional"`              // Is field optional?
-	Nullable    bool   `json:"nullable"`              // Can field be null?
-	IsRef       bool   `json:"isRef"`                 // Does this reference another type?
-	RefTypeName string `json:"refTypeName,omitempty"` // Name of referenced type if IsRef
-}
-
 // TypeDocs contains all documentation and code representations for a single type.
 // This includes descriptions, examples, JSON schema, and metadata about the type structure.
 type TypeDocs struct {
-	Description        string          `json:"description"`            // Human-readable type description
-	JsonRepresentation string          `json:"jsonRepresentation"`     // Example JSON instance
-	JsonSchema         string          `json:"jsonSchema"`             // JSON Schema generated from Go type
-	Fields             []FieldMetadata `json:"fields,omitempty"`       // Field metadata FIXME: this is not populated yet
-	References         []string        `json:"references,omitempty"`   // Types this type references
-	ReferencedBy       []string        `json:"referencedBy,omitempty"` // Types that reference this type (computed)
+	Description        string   `json:"description"`            // Human-readable type description
+	JsonRepresentation string   `json:"jsonRepresentation"`     // Example JSON instance
+	JsonSchema         string   `json:"jsonSchema"`             // JSON Schema generated from Go type
+	References         []string `json:"references,omitempty"`   // Types this type references
+	ReferencedBy       []string `json:"referencedBy,omitempty"` // Types that reference this type (computed)
 }
 
 // Protocols indicates which communication protocols support a method or event.

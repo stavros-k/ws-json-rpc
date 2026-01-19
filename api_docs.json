@@ -54,7 +54,7 @@
         {
           "title": "Subscribe",
           "description": "Subscribe to the DataCreated event",
-          "params": "{\n  \"event\": \"data.created\"\n}",
+          "params": "{\n  \"event\": \"data.created\",\n  \"data\": {\n    \"id\": \"00000000-0000-0000-0000-000000000000\"\n  }\n}",
           "result": "{\n  \"success\": true\n}"
         }
       ],
@@ -129,7 +129,10 @@
     "DataCreated": {
       "description": "User account information",
       "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
-      "jsonSchema": "{\n  \"description\": \"User account information\",\n  \"properties\": {\n    \"id\": {}\n  },\n  \"type\": \"object\"\n}"
+      "jsonSchema": "{\n  \"description\": \"User account information\",\n  \"properties\": {\n    \"id\": {}\n  },\n  \"type\": \"object\"\n}",
+      "referencedBy": [
+        "SubscribeParams"
+      ]
     },
     "PingResult": {
       "description": "",
@@ -138,8 +141,11 @@
     },
     "SubscribeParams": {
       "description": "",
-      "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}"
+      "jsonRepresentation": "{\n  \"event\": \"\",\n  \"data\": {\n    \"id\": \"00000000-0000-0000-0000-000000000000\"\n  }\n}",
+      "jsonSchema": "{\n  \"properties\": {\n    \"data\": {\n      \"$ref\": \"#/components/schemas/DataCreated\"\n    },\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
+      "references": [
+        "DataCreated"
+      ]
     },
     "SubscribeResult": {
       "description": "",

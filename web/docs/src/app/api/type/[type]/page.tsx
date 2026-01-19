@@ -1,7 +1,8 @@
 import { BsFileEarmarkCode } from "react-icons/bs";
-import { TbJson } from "react-icons/tb";
+import { TbJson, TbLink } from "react-icons/tb";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
+import { TypeReferences } from "@/components/type-references";
 import { docs, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -22,6 +23,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
     const params = await props.params;
     const { type } = params as { type: TypeKeys };
     const data = docs.types[type];
+
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
             <div>
@@ -55,6 +57,11 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                                 label={{ text: type }}
                             />
                         ),
+                    },
+                    {
+                        title: "References",
+                        icon: <TbLink className='w-8 h-8 text-blue-400' />,
+                        code: <TypeReferences typeName={type} data={data} />,
                     },
                 ]}
             />

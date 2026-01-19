@@ -42,13 +42,11 @@ type DataCreated struct {
 	ID uuid.UUID `json:"id"`
 }
 
-// StatusResult - Result for the Status method
-type StatusResult PingResult
-
 // SubscribeParams - Parameters for the Subscribe method
 type SubscribeParams struct {
 	// The event topic to subscribe to
-	Event EventKind `json:"event"`
+	Event EventKind   `json:"event"`
+	Data  DataCreated `json:"data"`
 }
 
 // SubscribeResult - Result for the Subscribe method

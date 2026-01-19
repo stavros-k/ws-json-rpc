@@ -31,23 +31,12 @@ export type PingResult = {
 export type PingStatus = "error" | "success";
 
 // From rpctypes/types.go
-export type StatusResult = {
-    /**
-     * A message describing the result
-     */
-    message: string;
-    /**
-     * The status of the ping
-     */
-    status: PingStatus;
-};
-
-// From rpctypes/types.go
 export type SubscribeParams = {
     /**
      * The event topic to subscribe to
      */
     event: EventKind;
+    data: DataCreated;
 };
 
 // From rpctypes/types.go
