@@ -11,6 +11,9 @@ import (
 	"sort"
 	"time"
 
+	"github.com/coder/guts"
+	"github.com/coder/guts/config"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3gen"
 
 	"ws-json-rpc/internal/database/sqlite"
@@ -36,6 +39,7 @@ type GeneratorImpl struct {
 	l                *slog.Logger           // Logger for debugging and error reporting
 	d                *Docs                  // API documentation structure
 	schemaGen        *openapi3gen.Generator // OpenAPI schema generator for JSON schemas
+	tsParser         *guts.Typescript       // TypeScript AST parser
 	docsFilePath     string                 // Output path for API docs JSON
 	dbSchemaFilePath string                 // Output path for database schema SQL
 }
@@ -43,6 +47,7 @@ type GeneratorImpl struct {
 // GeneratorOptions contains all configuration needed to create a Generator.
 // All paths must be provided for the generator to function properly.
 type GeneratorOptions struct {
+	GoTypesDirPath               string      // Path to Go types file for parsing
 	DocsFileOutputPath           string      // Path for generated API docs JSON file
 	DatabaseSchemaFileOutputPath string      // Path for generated database schema SQL file
 	DocsOptions                  DocsOptions // Docs options
@@ -62,10 +67,51 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 		return nil, fmt.Errorf("schema file path is required")
 	}
 
+	// Initialize guts Go parser
+	goParser, err := guts.NewGolangParser()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create guts parser: %w", err)
+	}
+	goParser.PreserveComments()
+
+	if _, err := os.Stat(opts.GoTypesDirPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("go types dir path %s does not exist", opts.GoTypesDirPath)
+	}
+
+	// Include the package where RPC types are defined
+	if err := goParser.IncludeGenerate(opts.GoTypesDirPath); err != nil {
+		l.Warn("Failed to include rpcapi package for parsing", utils.ErrAttr(err))
+	}
+
+	// Try to get TypeScript AST from guts
+	ts, err := goParser.ToTypescript()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate TypeScript AST: %w", err)
+	}
+	ts.ApplyMutations(
+		config.EnumAsTypes,
+		config.ExportTypes,
+		config.InterfaceToType,
+	)
+
+	// write ts to file
+	str, err := ts.Serialize()
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize TypeScript AST: %w", err)
+	}
+	err = os.WriteFile("test.ts", []byte(str), 0644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write TypeScript AST to file: %w", err)
+	}
+
 	g := &GeneratorImpl{
-		l:                l.With(slog.String("component", "generator")),
-		d:                NewDocs(opts.DocsOptions),
-		schemaGen:        openapi3gen.NewGenerator(),
+		l: l.With(slog.String("component", "generator")),
+		d: NewDocs(opts.DocsOptions),
+		schemaGen: openapi3gen.NewGenerator(
+			openapi3gen.ThrowErrorOnCycle(),
+			SmartCustomizer(),
+		),
+		tsParser:         ts,
 		docsFilePath:     opts.DocsFileOutputPath,
 		dbSchemaFilePath: opts.DatabaseSchemaFileOutputPath,
 	}
@@ -254,7 +300,7 @@ func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs Meth
 
 // registerType registers a type with its JSON instance and JSON schema.
 // Creates a new type entry if it doesn't exist, or updates an existing one.
-// Field metadata and references will be populated later via type parsing.
+// Parses the Go type to extract AST information for documentation.
 func (g *GeneratorImpl) registerType(name string, v any) {
 	if name == "null" {
 		return
@@ -270,39 +316,46 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 	}
 
 	g.l.Debug("Registering type", slog.String("type", name))
+	_, exists := g.tsParser.Node(name)
+	if !exists {
+		g.fatalIfErr(fmt.Errorf("type %s not found in TypeScript AST", name))
+	}
+	// FIXME: find a way to serialize a single node
 
 	// Generate JSON schema from Go type
-	jsonSchema, err := g.getJsonSchema(name, v)
-	g.fatalIfErr(fmt.Errorf("failed to generate JSON schema for type %s: %w", name, err))
+	jsonSchema, schemaRef, err := g.getJsonSchema(name, v)
+	g.fatalIfErr(err)
 
 	// Create new type docs with JSON instance and schema
-	// Description, Fields, and References will be populated during type parsing
+	// Description, Fields, and References will be populated from guts AST
 	typeDocs := TypeDocs{
-		Description:        "",
+		Description:        schemaRef.Value.Description,
 		JsonRepresentation: string(utils.MustToJSONIndent(v)),
 		JsonSchema:         jsonSchema,
+		// TSType:             tsType, // Insert TS type here
 	}
 
 	g.d.Types[name] = typeDocs
 }
 
-func (g *GeneratorImpl) getJsonSchema(name string, v any) (string, error) {
+func (g *GeneratorImpl) getJsonSchema(name string, v any) (string, *openapi3.SchemaRef, error) {
 	schemaRef, err := g.schemaGen.NewSchemaRefForValue(v, nil)
 	if err != nil {
-		g.l.Warn("Failed to generate JSON schema for type", slog.String("type", name), utils.ErrAttr(err))
-		// Continue without schema rather than failing
+		return "", nil, fmt.Errorf("failed to generate JSON schema for type %s: %w", name, err)
 	}
 
 	if schemaRef == nil || schemaRef.Value == nil {
-		return "", nil
+		return "", nil, fmt.Errorf("failed to generate JSON schema for type %s: %w", name, err)
 	}
+
 	schemaBytes, err := schemaRef.Value.MarshalJSON()
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
+
 	schema := utils.MustFromJSON[map[string]any](schemaBytes)
 	indented, err := utils.ToJSONIndent(schema)
-	return string(indented), err
+	return string(indented), schemaRef, err
 }
 
 // fatalIfErr logs the error and exits the program if err is not nil.

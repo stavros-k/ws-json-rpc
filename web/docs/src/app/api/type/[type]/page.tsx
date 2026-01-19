@@ -1,8 +1,7 @@
 import { BsFileEarmarkCode } from "react-icons/bs";
-import { TbInfoCircle, TbJson } from "react-icons/tb";
+import { TbJson } from "react-icons/tb";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
-import { TypeMetadata } from "@/components/type-metadata";
 import { docs, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -35,16 +34,6 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
 
             <TabbedCardWrapper
                 tabs={[
-                    {
-                        title: "Overview",
-                        icon: <TbInfoCircle className='w-8 h-8 text-accent-primary' />,
-                        code: (
-                            <TypeMetadata
-                                typeName={type}
-                                data={data}
-                            />
-                        ),
-                    },
                     {
                         title: "JSON",
                         icon: <TbJson className='w-8 h-8 text-lang-json' />,

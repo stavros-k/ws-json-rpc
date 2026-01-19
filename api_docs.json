@@ -113,7 +113,7 @@
         "ws": true
       },
       "resultType": {
-        "$ref": "SomeEvent"
+        "$ref": "DataCreated"
       },
       "examples": [
         {
@@ -126,15 +126,15 @@
     }
   },
   "types": {
+    "DataCreated": {
+      "description": "User account information",
+      "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
+      "jsonSchema": "{\n  \"description\": \"User account information\",\n  \"properties\": {\n    \"id\": {}\n  },\n  \"type\": \"object\"\n}"
+    },
     "PingResult": {
       "description": "",
       "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
       "jsonSchema": "{\n  \"properties\": {\n    \"message\": {\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}"
-    },
-    "SomeEvent": {
-      "description": "",
-      "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"id\": {}\n  },\n  \"type\": \"object\"\n}"
     },
     "SubscribeParams": {
       "description": "",

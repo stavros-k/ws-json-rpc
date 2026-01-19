@@ -13,6 +13,7 @@ import (
 	"ws-json-rpc/internal/app"
 	"ws-json-rpc/internal/database/sqlite"
 	"ws-json-rpc/internal/rpcapi"
+	rpctypes "ws-json-rpc/internal/rpcapi/types"
 	"ws-json-rpc/pkg/database"
 	"ws-json-rpc/pkg/rpc"
 	"ws-json-rpc/pkg/rpc/generate"
@@ -32,7 +33,7 @@ func simulate(h *rpc.Hub) {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		h.PublishEvent(rpc.NewEvent(string(rpcapi.EventKindDataCreated), map[string]any{"id": uuid.NewString()}))
+		h.PublishEvent(rpc.NewEvent(string(rpctypes.EventKindDataCreated), map[string]any{"id": uuid.NewString()}))
 	}
 }
 
@@ -77,7 +78,7 @@ func main() {
 	hub.WithMiddleware(middleware.LoggingMiddleware)
 
 	// Register events
-	rpc.RegisterEvent[rpcapi.SomeEvent](hub, string(rpcapi.EventKindDataCreated), rpc.EventOptions{
+	rpc.RegisterEvent[rpctypes.DataCreated](hub, string(rpctypes.EventKindDataCreated), rpc.EventOptions{
 		Docs: generate.EventDocs{
 			Title:       "DataCreated",
 			Description: "Event fired when new data is created",
@@ -87,14 +88,14 @@ func main() {
 				{
 					Title:       "Basic example",
 					Description: "Subscribe to the DataCreated event",
-					ResultObj:   rpcapi.SomeEvent{ID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")},
+					ResultObj:   rpctypes.DataCreated{ID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")},
 				},
 			},
 		},
 	})
 
 	// Register methods
-	rpc.RegisterMethod(hub, string(rpcapi.MethodKindPing), methods.PingHandler, rpc.RegisterMethodOptions{
+	rpc.RegisterMethod(hub, string(rpctypes.MethodKindPing), methods.PingHandler, rpc.RegisterMethodOptions{
 		Docs: generate.MethodDocs{
 			Title:       "Ping",
 			Description: "A simple ping method to check if the server is alive",
@@ -105,13 +106,13 @@ func main() {
 					Title:       "Ping",
 					Description: "Ping the server",
 					ParamsObj:   nil,
-					ResultObj:   rpcapi.PingResult{Message: "pong", Status: rpcapi.PingStatusSuccess},
+					ResultObj:   rpctypes.PingResult{Message: "pong", Status: rpctypes.PingStatusSuccess},
 				},
 			},
 		},
 	})
 
-	rpc.RegisterMethod(hub, string(rpcapi.MethodKindSubscribe), methods.Subscribe, rpc.RegisterMethodOptions{
+	rpc.RegisterMethod(hub, string(rpctypes.MethodKindSubscribe), methods.Subscribe, rpc.RegisterMethodOptions{
 		Docs: generate.MethodDocs{
 			Title:       "Subscribe",
 			Description: "Subscribe to a data event",
@@ -121,8 +122,8 @@ func main() {
 				{
 					Title:       "Subscribe",
 					Description: "Subscribe to the DataCreated event",
-					ParamsObj:   rpcapi.SubscribeParams{Event: rpcapi.EventKindDataCreated},
-					ResultObj:   rpcapi.SubscribeResult{Success: true},
+					ParamsObj:   rpctypes.SubscribeParams{Event: rpctypes.EventKindDataCreated},
+					ResultObj:   rpctypes.SubscribeResult{Success: true},
 				},
 			},
 			Errors: []generate.ErrorDoc{
@@ -136,7 +137,7 @@ func main() {
 		},
 	})
 
-	rpc.RegisterMethod(hub, string(rpcapi.MethodKindUnsubscribe), methods.Unsubscribe, rpc.RegisterMethodOptions{
+	rpc.RegisterMethod(hub, string(rpctypes.MethodKindUnsubscribe), methods.Unsubscribe, rpc.RegisterMethodOptions{
 		Docs: generate.MethodDocs{
 			Title:       "Unsubscribe",
 			Description: "Unsubscribe from a data event",
@@ -146,8 +147,8 @@ func main() {
 				{
 					Title:       "Unsubscribe",
 					Description: "Unsubscribe from the DataCreated event",
-					ParamsObj:   rpcapi.UnsubscribeParams{Event: rpcapi.EventKindDataCreated},
-					ResultObj:   rpcapi.UnsubscribeResult{Success: true},
+					ParamsObj:   rpctypes.UnsubscribeParams{Event: rpctypes.EventKindDataCreated},
+					ResultObj:   rpctypes.UnsubscribeResult{Success: true},
 				},
 			},
 			Errors: []generate.ErrorDoc{
@@ -220,7 +221,8 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 		return &generate.MockGenerator{}, nil
 	}
 	return generate.NewGenerator(logger, generate.GeneratorOptions{
-		DocsFileOutputPath:   "api_docs.json",
+		GoTypesDirPath:               "./internal/rpcapi/types",
+		DocsFileOutputPath:           "api_docs.json",
 		DatabaseSchemaFileOutputPath: "schema.sql",
 		DocsOptions: generate.DocsOptions{
 			Title:       "Local API",
