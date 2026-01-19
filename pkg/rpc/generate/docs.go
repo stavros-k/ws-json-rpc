@@ -29,7 +29,7 @@ type TypeDocs struct {
 	Description        string          `json:"description"`            // Human-readable type description
 	JsonRepresentation string          `json:"jsonRepresentation"`     // Example JSON instance
 	JsonSchema         string          `json:"jsonSchema"`             // JSON Schema generated from Go type
-	Fields             []FieldMetadata `json:"fields,omitempty"`       // Field metadata (parsed from Go struct)
+	Fields             []FieldMetadata `json:"fields,omitempty"`       // Field metadata FIXME: this is not populated yet
 	References         []string        `json:"references,omitempty"`   // Types this type references
 	ReferencedBy       []string        `json:"referencedBy,omitempty"` // Types that reference this type (computed)
 }
