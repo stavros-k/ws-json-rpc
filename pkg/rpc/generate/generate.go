@@ -172,14 +172,14 @@ func (g *GeneratorImpl) computeBackReferences() {
 
 // AddEventType registers a WebSocket event with its response type and documentation.
 // Events are unidirectional server-to-client messages sent over WebSocket connections.
-// The response type must be a named struct with a corresponding JSON schema file.
+// The response type must be a named struct.
 //
 // This method:
 // 1. Validates the event hasn't been registered already
 // 2. Validates the event documentation
 // 3. Converts example objects to JSON strings
 // 4. Sets the result type reference
-// 5. Sets the JSON instance representation for the result type
+// 5. Registers the type with its JSON instance
 func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 	if _, exists := g.d.Events[name]; exists {
 		g.fatalIfErr(errors.New("event already registered: " + name))
@@ -214,7 +214,7 @@ func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 // 2. Validates the method documentation
 // 3. Converts example objects to JSON strings
 // 4. Sets parameter and result type references
-// 5. Sets JSON instance representations for both types
+// 5. Registers both types with their JSON instances
 // 6. Configures protocol availability (WS always enabled, HTTP based on docs.NoHTTP)
 func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs MethodDocs) {
 	if _, exists := g.d.Methods[name]; exists {
@@ -249,6 +249,7 @@ func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs Meth
 
 // registerType registers a type with its JSON instance.
 // Creates a new type entry if it doesn't exist, or updates an existing one.
+// JSON schema and field metadata will be populated later via type parsing.
 func (g *GeneratorImpl) registerType(name string, v any) {
 	if name == "null" {
 		return
@@ -266,10 +267,11 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 	g.l.Debug("Registering type", slog.String("type", name))
 
 	// Create new type docs with JSON instance
+	// Description, JsonSchema, Fields, and References will be populated during type parsing
 	typeDocs := TypeDocs{
-		Description:        "", // Will be extracted from Go struct comments later
-		Kind:               "struct",
+		Description:        "",
 		JsonRepresentation: string(utils.MustToJSONIndent(v)),
+		JsonSchema:         "", // Will be generated from Go type using kin-openapi
 	}
 
 	g.d.Types[name] = typeDocs

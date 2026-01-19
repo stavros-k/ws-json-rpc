@@ -11,12 +11,6 @@ type Ref struct {
 	Ref string `json:"$ref"` // Type name (e.g., "PingParams")
 }
 
-// EnumValue represents a single possible value in an enum type.
-type EnumValue struct {
-	Value       string `json:"value"`       // The enum value (e.g., "data.created")
-	Description string `json:"description"` // Description of this enum value
-}
-
 // FieldMetadata contains metadata about an object field for documentation.
 type FieldMetadata struct {
 	Name        string `json:"name"`                  // Field name
@@ -30,19 +24,14 @@ type FieldMetadata struct {
 }
 
 // TypeDocs contains all documentation and code representations for a single type.
-// This includes descriptions, examples, generated code, and metadata about the type structure.
+// This includes descriptions, examples, JSON schema, and metadata about the type structure.
 type TypeDocs struct {
-	Description        string          `json:"description"`             // Human-readable type description
-	Kind               string          `json:"kind"`                    // Type category: "enum", "object", "alias", "map"
-	JsonRepresentation string          `json:"jsonRepresentation"`      // Example JSON instance
-	TypeDefinition     string          `json:"typeDefinition"`          // Type definition from .type.json
-	EnumValues         []EnumValue     `json:"enumValues,omitempty"`    // Enum values (for enums only)
-	AliasTarget        string          `json:"aliasTarget,omitempty"`   // Target type name (for aliases only)
-	MapValueType       string          `json:"mapValueType,omitempty"`  // Value type string (for maps only, e.g., "string", "User")
-	MapValueIsRef      bool            `json:"mapValueIsRef,omitempty"` // Whether map value type is a reference (for maps only)
-	Fields             []FieldMetadata `json:"fields,omitempty"`        // Field metadata (for objects only)
-	References         []string        `json:"references,omitempty"`    // Types this type references
-	ReferencedBy       []string        `json:"referencedBy,omitempty"`  // Types that reference this type (computed)
+	Description        string          `json:"description"`            // Human-readable type description
+	JsonRepresentation string          `json:"jsonRepresentation"`     // Example JSON instance
+	JsonSchema         string          `json:"jsonSchema"`             // JSON Schema generated from Go type
+	Fields             []FieldMetadata `json:"fields,omitempty"`       // Field metadata (parsed from Go struct)
+	References         []string        `json:"references,omitempty"`   // Types this type references
+	ReferencedBy       []string        `json:"referencedBy,omitempty"` // Types that reference this type (computed)
 }
 
 // Protocols indicates which communication protocols support a method or event.
