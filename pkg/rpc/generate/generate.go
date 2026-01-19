@@ -12,7 +12,6 @@ import (
 	"time"
 	"ws-json-rpc/internal/database/sqlite"
 	"ws-json-rpc/pkg/database"
-	"ws-json-rpc/pkg/rpc/generate/typesystem"
 	"ws-json-rpc/pkg/utils"
 )
 
@@ -28,14 +27,13 @@ type Generator interface {
 }
 
 // GeneratorImpl is the concrete implementation of the Generator interface.
-// It manages schema parsing, type registration, and documentation generation.
-// All schema types are registered during construction via NewGenerator.
+// It manages type registration and documentation generation.
+// Types are registered as methods/events are added during server startup.
 type GeneratorImpl struct {
-	l                *slog.Logger           // Logger for debugging and error reporting
-	d                *Docs                  // API documentation structure
-	parser           *typesystem.TypeParser // Type system parser
-	docsFilePath     string                 // Output path for API docs JSON
-	dbSchemaFilePath string                 // Output path for database schema SQL
+	l                *slog.Logger // Logger for debugging and error reporting
+	d                *Docs        // API documentation structure
+	docsFilePath     string       // Output path for API docs JSON
+	dbSchemaFilePath string       // Output path for database schema SQL
 }
 
 // GeneratorOptions contains all configuration needed to create a Generator.
@@ -49,10 +47,9 @@ type GeneratorOptions struct {
 // NewGenerator creates a new Generator instance with the given options.
 // It performs the following initialization steps:
 // 1. Validates all required options are provided
-// 2. Creates a schema parser
-// 3. Parses all JSON schema files
+// 2. Creates the docs structure
 //
-// JSON instance representations are added later when methods/events are registered.
+// Types are registered dynamically when methods/events are added.
 func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 	if opts.DocsFileOutputPath == "" {
 		return nil, fmt.Errorf("docs file path is required")
@@ -61,22 +58,11 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 		return nil, fmt.Errorf("schema file path is required")
 	}
 
-	parser := typesystem.NewTypeParser(l)
-
 	g := &GeneratorImpl{
 		l:                l.With(slog.String("component", "generator")),
 		d:                NewDocs(opts.DocsOptions),
-		parser:           parser,
 		docsFilePath:     opts.DocsFileOutputPath,
 		dbSchemaFilePath: opts.DatabaseSchemaFileOutputPath,
-	}
-
-	// Register all parsed types from definitions
-	allTypes := parser.GetRegistry().GetAll()
-	for name := range allTypes {
-		if err := g.registerTypeFromDefinition(name); err != nil {
-			return nil, fmt.Errorf("failed to register type %q from definition: %w", name, err)
-		}
 	}
 
 	return g, nil
@@ -214,10 +200,8 @@ func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 	resultTypeName := g.mustGetTypeName(resp)
 	docs.ResultType = Ref{Ref: resultTypeName}
 
-	// Set JSON instance representation (type must already be registered via Generate)
-	if err := g.setTypeJsonInstance(resultTypeName, resp); err != nil {
-		g.fatalIfErr(err)
-	}
+	// Register type with JSON instance
+	g.registerType(resultTypeName, resp)
 
 	g.d.Events[name] = docs
 }
@@ -256,69 +240,39 @@ func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs Meth
 	docs.ParamType = Ref{Ref: paramTypeName}
 	docs.ResultType = Ref{Ref: resultTypeName}
 
-	// Set JSON instance representations (types must already be registered via Generate)
-	if err := g.setTypeJsonInstance(paramTypeName, req); err != nil {
-		g.fatalIfErr(err)
-	}
-	if err := g.setTypeJsonInstance(resultTypeName, resp); err != nil {
-		g.fatalIfErr(err)
-	}
+	// Register types with JSON instances
+	g.registerType(paramTypeName, req)
+	g.registerType(resultTypeName, resp)
 
 	g.d.Methods[name] = docs
 }
 
-// registerTypeFromDefinition registers a type from the type system.
-// Generates Go/TS/C# representations but not JSON instance representation.
-// Returns an error if the type is already registered.
-func (g *GeneratorImpl) registerTypeFromDefinition(name string) error {
+// registerType registers a type with its JSON instance.
+// Creates a new type entry if it doesn't exist, or updates an existing one.
+func (g *GeneratorImpl) registerType(name string, v any) {
 	if name == "null" {
-		return nil
+		return
 	}
 
-	if _, exists := g.d.Types[name]; exists {
-		return fmt.Errorf("type %q is already registered", name)
+	// Check if type already exists
+	if docs, exists := g.d.Types[name]; exists {
+		// Type already registered, just verify we don't overwrite
+		if docs.JsonRepresentation != "" {
+			g.l.Debug("Type already registered with JSON instance", slog.String("type", name))
+			return
+		}
 	}
 
-	g.l.Debug("Registering type from definition", slog.String("type", name))
-	node := g.parser.GetRegistry().Get(name)
-	if node == nil {
-		return fmt.Errorf("type %q not found in parsed schemas", name)
-	}
+	g.l.Debug("Registering type", slog.String("type", name))
 
-	// Extract metadata from type node
+	// Create new type docs with JSON instance
 	typeDocs := TypeDocs{
-		Description:        node.GetDescription(),
-		Kind:               string(node.GetKind()),
-		JsonRepresentation: "", // Set later via setTypeJsonInstance
-		TypeDefinition:     node.GetRawDefinition(),
+		Description:        "", // Will be extracted from Go struct comments later
+		Kind:               "struct",
+		JsonRepresentation: string(utils.MustToJSONIndent(v)),
 	}
 
 	g.d.Types[name] = typeDocs
-
-	return nil
-}
-
-// setTypeJsonInstance sets the JSON instance representation for an already-registered type.
-// The type must have been registered via registerTypeFromDefinition first.
-func (g *GeneratorImpl) setTypeJsonInstance(name string, v any) error {
-	if name == "null" {
-		return nil
-	}
-
-	docs, exists := g.d.Types[name]
-	if !exists {
-		return fmt.Errorf("type %q not registered, call registerTypeFromDefinition first", name)
-	}
-
-	if docs.JsonRepresentation != "" {
-		return fmt.Errorf("type %q already has JSON instance representation", name)
-	}
-
-	g.l.Debug("Setting JSON instance for type", slog.String("type", name))
-	docs.JsonRepresentation = string(utils.MustToJSONIndent(v))
-	g.d.Types[name] = docs
-
-	return nil
 }
 
 // fatalIfErr logs the error and exits the program if err is not nil.
@@ -383,47 +337,3 @@ func isNamedStruct(t reflect.Type) bool {
 	// Check if it has a name (named types have PkgPath and Name)
 	return t.Name() != ""
 }
-
-// FIXME: Implement this generator
-// During server startup we register the types with the generator
-// Then generator will parse the json schema(s) and generate:
-// 1. Types for Go, TypeScript, and C#
-// 2. Combine the docs for the types (ie from descriptions etc) plus the docs defined during method/event registration
-// 3. Generates a json file that will be consumed by a website to display the API docs
-
-// Example of api docs structure
-// Title: Local API
-// Description: This is the API documentation for the Local API.
-// Version: 1.0.0
-//
-// Methods: {
-//   "Ping": {
-//     "name": "Ping",
-//     "tags": ["Utility"],
-//     "description": "A simple ping method to test connectivity",
-//     "params": "$ref:PingParams",
-//     "result": "$ref:PingResult",
-//   }
-// },
-// Events: {
-//   "DataCreated": {
-//     "name": "DataCreated",
-//     "tags": ["Data"],
-//     "description": "Triggered when a new data is created",
-//     "result": "$ref:DataCreatedResult",
-//   },
-// },
-// Types: {
-//   "PingParams": {
-//     "description": "Parameters for the Ping method",
-//     "jsonRepresentation": "{ }", # The string representation of the JSON object
-//     "jsonSchemaRepresentation": "{ }", # The string representation of the JSON schema
-//     "fields": [ # List of fields with their types and descriptions
-//       {
-//         "name": "field1",
-//         "type": "string",
-//         "description": "Description of field1"
-//       },
-//     ],
-//   },
-// },
