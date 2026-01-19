@@ -76,17 +76,13 @@ func (g *GutsGenerator) SerializeNode(name string) (string, error) {
 	if !exists {
 		return "", fmt.Errorf("node %s not found in TypeScript AST", name)
 	}
-	vm, err := bindings.New()
-	if err != nil {
-		return "", fmt.Errorf("failed to create bindings VM: %w", err)
-	}
 
-	typescriptNode, err := vm.ToTypescriptNode(node)
+	typescriptNode, err := g.vm.ToTypescriptNode(node)
 	if err != nil {
 		return "", fmt.Errorf("failed to convert node to TypeScript: %w", err)
 	}
 
-	serializedNode, err := vm.SerializeToTypescript(typescriptNode)
+	serializedNode, err := g.vm.SerializeToTypescript(typescriptNode)
 	if err != nil {
 		return "", fmt.Errorf("failed to serialize node to TypeScript: %w", err)
 	}

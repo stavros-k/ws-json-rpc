@@ -48,6 +48,7 @@ type GeneratorImpl struct {
 type GeneratorOptions struct {
 	GoTypesDirPath               string      // Path to Go types file for parsing
 	DocsFileOutputPath           string      // Path for generated API docs JSON file
+	TSTypesOutputPath            string      // Path for generated TypeScript types file
 	DatabaseSchemaFileOutputPath string      // Path for generated database schema SQL file
 	DocsOptions                  DocsOptions // Docs options
 }
@@ -72,7 +73,7 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 	}
 
 	// TODO: make the output path configurable
-	if err := gutsGenerator.WriteTypescriptASTToFile(gutsGenerator.tsParser, "test.ts"); err != nil {
+	if err := gutsGenerator.WriteTypescriptASTToFile(gutsGenerator.tsParser, opts.TSTypesOutputPath); err != nil {
 		return nil, fmt.Errorf("failed to write TypeScript AST to file: %w", err)
 	}
 

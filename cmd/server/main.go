@@ -224,6 +224,7 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 		GoTypesDirPath:               "./internal/rpcapi/types",
 		DocsFileOutputPath:           "api_docs.json",
 		DatabaseSchemaFileOutputPath: "schema.sql",
+		TSTypesOutputPath:            "types.ts",
 		DocsOptions: generate.DocsOptions{
 			Title:       "Local API",
 			Description: "A JSON-RPC API over HTTP and Websockets",
