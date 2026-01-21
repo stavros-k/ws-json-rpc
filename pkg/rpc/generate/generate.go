@@ -207,41 +207,13 @@ func (g *GeneratorImpl) computeUsedBy() {
 
 	// Add usedBy information from methods
 	for methodName, methodDocs := range g.d.Methods {
-		// Add parameter type usage
-		if methodDocs.ParamType.Ref != "" && methodDocs.ParamType.Ref != "null" {
-			paramTypeDocs, exists := g.d.Types[methodDocs.ParamType.Ref]
-			if exists {
-				paramTypeDocs.UsedBy = append(paramTypeDocs.UsedBy, UsedBy{
-					Type: "method", Target: methodName, Role: "param",
-				})
-				g.d.Types[methodDocs.ParamType.Ref] = paramTypeDocs
-			}
-		}
-
-		// Add result type usage
-		if methodDocs.ResultType.Ref != "" && methodDocs.ResultType.Ref != "null" {
-			resultTypeDocs, exists := g.d.Types[methodDocs.ResultType.Ref]
-			if exists {
-				resultTypeDocs.UsedBy = append(resultTypeDocs.UsedBy, UsedBy{
-					Type: "method", Target: methodName, Role: "result",
-				})
-				g.d.Types[methodDocs.ResultType.Ref] = resultTypeDocs
-			}
-		}
+		g.addTypeUsage(methodDocs.ParamType.Ref, "method", methodName, "param")
+		g.addTypeUsage(methodDocs.ResultType.Ref, "method", methodName, "result")
 	}
 
 	// Add usedBy information from events
 	for eventName, eventDocs := range g.d.Events {
-		// Add result type usage
-		if eventDocs.ResultType.Ref != "" && eventDocs.ResultType.Ref != "null" {
-			resultTypeDocs, exists := g.d.Types[eventDocs.ResultType.Ref]
-			if exists {
-				resultTypeDocs.UsedBy = append(resultTypeDocs.UsedBy, UsedBy{
-					Type: "event", Target: eventName, Role: "result",
-				})
-				g.d.Types[eventDocs.ResultType.Ref] = resultTypeDocs
-			}
-		}
+		g.addTypeUsage(eventDocs.ResultType.Ref, "event", eventName, "result")
 	}
 
 	// Sort UsedBy lists for deterministic output
@@ -249,21 +221,43 @@ func (g *GeneratorImpl) computeUsedBy() {
 	for name := range g.d.Types {
 		typeDocs := g.d.Types[name]
 		if len(typeDocs.UsedBy) > 0 {
-			sort.Slice(typeDocs.UsedBy, func(i, j int) bool {
-				if typeDocs.UsedBy[i].Type != typeDocs.UsedBy[j].Type {
-					return typeDocs.UsedBy[i].Type < typeDocs.UsedBy[j].Type
-				}
-				if typeDocs.UsedBy[i].Target != typeDocs.UsedBy[j].Target {
-					return typeDocs.UsedBy[i].Target < typeDocs.UsedBy[j].Target
-				}
-				return typeDocs.UsedBy[i].Role < typeDocs.UsedBy[j].Role
-			})
+			sort.Slice(typeDocs.UsedBy, usedByLess(typeDocs.UsedBy))
 			g.d.Types[name] = typeDocs
 			totalUsages += len(typeDocs.UsedBy)
 		}
 	}
 
 	g.l.Debug("Computed usedBy information for all types", slog.Int("totalUsages", totalUsages))
+}
+
+// addTypeUsage adds a usage record for a type if it exists and is not null
+func (g *GeneratorImpl) addTypeUsage(typeRef, usageType, target, role string) {
+	if typeRef == "" || typeRef == "null" {
+		return
+	}
+
+	typeDocs, exists := g.d.Types[typeRef]
+	if !exists {
+		return
+	}
+
+	typeDocs.UsedBy = append(typeDocs.UsedBy, UsedBy{
+		Type: usageType, Target: target, Role: role,
+	})
+	g.d.Types[typeRef] = typeDocs
+}
+
+// usedByLess returns a comparison function for sorting UsedBy entries
+func usedByLess(usedBy []UsedBy) func(i, j int) bool {
+	return func(i, j int) bool {
+		if usedBy[i].Type != usedBy[j].Type {
+			return usedBy[i].Type < usedBy[j].Type
+		}
+		if usedBy[i].Target != usedBy[j].Target {
+			return usedBy[i].Target < usedBy[j].Target
+		}
+		return usedBy[i].Role < usedBy[j].Role
+	}
 }
 
 // AddEventType registers a WebSocket event with its response type and documentation.

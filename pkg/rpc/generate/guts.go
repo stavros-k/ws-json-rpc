@@ -251,37 +251,34 @@ func (g *GutsGenerator) getTypeKindFromExpression(expr bindings.ExpressionType) 
 
 	switch e := expr.(type) {
 	case *bindings.UnionType:
-		// Check if it's a string enum (all members are string literals)
-		allStringLiterals := true
-		allNumberLiterals := true
+		// Check if it's a string/number enum (all members are literals of same type)
+		allString, allNumber := true, true
 
 		for _, member := range e.Types {
 			lit, ok := member.(*bindings.LiteralType)
 			if !ok {
-				allStringLiterals = false
-				allNumberLiterals = false
-				continue
+				allString, allNumber = false, false
+				break
 			}
 
-			if _, isString := lit.Value.(string); !isString {
-				allStringLiterals = false
-			}
-
-			if _, isNumber := lit.Value.(int); !isNumber {
-				if _, isFloat := lit.Value.(float64); !isFloat {
-					allNumberLiterals = false
-				}
+			switch lit.Value.(type) {
+			case string:
+				allNumber = false
+			case int, float64:
+				allString = false
+			default:
+				allString, allNumber = false, false
 			}
 		}
 
-		if allStringLiterals {
+		switch {
+		case allString:
 			return "String Enum", nil
-		}
-		if allNumberLiterals {
+		case allNumber:
 			return "Number Enum", nil
+		default:
+			return "Union", nil
 		}
-
-		return "Union", nil
 
 	case *bindings.TypeLiteralNode:
 		return "Object", nil
@@ -331,24 +328,26 @@ func (g *GutsGenerator) getTypeKindFromExpression(expr bindings.ExpressionType) 
 // extractFieldsFromExpressionType extracts fields if the expression is a type literal (object type)
 // Returns empty slice if serialization fails for any field
 func (g *GutsGenerator) extractFieldsFromExpressionType(expr bindings.ExpressionType) []FieldMetadata {
-	var fields []FieldMetadata
+	typeLiteral, ok := expr.(*bindings.TypeLiteralNode)
+	if !ok {
+		return nil
+	}
 
-	if typeLiteral, ok := expr.(*bindings.TypeLiteralNode); ok {
-		for _, member := range typeLiteral.Members {
-			typeStr, err := g.serializeExpressionType(member.Type)
-			if err != nil {
-				g.l.Warn("Failed to serialize field type in type literal", slog.String("field", member.Name), slog.String("error", err.Error()))
-				continue
-			}
-			field := FieldMetadata{
-				Name:        member.Name,
-				Type:        typeStr,
-				Description: g.extractComments(member.SupportComments),
-				Optional:    member.QuestionToken,
-				EnumValues:  g.extractEnumValues(member.Type),
-			}
-			fields = append(fields, field)
+	var fields []FieldMetadata
+	for _, member := range typeLiteral.Members {
+		typeStr, err := g.serializeExpressionType(member.Type)
+		if err != nil {
+			g.l.Warn("Failed to serialize field type in type literal", slog.String("field", member.Name), slog.String("error", err.Error()))
+			continue
 		}
+
+		fields = append(fields, FieldMetadata{
+			Name:        member.Name,
+			Type:        typeStr,
+			Description: g.extractComments(member.SupportComments),
+			Optional:    member.QuestionToken,
+			EnumValues:  g.extractEnumValues(member.Type),
+		})
 	}
 
 	return fields
@@ -381,12 +380,15 @@ func (g *GutsGenerator) extractComments(sc bindings.SupportComments) string {
 		return ""
 	}
 
-	commentTexts := make([]string, 0, len(comments))
-	for _, comment := range comments {
-		commentTexts = append(commentTexts, strings.TrimSpace(comment.Text))
+	var builder strings.Builder
+	for i, comment := range comments {
+		if i > 0 {
+			builder.WriteString(" ")
+		}
+		builder.WriteString(strings.TrimSpace(comment.Text))
 	}
 
-	return strings.Join(commentTexts, " ")
+	return builder.String()
 }
 
 // extractEnumValues checks if the type is a union of string literals and extracts the values
@@ -401,34 +403,46 @@ func (g *GutsGenerator) extractEnumValues(expr bindings.ExpressionType) []string
 	}
 
 	// Check if it's a reference to another type (like EventKind)
-	if ref, ok := expr.(*bindings.ReferenceType); ok {
-		refName := ref.Name.String()
-		node, exists := g.tsParser.Node(refName)
-		if !exists {
-			return nil
-		}
-
-		// Check if the referenced type is an alias to a union
-		if alias, ok := node.(*bindings.Alias); ok {
-			if union, ok := alias.Type.(*bindings.UnionType); ok {
-				return g.extractLiteralsFromUnion(union)
-			}
-		}
+	ref, ok := expr.(*bindings.ReferenceType)
+	if !ok {
+		return nil
 	}
 
-	return nil
+	node, exists := g.tsParser.Node(ref.Name.String())
+	if !exists {
+		return nil
+	}
+
+	// Check if the referenced type is an alias to a union
+	alias, ok := node.(*bindings.Alias)
+	if !ok {
+		return nil
+	}
+
+	union, ok := alias.Type.(*bindings.UnionType)
+	if !ok {
+		return nil
+	}
+
+	return g.extractLiteralsFromUnion(union)
 }
 
 // extractLiteralsFromUnion extracts string literal values from a union type
 func (g *GutsGenerator) extractLiteralsFromUnion(union *bindings.UnionType) []string {
 	var values []string
 	for _, member := range union.Types {
-		if lit, ok := member.(*bindings.LiteralType); ok {
-			// Check if the literal value is a string
-			if strVal, ok := lit.Value.(string); ok {
-				values = append(values, strVal)
-			}
+		lit, ok := member.(*bindings.LiteralType)
+		if !ok {
+			continue
 		}
+
+		// Check if the literal value is a string
+		strVal, ok := lit.Value.(string)
+		if !ok {
+			continue
+		}
+
+		values = append(values, strVal)
 	}
 	return values
 }
