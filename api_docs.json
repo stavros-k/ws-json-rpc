@@ -1,7 +1,7 @@
 {
   "info": {
     "title": "Local API",
-    "version": "vdev (c9ddbf5-dirty)",
+    "version": "vdev (c674e79-dirty)",
     "description": "A JSON-RPC API over HTTP and Websockets"
   },
   "methods": {
@@ -54,7 +54,7 @@
         {
           "title": "Subscribe",
           "description": "Subscribe to the DataCreated event",
-          "params": "{\n  \"event\": \"data.created\",\n  \"data\": {\n    \"id\": \"00000000-0000-0000-0000-000000000000\"\n  }\n}",
+          "params": "{\n  \"event\": \"data.created\"\n}",
           "result": "{\n  \"success\": true\n}"
         }
       ],
@@ -139,9 +139,6 @@
           "optional": false
         }
       ],
-      "referencedBy": [
-        "SubscribeParams"
-      ],
       "usedBy": [
         {
           "type": "event",
@@ -211,8 +208,8 @@
     },
     "SubscribeParams": {
       "description": "SubscribeParams - Parameters for the Subscribe method",
-      "jsonRepresentation": "{\n  \"event\": \"\",\n  \"data\": {\n    \"id\": \"00000000-0000-0000-0000-000000000000\"\n  }\n}",
-      "tsType": "/**\n * SubscribeParams - Parameters for the Subscribe method\n */\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n    data: DataCreated;\n};",
+      "jsonRepresentation": "{\n  \"event\": \"\"\n}",
+      "tsType": "/**\n * SubscribeParams - Parameters for the Subscribe method\n */\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -224,15 +221,9 @@
             "data.created",
             "data.updated"
           ]
-        },
-        {
-          "name": "data",
-          "type": "DataCreated",
-          "optional": false
         }
       ],
       "references": [
-        "DataCreated",
         "EventKind"
       ],
       "usedBy": [

@@ -5,7 +5,7 @@ package generate
 
 import (
 	"errors"
-	"ws-json-rpc/pkg/utils"
+	"ws-json-rpc/backend/pkg/utils"
 )
 
 // Ref represents a JSON Schema reference to another type.

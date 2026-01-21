@@ -64,6 +64,19 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 		return nil, fmt.Errorf("failed to include go types dir for parsing: %w", err)
 	}
 
+	hasErrors := false
+	for _, pkg := range goParser.Pkgs {
+		if len(pkg.Errors) > 0 {
+			hasErrors = true
+		}
+		for _, e := range pkg.Errors {
+			l.Error("failed to parse go types", slog.String("pkg", pkg.PkgPath), slog.String("error", e.Error()))
+		}
+	}
+	if hasErrors {
+		return nil, fmt.Errorf("failed to parse go types")
+	}
+
 	l.Debug("Generating TypeScript AST from Go types")
 
 	ts, err := goParser.ToTypescript()

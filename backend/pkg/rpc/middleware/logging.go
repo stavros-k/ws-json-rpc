@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"time"
-	"ws-json-rpc/pkg/rpc"
+	"ws-json-rpc/backend/pkg/rpc"
 )
 
 func LoggingMiddleware(next rpc.HandlerFunc) rpc.HandlerFunc {

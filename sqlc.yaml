@@ -1,7 +1,7 @@
 version: "2"
 sql:
   - engine: sqlite
-    queries: internal/database/sqlite/queries
+    queries: backend/internal/database/sqlite/queries
     schema: schema.sql
     strict_function_checks: true
     strict_order_by: true

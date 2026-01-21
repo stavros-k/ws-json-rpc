@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"ws-json-rpc/internal/database/sqlite"
-	"ws-json-rpc/pkg/database"
-	"ws-json-rpc/pkg/utils"
+	"ws-json-rpc/backend/internal/database/sqlite"
+	"ws-json-rpc/backend/pkg/database"
+	"ws-json-rpc/backend/pkg/utils"
 )
 
 // GeneratorImpl is the concrete implementation of the Generator interface.

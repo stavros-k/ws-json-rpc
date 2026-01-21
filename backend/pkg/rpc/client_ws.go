@@ -9,7 +9,7 @@ import (
 	"net"
 	"net/http"
 	"time"
-	"ws-json-rpc/pkg/utils"
+	"ws-json-rpc/backend/pkg/utils"
 
 	"github.com/coder/websocket"
 	"github.com/google/uuid"

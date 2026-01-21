@@ -2,8 +2,8 @@ package rpcapi
 
 import (
 	"context"
-	rpctypes "ws-json-rpc/internal/rpcapi/types"
-	"ws-json-rpc/pkg/rpc"
+	rpctypes "ws-json-rpc/backend/internal/rpcapi/types"
+	"ws-json-rpc/backend/pkg/rpc"
 )
 
 func (h *Handlers) Subscribe(ctx context.Context, hctx *rpc.HandlerContext, params rpctypes.SubscribeParams) (rpctypes.SubscribeResult, error) {

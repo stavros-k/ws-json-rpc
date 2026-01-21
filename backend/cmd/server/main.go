@@ -10,15 +10,15 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"ws-json-rpc/internal/app"
-	"ws-json-rpc/internal/database/sqlite"
-	"ws-json-rpc/internal/rpcapi"
-	rpctypes "ws-json-rpc/internal/rpcapi/types"
-	"ws-json-rpc/pkg/database"
-	"ws-json-rpc/pkg/rpc"
-	"ws-json-rpc/pkg/rpc/generate"
-	"ws-json-rpc/pkg/rpc/middleware"
-	"ws-json-rpc/pkg/utils"
+	"ws-json-rpc/backend/internal/app"
+	"ws-json-rpc/backend/internal/database/sqlite"
+	"ws-json-rpc/backend/internal/rpcapi"
+	rpctypes "ws-json-rpc/backend/internal/rpcapi/types"
+	"ws-json-rpc/backend/pkg/database"
+	"ws-json-rpc/backend/pkg/rpc"
+	"ws-json-rpc/backend/pkg/rpc/generate"
+	"ws-json-rpc/backend/pkg/rpc/middleware"
+	"ws-json-rpc/backend/pkg/utils"
 	"ws-json-rpc/web"
 
 	"github.com/google/uuid"
@@ -208,7 +208,7 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 		return &generate.MockGenerator{}, nil
 	}
 	return generate.NewGenerator(logger, generate.GeneratorOptions{
-		GoTypesDirPath:               "./internal/rpcapi/types",
+		GoTypesDirPath:               "backend/internal/rpcapi/types",
 		DocsFileOutputPath:           "api_docs.json",
 		DatabaseSchemaFileOutputPath: "schema.sql",
 		TSTypesOutputPath:            "web/ws-client/generated.ts",

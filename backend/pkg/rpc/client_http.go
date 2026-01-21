@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"ws-json-rpc/pkg/utils"
+	"ws-json-rpc/backend/pkg/utils"
 
 	"github.com/google/uuid"
 )

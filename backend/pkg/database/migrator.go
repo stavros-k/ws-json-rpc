@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"ws-json-rpc/pkg/utils"
+	"ws-json-rpc/backend/pkg/utils"
 
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/sqlite"

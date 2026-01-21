@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"sync"
 	"time"
-	"ws-json-rpc/pkg/rpc/generate"
-	"ws-json-rpc/pkg/utils"
+	"ws-json-rpc/backend/pkg/rpc/generate"
+	"ws-json-rpc/backend/pkg/utils"
 
 	"github.com/google/uuid"
 )

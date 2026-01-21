@@ -1,6 +1,6 @@
 package rpcapi
 
-import "ws-json-rpc/pkg/rpc"
+import "ws-json-rpc/backend/pkg/rpc"
 
 type Handlers struct {
 	hub *rpc.Hub
