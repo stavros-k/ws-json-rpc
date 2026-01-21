@@ -1,7 +1,7 @@
 import type { APIEvents, EventKind } from "./events";
 import type { APIMethods, MethodKind } from "./methods";
 
-type UUID = ReturnType<typeof crypto.randomUUID>;
+type UUID = string;
 
 // Incoming message is either a response or an event
 export type IncomingMessage = ResponseMessage | EventMessage;
