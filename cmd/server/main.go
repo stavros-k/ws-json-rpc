@@ -49,89 +49,10 @@ func main() {
 	hub.WithMiddleware(middleware.LoggingMiddleware)
 
 	// Register events
-	rpc.RegisterEvent[rpctypes.DataCreated](hub, string(rpctypes.EventKindDataCreated), rpc.EventOptions{
-		Docs: generate.EventDocs{
-			Title:       "DataCreated",
-			Description: "Event fired when new data is created",
-			Group:       "Data",
-			Deprecated:  true,
-			Examples: []generate.Example{
-				{
-					Title:       "Basic example",
-					Description: "Subscribe to the DataCreated event",
-					ResultObj:   rpctypes.DataCreated{ID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")},
-				},
-			},
-		},
-	})
+	registerEvents(hub)
 
 	// Register methods
-	rpc.RegisterMethod(hub, string(rpctypes.MethodKindPing), methods.PingHandler, rpc.RegisterMethodOptions{
-		Docs: generate.MethodDocs{
-			Title:       "Ping",
-			Description: "A simple ping method to check if the server is alive",
-			Group:       "Core",
-			Tags:        []string{"health", "status"},
-			Examples: []generate.Example{
-				{
-					Title:       "Ping",
-					Description: "Ping the server",
-					ParamsObj:   nil,
-					ResultObj:   rpctypes.PingResult{Message: "pong", Status: rpctypes.PingStatusSuccess},
-				},
-			},
-		},
-	})
-
-	rpc.RegisterMethod(hub, string(rpctypes.MethodKindSubscribe), methods.Subscribe, rpc.RegisterMethodOptions{
-		Docs: generate.MethodDocs{
-			Title:       "Subscribe",
-			Description: "Subscribe to a data event",
-			Group:       "Utility",
-			NoHTTP:      true,
-			Examples: []generate.Example{
-				{
-					Title:       "Subscribe",
-					Description: "Subscribe to the DataCreated event",
-					ParamsObj:   rpctypes.SubscribeParams{Event: rpctypes.EventKindDataCreated},
-					ResultObj:   rpctypes.SubscribeResult{Success: true},
-				},
-			},
-			Errors: []generate.ErrorDoc{
-				{
-					Title:       "Invalid event",
-					Description: "The event topic is invalid",
-					Code:        400,
-					Message:     "Invalid event topic",
-				},
-			},
-		},
-	})
-
-	rpc.RegisterMethod(hub, string(rpctypes.MethodKindUnsubscribe), methods.Unsubscribe, rpc.RegisterMethodOptions{
-		Docs: generate.MethodDocs{
-			Title:       "Unsubscribe",
-			Description: "Unsubscribe from a data event",
-			Group:       "Utility",
-			NoHTTP:      true,
-			Examples: []generate.Example{
-				{
-					Title:       "Unsubscribe",
-					Description: "Unsubscribe from the DataCreated event",
-					ParamsObj:   rpctypes.UnsubscribeParams{Event: rpctypes.EventKindDataCreated},
-					ResultObj:   rpctypes.UnsubscribeResult{Success: true},
-				},
-			},
-			Errors: []generate.ErrorDoc{
-				{
-					Title:       "Invalid event",
-					Description: "The event topic is invalid",
-					Code:        400,
-					Message:     "Invalid event topic",
-				},
-			},
-		},
-	})
+	registerMethods(hub, methods)
 
 	if err := hub.GenerateDocs(); err != nil {
 		fatalIfErr(logger, fmt.Errorf("failed to generate API docs: %w", err))
@@ -193,6 +114,93 @@ func main() {
 	}
 
 	logger.Info("http/ws server shutdown complete")
+}
+
+func registerEvents(h *rpc.Hub) {
+	rpc.RegisterEvent[rpctypes.DataCreated](h, string(rpctypes.EventKindDataCreated), rpc.EventOptions{
+		Docs: generate.EventDocs{
+			Title:       "DataCreated",
+			Description: "Event fired when new data is created",
+			Group:       "Data",
+			Deprecated:  true,
+			Examples: []generate.Example{
+				{
+					Title:       "Basic example",
+					Description: "Subscribe to the DataCreated event",
+					ResultObj:   rpctypes.DataCreated{ID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")},
+				},
+			},
+		},
+	})
+}
+
+func registerMethods(h *rpc.Hub, methods *rpcapi.Handlers) {
+	rpc.RegisterMethod(h, string(rpctypes.MethodKindPing), methods.PingHandler, rpc.RegisterMethodOptions{
+		Docs: generate.MethodDocs{
+			Title:       "Ping",
+			Description: "A simple ping method to check if the server is alive",
+			Group:       "Core",
+			Tags:        []string{"health", "status"},
+			Examples: []generate.Example{
+				{
+					Title:       "Ping",
+					Description: "Ping the server",
+					ParamsObj:   nil,
+					ResultObj:   rpctypes.PingResult{Message: "pong", Status: rpctypes.PingStatusSuccess},
+				},
+			},
+		},
+	})
+
+	rpc.RegisterMethod(h, string(rpctypes.MethodKindSubscribe), methods.Subscribe, rpc.RegisterMethodOptions{
+		Docs: generate.MethodDocs{
+			Title:       "Subscribe",
+			Description: "Subscribe to a data event",
+			Group:       "Utility",
+			NoHTTP:      true,
+			Examples: []generate.Example{
+				{
+					Title:       "Subscribe",
+					Description: "Subscribe to the DataCreated event",
+					ParamsObj:   rpctypes.SubscribeParams{Event: rpctypes.EventKindDataCreated},
+					ResultObj:   rpctypes.SubscribeResult{Success: true},
+				},
+			},
+			Errors: []generate.ErrorDoc{
+				{
+					Title:       "Invalid event",
+					Description: "The event topic is invalid",
+					Code:        400,
+					Message:     "Invalid event topic",
+				},
+			},
+		},
+	})
+
+	rpc.RegisterMethod(h, string(rpctypes.MethodKindUnsubscribe), methods.Unsubscribe, rpc.RegisterMethodOptions{
+		Docs: generate.MethodDocs{
+			Title:       "Unsubscribe",
+			Description: "Unsubscribe from a data event",
+			Group:       "Utility",
+			NoHTTP:      true,
+			Examples: []generate.Example{
+				{
+					Title:       "Unsubscribe",
+					Description: "Unsubscribe from the DataCreated event",
+					ParamsObj:   rpctypes.UnsubscribeParams{Event: rpctypes.EventKindDataCreated},
+					ResultObj:   rpctypes.UnsubscribeResult{Success: true},
+				},
+			},
+			Errors: []generate.ErrorDoc{
+				{
+					Title:       "Invalid event",
+					Description: "The event topic is invalid",
+					Code:        400,
+					Message:     "Invalid event topic",
+				},
+			},
+		},
+	})
 }
 
 func generator(config *app.Config, logger *slog.Logger) (generate.Generator, error) {

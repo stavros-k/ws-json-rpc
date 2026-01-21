@@ -62,6 +62,11 @@ export const Sidebar = () => {
             />
 
             <SidebarLink
+                title='JSON-RPC Protocol'
+                href='/api/protocol'
+            />
+
+            <SidebarLink
                 title='Database Schema'
                 href='/api/database/schema'
             />
