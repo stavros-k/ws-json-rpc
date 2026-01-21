@@ -1,3 +1,7 @@
+// Package generate provides API documentation generation from Go type definitions.
+// It extracts type metadata from Go structs, generates TypeScript definitions,
+// and produces comprehensive JSON documentation including methods, events, types,
+// and database schema information.
 package generate
 
 import (
@@ -38,12 +42,9 @@ type GeneratorOptions struct {
 	DocsOptions                  DocsOptions // Docs options
 }
 
-// NewGenerator creates a new Generator instance with the given options.
-// It performs the following initialization steps:
-// 1. Validates all required options are provided
-// 2. Creates the docs structure
-//
-// Types are registered dynamically when methods/events are added.
+// NewGenerator creates a Generator that validates options, initializes the TypeScript parser,
+// writes type definitions, and sets up documentation structures.
+// Types are registered dynamically as methods/events are added.
 func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 	l.Debug("Creating API documentation generator",
 		slog.String("docsOutput", opts.DocsFileOutputPath),
@@ -57,7 +58,7 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 		return nil, fmt.Errorf("schema file path is required")
 	}
 
-	gutsGenerator, err := NewGutsGenerator(l.With("component", "guts-generator"), opts.GoTypesDirPath)
+	gutsGenerator, err := NewGutsGenerator(l, opts.GoTypesDirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GutsGenerator: %w", err)
 	}
@@ -78,9 +79,7 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 	return g, nil
 }
 
-// GetDatabaseSchema generates the database schema by running migrations on a temporary database.
-// It creates a temporary SQLite database, runs all migrations, and dumps the resulting schema.
-// Returns the schema as a string for inclusion in API documentation.
+// GetDatabaseSchema runs migrations on a temporary database and returns the resulting schema.
 func (g *GeneratorImpl) GetDatabaseSchema() (string, error) {
 	g.l.Debug("Generating database schema from migrations")
 
@@ -108,12 +107,7 @@ func (g *GeneratorImpl) GetDatabaseSchema() (string, error) {
 }
 
 // Generate produces the final API documentation JSON file.
-// It performs the following steps:
-// 1. Generates database schema from migrations
-// 2. Writes complete API documentation (types, methods, events, database schema) to JSON file
-//
-// This should be called after all methods and events have been registered via
-// AddHandlerType and AddEventType.
+// Must be called after all methods and events have been registered.
 func (g *GeneratorImpl) Generate() error {
 	g.l.Info("Starting API documentation generation",
 		slog.Int("methods", len(g.d.Methods)),
@@ -152,8 +146,8 @@ func (g *GeneratorImpl) Generate() error {
 	return nil
 }
 
-// computeBackReferences computes which types are referenced by other types.
-// For each type A that references type B, adds A to B's ReferencedBy list.
+// computeBackReferences builds reverse relationships, allowing navigation from a type
+// to all types that reference it.
 func (g *GeneratorImpl) computeBackReferences() {
 	// First, clear all existing back-references
 	for name := range g.d.Types {
@@ -195,8 +189,7 @@ func (g *GeneratorImpl) computeBackReferences() {
 	g.l.Debug("Computed back-references for all types", slog.Int("totalBackRefs", totalBackRefs))
 }
 
-// computeUsedBy computes which methods and events use each type.
-// For each type, records where it's used as a parameter or result.
+// computeUsedBy records which methods and events use each type as a parameter or result.
 func (g *GeneratorImpl) computeUsedBy() {
 	// First, clear all existing usedBy information
 	for name := range g.d.Types {
@@ -230,7 +223,7 @@ func (g *GeneratorImpl) computeUsedBy() {
 	g.l.Debug("Computed usedBy information for all types", slog.Int("totalUsages", totalUsages))
 }
 
-// addTypeUsage adds a usage record for a type if it exists and is not null
+// addTypeUsage adds a usage record for a type if it exists and is not null.
 func (g *GeneratorImpl) addTypeUsage(typeRef, usageType, target, role string) {
 	if typeRef == "" || typeRef == "null" {
 		return
@@ -247,7 +240,7 @@ func (g *GeneratorImpl) addTypeUsage(typeRef, usageType, target, role string) {
 	g.d.Types[typeRef] = typeDocs
 }
 
-// usedByLess returns a comparison function for sorting UsedBy entries
+// usedByLess returns a comparison function that sorts by Type, Target, then Role.
 func usedByLess(usedBy []UsedBy) func(i, j int) bool {
 	return func(i, j int) bool {
 		if usedBy[i].Type != usedBy[j].Type {
@@ -261,15 +254,6 @@ func usedByLess(usedBy []UsedBy) func(i, j int) bool {
 }
 
 // AddEventType registers a WebSocket event with its response type and documentation.
-// Events are unidirectional server-to-client messages sent over WebSocket connections.
-// The response type must be a named struct.
-//
-// This method:
-// 1. Validates the event hasn't been registered already
-// 2. Validates the event documentation
-// 3. Converts example objects to JSON strings
-// 4. Sets the result type reference
-// 5. Registers the type with its JSON instance
 func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 	if _, exists := g.d.Events[name]; exists {
 		g.fatalIfErr(errors.New("event already registered: " + name))
@@ -298,15 +282,6 @@ func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 }
 
 // AddHandlerType registers an RPC method with its request/response types and documentation.
-// Methods are bidirectional request-response calls available over WebSocket and optionally HTTP.
-//
-// This method:
-// 1. Validates the method hasn't been registered already
-// 2. Validates the method documentation
-// 3. Converts example objects to JSON strings
-// 4. Sets parameter and result type references
-// 5. Registers both types with their JSON instances
-// 6. Configures protocol availability (WS always enabled, HTTP based on docs.NoHTTP)
 func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs MethodDocs) {
 	if _, exists := g.d.Methods[name]; exists {
 		g.fatalIfErr(errors.New("method already registered: " + name))
@@ -343,8 +318,9 @@ func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs Meth
 }
 
 // registerType registers a type with optional JSON instance.
-// If v is nil, only TypeScript type information is registered (for discovered types).
+// If v is nil, only TypeScript information is registered (for referenced types).
 // If v is not nil, also includes JSON representation (for explicitly registered types).
+// Recursively registers any types this type references.
 func (g *GeneratorImpl) registerType(name string, v any) {
 	if name == "null" {
 		return
@@ -413,8 +389,7 @@ type typeMetadata struct {
 	enumValues []string
 }
 
-// extractTypeMetadata extracts all metadata from TypeScript AST for a type.
-// Handles errors by logging warnings and returning sensible defaults.
+// extractTypeMetadata extracts all metadata for a type, logging warnings and using defaults on errors.
 func (g *GeneratorImpl) extractTypeMetadata(name string) typeMetadata {
 	var metadata typeMetadata
 
@@ -453,8 +428,7 @@ func (g *GeneratorImpl) extractTypeMetadata(name string) typeMetadata {
 	return metadata
 }
 
-// fatalIfErr logs the error and exits the program if err is not nil.
-// This is used for unrecoverable errors during generator setup.
+// fatalIfErr logs the error and exits if err is not nil.
 func (g *GeneratorImpl) fatalIfErr(err error) {
 	if err == nil {
 		return
@@ -464,10 +438,8 @@ func (g *GeneratorImpl) fatalIfErr(err error) {
 	os.Exit(1)
 }
 
-// mustGetTypeName extracts the type name from a value.
-// It validates that the value is a named struct (not an anonymous struct or primitive type).
-// Returns "null" for empty struct{} values (representing no params/result).
-// Panics via fatalIfErr if the value is not a valid named struct.
+// mustGetTypeName extracts the type name from a value, requiring it to be a named struct.
+// Returns "null" for empty struct{} (representing no params/result).
 func (g *GeneratorImpl) mustGetTypeName(v any) string {
 	// Handle nil
 	if v == nil {
@@ -493,9 +465,7 @@ func (g *GeneratorImpl) mustGetTypeName(v any) string {
 	return t.Name()
 }
 
-// isNamedStruct checks if a type is a named struct (has a type name).
-// Returns true for types like "type User struct { ... }" but false for anonymous structs.
-// Handles pointer types by checking the underlying element type.
+// isNamedStruct checks if a type is a named struct (not anonymous).
 func isNamedStruct(t reflect.Type) bool {
 	// Handle nil
 	if t == nil {

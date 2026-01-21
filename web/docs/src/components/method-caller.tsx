@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ApiMethods } from "@/../../artifacts/types";
+import type { APIMethods } from "../../../ws-client/methods";
 import { useMaxResults } from "@/contexts/max-results-context";
 import { useWebSocket } from "@/contexts/websocket-context";
 import { CodeWrapperClient } from "./code-wrapper-client";
 
 type MethodCallerProps = {
-    methodName: keyof ApiMethods;
+    methodName: keyof APIMethods;
     defaultParams?: string;
 };
 
@@ -20,7 +20,7 @@ type CallResult = {
 
 export function MethodCaller({ methodName, defaultParams = "{}" }: MethodCallerProps) {
     const { client, connected, error: connectionError } = useWebSocket();
-    const { maxResults } = useMaxResults();
+    const { maxResults, settled: maxResSettled } = useMaxResults();
     const [params, setParams] = useState(defaultParams);
     const [results, setResults] = useState<CallResult[]>([]);
     const [isValidJson, setIsValidJson] = useState(true);
@@ -37,8 +37,9 @@ export function MethodCaller({ methodName, defaultParams = "{}" }: MethodCallerP
 
     // Trim results array when maxResults changes
     useEffect(() => {
+        if (!maxResSettled) return;
         setResults((prev) => prev.slice(0, maxResults));
-    }, [maxResults]);
+    }, [maxResults, maxResSettled]);
 
     const validateJson = (value: string) => {
         if (!value.trim()) {
@@ -165,84 +166,92 @@ export function MethodCaller({ methodName, defaultParams = "{}" }: MethodCallerP
                 </div>
             )}
 
-            {hasParams && (
-                <div className='space-y-2 mb-4'>
-                    <label
-                        htmlFor={`method-params-${methodName}`}
-                        className='block text-sm font-medium text-text-secondary'>
-                        Parameters (JSON)
-                    </label>
-                    <div className='relative'>
-                        <div
-                            className='invisible whitespace-pre-wrap wrap-break-word px-3 py-2 font-mono text-sm min-h-10'
-                            aria-hidden='true'>
-                            {params || "{}"}
-                        </div>
-                        <textarea
-                            id={`method-params-${methodName}`}
-                            value={params}
-                            onChange={handleParamsChange}
-                            className={`absolute inset-0 w-full h-full px-3 py-2 font-mono text-sm rounded border ${
-                                isValidJson ? "border-border-primary bg-bg-secondary" : "border-red-500 bg-red-500/5"
-                            } text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden min-h-10`}
-                            placeholder='{"key": "value"}'
-                        />
-                    </div>
-                    {!isValidJson && <p className='text-xs text-red-500'>Invalid JSON syntax</p>}
-                </div>
-            )}
-
-            <button
-                onClick={handleCall}
-                disabled={!connected || !isValidJson || isCalling}
-                className='w-full px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium transition-colors mb-4'
-                type='button'>
-                {isCalling ? "Calling..." : "Call"}
-            </button>
-
-            <div className='border-t border-border-primary pt-4 space-y-4'>
-                {results.length > 0 ? (
-                    results.map((result, index) => (
-                        <div
-                            key={result.timestamp}
-                            className='pb-4 border-b border-border-primary last:border-b-0 last:pb-0 animate-slide-down-fade-in'>
-                            <div className='flex items-center justify-between mb-2'>
-                                <div className='flex items-center gap-2'>
-                                    <span className='text-xs text-text-tertiary'>Result #{results.length - index}</span>
-                                    <span
-                                        className={`text-xs px-2 py-0.5 rounded ${
-                                            result.success
-                                                ? "bg-green-500/20 text-green-500"
-                                                : "bg-red-500/20 text-red-500"
-                                        }`}>
-                                        {result.success ? "Success" : "Error"}
-                                    </span>
+            {!connectionError && (
+                <>
+                    {hasParams && (
+                        <div className='space-y-2 mb-4'>
+                            <label
+                                htmlFor={`method-params-${methodName}`}
+                                className='block text-sm font-medium text-text-secondary'>
+                                Parameters (JSON)
+                            </label>
+                            <div className='relative'>
+                                <div
+                                    className='invisible whitespace-pre-wrap wrap-break-word px-3 py-2 font-mono text-sm min-h-10'
+                                    aria-hidden='true'>
+                                    {params || "{}"}
                                 </div>
-                                <span className='text-xs text-text-tertiary'>
-                                    {new Date(result.timestamp).toLocaleTimeString()}
-                                </span>
-                            </div>
-                            {result.error && (
-                                <div className='mb-2 p-2 bg-red-500/10 border border-red-500 rounded text-red-500 text-xs'>
-                                    {result.error}
-                                </div>
-                            )}
-                            {result.data !== null && result.data !== undefined && (
-                                <CodeWrapperClient
-                                    code={JSON.stringify(result.data)}
-                                    lang='json'
+                                <textarea
+                                    id={`method-params-${methodName}`}
+                                    value={params}
+                                    onChange={handleParamsChange}
+                                    className={`absolute inset-0 w-full h-full px-3 py-2 font-mono text-sm rounded border ${
+                                        isValidJson
+                                            ? "border-border-primary bg-bg-secondary"
+                                            : "border-red-500 bg-red-500/5"
+                                    } text-text-primary focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none overflow-hidden min-h-10`}
+                                    placeholder='{"key": "value"}'
                                 />
-                            )}
+                            </div>
+                            {!isValidJson && <p className='text-xs text-red-500'>Invalid JSON syntax</p>}
                         </div>
-                    ))
-                ) : (
-                    <div className='p-4 rounded-xl border-2 border-border-primary bg-background-secondary'>
-                        <p className='text-text-tertiary text-sm'>
-                            No results yet. Call the method to see results here.
-                        </p>
+                    )}
+
+                    <button
+                        onClick={handleCall}
+                        disabled={!connected || !isValidJson || isCalling}
+                        className='w-full px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium transition-colors mb-4'
+                        type='button'>
+                        {isCalling ? "Calling..." : "Call"}
+                    </button>
+
+                    <div className='border-t border-border-primary pt-4 space-y-4'>
+                        {results.length > 0 ? (
+                            results.map((result, index) => (
+                                <div
+                                    key={result.timestamp}
+                                    className='pb-4 border-b border-border-primary last:border-b-0 last:pb-0 animate-slide-down-fade-in'>
+                                    <div className='flex items-center justify-between mb-2'>
+                                        <div className='flex items-center gap-2'>
+                                            <span className='text-xs text-text-tertiary'>
+                                                Result #{results.length - index}
+                                            </span>
+                                            <span
+                                                className={`text-xs px-2 py-0.5 rounded ${
+                                                    result.success
+                                                        ? "bg-green-500/20 text-green-500"
+                                                        : "bg-red-500/20 text-red-500"
+                                                }`}>
+                                                {result.success ? "Success" : "Error"}
+                                            </span>
+                                        </div>
+                                        <span className='text-xs text-text-tertiary'>
+                                            {new Date(result.timestamp).toLocaleTimeString()}
+                                        </span>
+                                    </div>
+                                    {result.error && (
+                                        <div className='mb-2 p-2 bg-red-500/10 border border-red-500 rounded text-red-500 text-xs'>
+                                            {result.error}
+                                        </div>
+                                    )}
+                                    {result.data !== null && result.data !== undefined && (
+                                        <CodeWrapperClient
+                                            code={JSON.stringify(result.data)}
+                                            lang='json'
+                                        />
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <div className='p-4 rounded-xl border-2 border-border-primary bg-background-secondary'>
+                                <p className='text-text-tertiary text-sm'>
+                                    No results yet. Call the method to see results here.
+                                </p>
+                            </div>
+                        )}
                     </div>
-                )}
-            </div>
+                </>
+            )}
 
             {results.length > 0 && (
                 <div className='mt-4 flex justify-end'>

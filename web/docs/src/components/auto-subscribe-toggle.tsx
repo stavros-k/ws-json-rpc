@@ -3,7 +3,18 @@
 import { useAutoSubscribe } from "@/contexts/auto-subscribe-context";
 
 export function AutoSubscribeToggle() {
-    const { autoSubscribe, toggleAutoSubscribe } = useAutoSubscribe();
+    const { autoSubscribe, toggleAutoSubscribe, settled } = useAutoSubscribe();
+
+    if (!settled) {
+        return (
+            <div className='w-full rounded-lg border border-border-primary bg-bg-secondary px-3 py-2 text-sm font-medium opacity-50'>
+                <div className='flex items-center justify-between'>
+                    <span>Auto-subscribe Events</span>
+                    <span className='text-xs'>...</span>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <button

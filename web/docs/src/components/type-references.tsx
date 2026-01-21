@@ -33,9 +33,7 @@ export function TypeReferences({ typeName, data }: TypeReferencesProps) {
                         </div>
                     </>
                 ) : (
-                    <p className='text-sm text-text-tertiary'>
-                        This type does not reference other types.
-                    </p>
+                    <p className='text-sm text-text-tertiary'>This type does not reference other types.</p>
                 )}
             </div>
 

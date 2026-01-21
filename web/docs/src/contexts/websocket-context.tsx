@@ -55,8 +55,8 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
             setConnected(false);
         });
 
-        newClient.onError((err) => {
-            setError(`WebSocket error: ${err.type}`);
+        newClient.onError((message) => {
+            setError(message);
             setConnected(false);
         });
 

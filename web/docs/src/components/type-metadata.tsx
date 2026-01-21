@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { TypeData, FieldMetadata } from "@/data/api";
+import type { FieldMetadata, TypeData } from "@/data/api";
 import { docs } from "@/data/api";
 
 interface TypeMetadataProps {

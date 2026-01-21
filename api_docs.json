@@ -129,7 +129,7 @@
     "DataCreated": {
       "description": "SomeEvent - Result for the SomeEvent method",
       "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
-      "tsType": "// From rpctypes/types.go\n/**\n * SomeEvent - Result for the SomeEvent method\n */\nexport type DataCreated = {\n    /**\n     * The unique identifier for the result\n     */\n    // this is likely an enum in an external package \"github.com/google/uuid.UUID\"\n    id: string;\n};",
+      "tsType": "/**\n * SomeEvent - Result for the SomeEvent method\n */\nexport type DataCreated = {\n    /**\n     * The unique identifier for the result\n     */\n    // this is likely an enum in an external package \"github.com/google/uuid.UUID\"\n    id: string;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -152,7 +152,7 @@
     },
     "EventKind": {
       "description": "",
-      "tsType": "// From rpctypes/coretypes.go\nexport type EventKind = \"data.created\" | \"data.updated\";",
+      "tsType": "export type EventKind = \"data.created\" | \"data.updated\";",
       "kind": "String Enum",
       "enumValues": [
         "data.created",
@@ -166,7 +166,7 @@
     "PingResult": {
       "description": "PingResult - Result for the Ping method",
       "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
-      "tsType": "// From rpctypes/types.go\n/**\n * PingResult - Result for the Ping method\n */\nexport type PingResult = {\n    /**\n     * A message describing the result\n     */\n    message: string;\n    /**\n     * The status of the ping\n     */\n    status: PingStatus;\n};",
+      "tsType": "/**\n * PingResult - Result for the Ping method\n */\nexport type PingResult = {\n    /**\n     * A message describing the result\n     */\n    message: string;\n    /**\n     * The status of the ping\n     */\n    status: PingStatus;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -199,7 +199,7 @@
     },
     "PingStatus": {
       "description": "",
-      "tsType": "// From rpctypes/types.go\nexport type PingStatus = \"error\" | \"success\";",
+      "tsType": "export type PingStatus = \"error\" | \"success\";",
       "kind": "String Enum",
       "enumValues": [
         "error",
@@ -212,7 +212,7 @@
     "SubscribeParams": {
       "description": "SubscribeParams - Parameters for the Subscribe method",
       "jsonRepresentation": "{\n  \"event\": \"\",\n  \"data\": {\n    \"id\": \"00000000-0000-0000-0000-000000000000\"\n  }\n}",
-      "tsType": "// From rpctypes/types.go\n/**\n * SubscribeParams - Parameters for the Subscribe method\n */\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n    data: DataCreated;\n};",
+      "tsType": "/**\n * SubscribeParams - Parameters for the Subscribe method\n */\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n    data: DataCreated;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -246,7 +246,7 @@
     "SubscribeResult": {
       "description": "SubscribeResult - Result for the Subscribe method",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "tsType": "// From rpctypes/types.go\n/**\n * SubscribeResult - Result for the Subscribe method\n */\nexport type SubscribeResult = {\n    /**\n     * Whether the subscribe was successful\n     */\n    success: boolean;\n};",
+      "tsType": "/**\n * SubscribeResult - Result for the Subscribe method\n */\nexport type SubscribeResult = {\n    /**\n     * Whether the subscribe was successful\n     */\n    success: boolean;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -267,7 +267,7 @@
     "UnsubscribeParams": {
       "description": "UnsubscribeParams - Parameters for the Unsubscribe method",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "tsType": "// From rpctypes/types.go\n/**\n * UnsubscribeParams - Parameters for the Unsubscribe method\n */\nexport type UnsubscribeParams = {\n    /**\n     * The event topic to unsubscribe from\n     */\n    event: EventKind;\n};",
+      "tsType": "/**\n * UnsubscribeParams - Parameters for the Unsubscribe method\n */\nexport type UnsubscribeParams = {\n    /**\n     * The event topic to unsubscribe from\n     */\n    event: EventKind;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -295,7 +295,7 @@
     "UnsubscribeResult": {
       "description": "UnsubscribeResult - Result for the Unsubscribe method",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "tsType": "// From rpctypes/types.go\n/**\n * UnsubscribeResult - Result for the Unsubscribe method\n */\nexport type UnsubscribeResult = {\n    /**\n     * Whether the unsubscribe was successful\n     */\n    success: boolean;\n};",
+      "tsType": "/**\n * UnsubscribeResult - Result for the Unsubscribe method\n */\nexport type UnsubscribeResult = {\n    /**\n     * Whether the unsubscribe was successful\n     */\n    success: boolean;\n};",
       "kind": "Object",
       "fields": [
         {

@@ -69,7 +69,7 @@ export class WebSocketClient {
     private connectionHandlers: {
         onConnect?: () => void;
         onDisconnect?: () => void;
-        onError?: (error: Event) => void;
+        onError?: (message: string) => void;
         onReconnectAttempt?: (attempt: number) => void;
     } = {};
 
@@ -148,9 +148,25 @@ export class WebSocketClient {
         this.ws.onerror = (error) => {
             this.clearConnectionTimeout();
             this.isConnecting = false;
-            this.logger("error", `Error occurred: ${error.type}`);
-            this.connectionHandlers.onError?.(error);
-            reject(new Error("WebSocket connection failed"));
+
+            const readyState = this.ws?.readyState;
+            let message = `Failed to connect to ${this.url}`;
+
+            // Provide helpful context based on state
+            if (readyState === WebSocket.CLOSED || readyState === WebSocket.CLOSING) {
+                message += " - Server may not be running or refusing connections";
+            } else if (readyState === WebSocket.CONNECTING) {
+                message += " - Connection attempt failed";
+            }
+
+            // Add any additional error details if available
+            if (error instanceof ErrorEvent && error.message) {
+                message += ` (${error.message})`;
+            }
+
+            this.logger("error", message);
+            this.connectionHandlers.onError?.(message);
+            reject(new Error(`WebSocket connection failed: ${message}`));
         };
     }
 
@@ -499,7 +515,7 @@ export class WebSocketClient {
     /**
      * Called when an error occurs.
      */
-    onError(handler: (error: Event) => void): void {
+    onError(handler: (message: string) => void): void {
         this.connectionHandlers.onError = handler;
     }
 

@@ -1,3 +1,6 @@
+// Package generate provides API documentation generation from Go type definitions.
+// This file (docs.go) defines the data structures for API documentation,
+// including types, methods, events, and their associated metadata.
 package generate
 
 import (

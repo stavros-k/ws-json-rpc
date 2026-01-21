@@ -1,4 +1,4 @@
-import { TbJson, TbBrandTypescript, TbInfoCircle } from "react-icons/tb";
+import { TbBrandTypescript, TbInfoCircle, TbJson } from "react-icons/tb";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
 import { TypeMetadata } from "@/components/type-metadata";
@@ -38,7 +38,12 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                     {
                         title: "Overview",
                         icon: <TbInfoCircle className='w-8 h-8 text-lang-overview' />,
-                        code: <TypeMetadata data={data} typeName={type} />,
+                        code: (
+                            <TypeMetadata
+                                data={data}
+                                typeName={type}
+                            />
+                        ),
                     },
                     {
                         title: "TypeScript",
