@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { APIMethods } from "../../../ws-client/methods";
 import { useMaxResults } from "@/contexts/max-results-context";
 import { useWebSocket } from "@/contexts/websocket-context";
+import type { APIMethods } from "../../../ws-client/methods";
 import { CodeWrapperClient } from "./code-wrapper-client";
 
 type MethodCallerProps = {

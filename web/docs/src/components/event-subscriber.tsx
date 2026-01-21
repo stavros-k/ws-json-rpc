@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { APIEvents } from "../../../ws-client/events";
 import { useAutoSubscribe } from "@/contexts/auto-subscribe-context";
 import { useMaxResults } from "@/contexts/max-results-context";
 import { useWebSocket } from "@/contexts/websocket-context";
+import type { APIEvents } from "../../../ws-client/events";
 import { CodeWrapperClient } from "./code-wrapper-client";
 
 type EventSubscriberProps = {

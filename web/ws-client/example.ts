@@ -1,4 +1,4 @@
-import type { DataCreatedEvent, DataDeletedEvent } from "./events";
+import type { DataCreated } from "./generated";
 import { WebSocketClient } from "./index";
 
 const client = new WebSocketClient({
@@ -15,20 +15,13 @@ await client.connect();
 
 await client.call("ping");
 await client.subscribe("data.created");
-await client.subscribe("data.deleted");
 
-const createdFn = (event: DataCreatedEvent) => {
+const createdFn = (event: DataCreated) => {
     console.log("data.created", event);
 };
-const deletedFn = (event: DataDeletedEvent) => {
-    console.log("data.deleted", event);
-};
-client.on("data.created", createdFn);
-client.on("data.deleted", deletedFn);
 
+client.on("data.created", createdFn);
 client.off("data.created", createdFn);
-client.off("data.deleted", deletedFn);
 
 // No need to .off() the handlers, they are automatically removed when the event is unsubscribed
 await client.unsubscribe("data.created");
-await client.unsubscribe("data.deleted");

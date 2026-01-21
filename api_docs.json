@@ -1,7 +1,7 @@
 {
   "info": {
     "title": "Local API",
-    "version": "vdev (unknown)",
+    "version": "vdev (148e436-dirty)",
     "description": "A JSON-RPC API over HTTP and Websockets"
   },
   "methods": {
@@ -127,9 +127,9 @@
   },
   "types": {
     "DataCreated": {
-      "description": "SomeEvent - Result for the SomeEvent method",
+      "description": "DataCreated - Result for the DataCreated event",
       "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
-      "tsType": "/**\n * SomeEvent - Result for the SomeEvent method\n */\nexport type DataCreated = {\n    /**\n     * The unique identifier for the result\n     */\n    // this is likely an enum in an external package \"github.com/google/uuid.UUID\"\n    id: string;\n};",
+      "tsType": "/**\n * DataCreated - Result for the DataCreated event\n */\nexport type DataCreated = {\n    /**\n     * The unique identifier for the result\n     */\n    // this is likely an enum in an external package \"github.com/google/uuid.UUID\"\n    id: string;\n};",
       "kind": "Object",
       "fields": [
         {

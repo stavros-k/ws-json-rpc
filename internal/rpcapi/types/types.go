@@ -32,7 +32,7 @@ func (e PingStatus) Valid() bool {
 	}
 }
 
-// SomeEvent - Result for the SomeEvent method
+// DataCreated - Result for the DataCreated event
 type DataCreated struct {
 	// The unique identifier for the result
 	ID uuid.UUID `json:"id"`

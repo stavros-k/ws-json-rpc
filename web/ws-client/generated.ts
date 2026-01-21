@@ -2,7 +2,7 @@
 
 // From rpctypes/types.go
 /**
- * SomeEvent - Result for the SomeEvent method
+ * DataCreated - Result for the DataCreated event
  */
 export type DataCreated = {
     /**

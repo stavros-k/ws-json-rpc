@@ -15,7 +15,8 @@
             "!build",
             "!package-lock.json",
             "!api_docs.json",
-            "!**/testdata"
+            "!**/testdata",
+            "!**/ws-client/generated.ts"
         ]
     },
     "formatter": {
