@@ -161,14 +161,13 @@ func (g *GutsGenerator) ExtractFields(name string) ([]FieldMetadata, error) {
 				return nil, fmt.Errorf("failed to serialize type for field %s in %s: %w", prop.Name, name, err)
 			}
 
-			field := FieldMetadata{
+			fields = append(fields, FieldMetadata{
 				Name:        prop.Name,
 				Type:        typeStr,
 				Description: g.extractComments(prop.SupportComments),
 				Optional:    prop.QuestionToken,
 				EnumValues:  g.extractEnumValues(prop.Type),
-			}
-			fields = append(fields, field)
+			})
 		}
 	}
 
