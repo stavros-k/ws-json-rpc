@@ -41,8 +41,7 @@ type DataCreated struct {
 // SubscribeParams - Parameters for the Subscribe method
 type SubscribeParams struct {
 	// The event topic to subscribe to
-	Event EventKind   `json:"event"`
-	Data  DataCreated `json:"data"`
+	Event EventKind `json:"event"`
 }
 
 // SubscribeResult - Result for the Subscribe method

@@ -1,7 +1,7 @@
+import { v4 as uuidv4 } from "uuid";
 import type { APIEvents, EventKind } from "./events";
 import type { APIMethods, MethodKind } from "./methods";
 import type { EventHandler, EventMessage, IncomingMessage, RequestMessage, ResponseMessage } from "./types";
-import { v4 as uuidv4 } from "uuid";
 
 // JSON-RPC error codes (https://www.jsonrpc.org/specification#error_object)
 const RPC_ERROR_CODE = {
