@@ -2,8 +2,10 @@ package generate
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/coder/guts"
 	"github.com/coder/guts/bindings"
@@ -13,24 +15,32 @@ import (
 type GutsGenerator struct {
 	tsParser *guts.Typescript
 	vm       *bindings.Bindings
+	l        *slog.Logger
 }
 
-func NewGutsGenerator(goTypesDirPath string) (*GutsGenerator, error) {
+func NewGutsGenerator(l *slog.Logger, goTypesDirPath string) (*GutsGenerator, error) {
 	var err error
 
-	gutsGenerator := &GutsGenerator{}
+	l.Debug("Creating guts generator", slog.String("goTypesDirPath", goTypesDirPath))
+
+	gutsGenerator := &GutsGenerator{l: l}
 	gutsGenerator.vm, err = bindings.New()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create bindings VM: %w", err)
 	}
-	gutsGenerator.tsParser, err = newTypescriptASTFromGoTypesDir(goTypesDirPath)
+
+	gutsGenerator.tsParser, err = newTypescriptASTFromGoTypesDir(l, goTypesDirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TypeScript AST from go types dir: %w", err)
 	}
+
+	l.Info("Guts generator created successfully")
 	return gutsGenerator, nil
 }
 
-func newTypescriptASTFromGoTypesDir(goTypesDirPath string) (*guts.Typescript, error) {
+func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*guts.Typescript, error) {
+	l.Debug("Parsing Go types directory", slog.String("path", goTypesDirPath))
+
 	// Initialize guts Go parser
 	goParser, err := guts.NewGolangParser()
 	if err != nil {
@@ -47,32 +57,44 @@ func newTypescriptASTFromGoTypesDir(goTypesDirPath string) (*guts.Typescript, er
 		return nil, fmt.Errorf("failed to include go types dir for parsing: %w", err)
 	}
 
+	l.Debug("Generating TypeScript AST from Go types")
+
 	// Try to get TypeScript AST from guts
 	ts, err := goParser.ToTypescript()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate TypeScript AST: %w", err)
 	}
+
 	ts.ApplyMutations(
 		config.EnumAsTypes,
 		config.ExportTypes,
 		config.InterfaceToType,
 	)
+
+	l.Debug("TypeScript AST generated successfully")
 	return ts, nil
 }
 
 func (g *GutsGenerator) WriteTypescriptASTToFile(ts *guts.Typescript, filePath string) error {
+	g.l.Debug("Serializing TypeScript AST", slog.String("file", filePath))
+
 	str, err := ts.Serialize()
 	if err != nil {
 		return fmt.Errorf("failed to serialize TypeScript AST: %w", err)
 	}
+
 	err = os.WriteFile(filePath, []byte(str), 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write TypeScript AST to file: %w", err)
 	}
+
+	g.l.Info("TypeScript types written", slog.String("file", filePath))
 	return nil
 }
 
 func (g *GutsGenerator) SerializeNode(name string) (string, error) {
+	g.l.Debug("Serializing node", slog.String("type", name))
+
 	node, exists := g.tsParser.Node(name)
 	if !exists {
 		return "", fmt.Errorf("node %s not found in TypeScript AST", name)
@@ -111,7 +133,304 @@ func (g *GutsGenerator) ExtractReferences(name string) ([]string, error) {
 	// Sort for deterministic output
 	sort.Strings(refList)
 
+	g.l.Debug("Extracted type references", slog.String("type", name), slog.Int("count", len(refList)))
 	return refList, nil
+}
+
+// ExtractFields extracts field metadata from a TypeScript node.
+// Returns a list of fields with their types, descriptions, and optional flags.
+func (g *GutsGenerator) ExtractFields(name string) ([]FieldMetadata, error) {
+	node, exists := g.tsParser.Node(name)
+	if !exists {
+		return nil, fmt.Errorf("node %s not found in TypeScript AST", name)
+	}
+
+	var fields []FieldMetadata
+
+	switch n := node.(type) {
+	case *bindings.Alias:
+		// Type alias - extract fields from the aliased type if it's a type literal
+		fields = g.extractFieldsFromExpressionType(n.Type)
+
+	case *bindings.Interface:
+		// Interface - extract fields from property signatures
+		for _, prop := range n.Fields {
+			typeStr, err := g.serializeExpressionType(prop.Type)
+			if err != nil {
+				g.l.Warn("Failed to serialize field type", slog.String("type", name), slog.String("field", prop.Name), slog.String("error", err.Error()))
+				return nil, fmt.Errorf("failed to serialize type for field %s in %s: %w", prop.Name, name, err)
+			}
+
+			field := FieldMetadata{
+				Name:        prop.Name,
+				Type:        typeStr,
+				Description: g.extractComments(prop.SupportComments),
+				Optional:    prop.QuestionToken,
+				EnumValues:  g.extractEnumValues(prop.Type),
+			}
+			fields = append(fields, field)
+		}
+	}
+
+	g.l.Debug("Extracted fields", slog.String("type", name), slog.Int("count", len(fields)))
+	return fields, nil
+}
+
+// ExtractTypeDescription extracts the description from a type's comments.
+// Returns the description from Go comments, or empty string if no comments.
+func (g *GutsGenerator) ExtractTypeDescription(name string) (string, error) {
+	node, exists := g.tsParser.Node(name)
+	if !exists {
+		return "", fmt.Errorf("node %s not found in TypeScript AST", name)
+	}
+
+	switch n := node.(type) {
+	case *bindings.Alias:
+		return g.extractComments(n.SupportComments), nil
+
+	case *bindings.Interface:
+		return g.extractComments(n.SupportComments), nil
+
+	default:
+		return "", fmt.Errorf("node %s is not a supported type (%T)", name, node)
+	}
+}
+
+// ExtractTypeKind determines the kind of a type from its AST node.
+// Returns a human-readable type kind like "Object", "String Enum", "Union", etc.
+func (g *GutsGenerator) ExtractTypeKind(name string) (string, error) {
+	node, exists := g.tsParser.Node(name)
+	if !exists {
+		return "", fmt.Errorf("node %s not found in TypeScript AST", name)
+	}
+
+	switch n := node.(type) {
+	case *bindings.Alias:
+		kind, err := g.getTypeKindFromExpression(n.Type)
+		if err != nil {
+			return "", fmt.Errorf("failed to get type kind for alias %s: %w", name, err)
+		}
+		g.l.Debug("Extracted type kind", slog.String("type", name), slog.String("kind", kind))
+		return kind, nil
+
+	case *bindings.Interface:
+		g.l.Debug("Extracted type kind", slog.String("type", name), slog.String("kind", "Object"))
+		return "Object", nil
+
+	default:
+		return "", fmt.Errorf("node %s is not a supported type (%T)", name, node)
+	}
+}
+
+// ExtractTypeEnumValues extracts enum values for the type itself (not fields).
+// Returns a list of string literal values if the type is a union of string literals.
+func (g *GutsGenerator) ExtractTypeEnumValues(name string) ([]string, error) {
+	node, exists := g.tsParser.Node(name)
+	if !exists {
+		return nil, fmt.Errorf("node %s not found in TypeScript AST", name)
+	}
+
+	switch n := node.(type) {
+	case *bindings.Alias:
+		// Reuse extractEnumValues logic for the alias type
+		values := g.extractEnumValues(n.Type)
+		if len(values) > 0 {
+			g.l.Debug("Extracted enum values", slog.String("type", name), slog.Int("count", len(values)))
+		}
+		return values, nil
+	default:
+		return nil, fmt.Errorf("node %s is not a supported type (%T)", name, node)
+	}
+}
+
+// getTypeKindFromExpression determines the type kind from an expression type
+func (g *GutsGenerator) getTypeKindFromExpression(expr bindings.ExpressionType) (string, error) {
+	if expr == nil {
+		return "", fmt.Errorf("expression type is nil")
+	}
+
+	switch e := expr.(type) {
+	case *bindings.UnionType:
+		// Check if it's a string enum (all members are string literals)
+		allStringLiterals := true
+		allNumberLiterals := true
+
+		for _, member := range e.Types {
+			lit, ok := member.(*bindings.LiteralType)
+			if !ok {
+				allStringLiterals = false
+				allNumberLiterals = false
+				continue
+			}
+
+			if _, isString := lit.Value.(string); !isString {
+				allStringLiterals = false
+			}
+
+			if _, isNumber := lit.Value.(int); !isNumber {
+				if _, isFloat := lit.Value.(float64); !isFloat {
+					allNumberLiterals = false
+				}
+			}
+		}
+
+		if allStringLiterals {
+			return "String Enum", nil
+		}
+		if allNumberLiterals {
+			return "Number Enum", nil
+		}
+
+		return "Union", nil
+
+	case *bindings.TypeLiteralNode:
+		return "Object", nil
+
+	case *bindings.ArrayLiteralType:
+		return "Array", nil
+
+	case *bindings.ReferenceType:
+		// Try to resolve the reference and get its kind
+		refName := e.Name.String()
+		refNode, exists := g.tsParser.Node(refName)
+		if !exists {
+			return "Type Reference", nil
+		}
+
+		// Check if it's an alias
+		if alias, ok := refNode.(*bindings.Alias); ok {
+			return g.getTypeKindFromExpression(alias.Type)
+		}
+
+		return "Type Reference", nil
+
+	case *bindings.LiteralKeyword:
+		keyword := string(*e)
+		switch keyword {
+		case "StringKeyword":
+			return "String", nil
+		case "NumberKeyword":
+			return "Number", nil
+		case "BooleanKeyword":
+			return "Boolean", nil
+		case "NullKeyword":
+			return "Null", nil
+		case "UndefinedKeyword":
+			return "Undefined", nil
+		case "VoidKeyword":
+			return "Void", nil
+		default:
+			return "Primitive", nil
+		}
+
+	default:
+		return "Type Alias", nil
+	}
+}
+
+// extractFieldsFromExpressionType extracts fields if the expression is a type literal (object type)
+// Returns empty slice if serialization fails for any field
+func (g *GutsGenerator) extractFieldsFromExpressionType(expr bindings.ExpressionType) []FieldMetadata {
+	var fields []FieldMetadata
+
+	if typeLiteral, ok := expr.(*bindings.TypeLiteralNode); ok {
+		for _, member := range typeLiteral.Members {
+			typeStr, err := g.serializeExpressionType(member.Type)
+			if err != nil {
+				g.l.Warn("Failed to serialize field type in type literal", slog.String("field", member.Name), slog.String("error", err.Error()))
+				continue
+			}
+			field := FieldMetadata{
+				Name:        member.Name,
+				Type:        typeStr,
+				Description: g.extractComments(member.SupportComments),
+				Optional:    member.QuestionToken,
+				EnumValues:  g.extractEnumValues(member.Type),
+			}
+			fields = append(fields, field)
+		}
+	}
+
+	return fields
+}
+
+// serializeExpressionType serializes an expression type to a TypeScript string
+func (g *GutsGenerator) serializeExpressionType(expr bindings.ExpressionType) (string, error) {
+	if expr == nil {
+		return "", fmt.Errorf("expression type is nil")
+	}
+
+	// Convert expression to TypeScript node and serialize
+	tsNode, err := g.vm.ToTypescriptExpressionNode(expr)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert expression to TypeScript node: %w", err)
+	}
+
+	serialized, err := g.vm.SerializeToTypescript(tsNode)
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize TypeScript node: %w", err)
+	}
+
+	return serialized, nil
+}
+
+// extractComments extracts comment text from a SupportComments struct
+func (g *GutsGenerator) extractComments(sc bindings.SupportComments) string {
+	comments := sc.Comments()
+	if len(comments) == 0 {
+		return ""
+	}
+
+	commentTexts := make([]string, 0, len(comments))
+	for _, comment := range comments {
+		commentTexts = append(commentTexts, strings.TrimSpace(comment.Text))
+	}
+
+	return strings.Join(commentTexts, " ")
+}
+
+// extractEnumValues checks if the type is a union of string literals and extracts the values
+func (g *GutsGenerator) extractEnumValues(expr bindings.ExpressionType) []string {
+	if expr == nil {
+		return nil
+	}
+
+	// Check if it's a direct union type
+	if union, ok := expr.(*bindings.UnionType); ok {
+		return g.extractLiteralsFromUnion(union)
+	}
+
+	// Check if it's a reference to another type (like EventKind)
+	if ref, ok := expr.(*bindings.ReferenceType); ok {
+		refName := ref.Name.String()
+		node, exists := g.tsParser.Node(refName)
+		if !exists {
+			return nil
+		}
+
+		// Check if the referenced type is an alias to a union
+		if alias, ok := node.(*bindings.Alias); ok {
+			if union, ok := alias.Type.(*bindings.UnionType); ok {
+				return g.extractLiteralsFromUnion(union)
+			}
+		}
+	}
+
+	return nil
+}
+
+// extractLiteralsFromUnion extracts string literal values from a union type
+func (g *GutsGenerator) extractLiteralsFromUnion(union *bindings.UnionType) []string {
+	var values []string
+	for _, member := range union.Types {
+		if lit, ok := member.(*bindings.LiteralType); ok {
+			// Check if the literal value is a string
+			if strVal, ok := lit.Value.(string); ok {
+				values = append(values, strVal)
+			}
+		}
+	}
+	return values
 }
 
 // collectTypeReferences recursively collects all type references from a node

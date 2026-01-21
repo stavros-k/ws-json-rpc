@@ -28,47 +28,18 @@ const (
 	shutdownTimeout = 30 * time.Second
 )
 
-func simulate(h *rpc.Hub) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		h.PublishEvent(rpc.NewEvent(string(rpctypes.EventKindDataCreated), map[string]any{"id": uuid.NewString()}))
-	}
-}
-
 func main() {
 	config, err := app.NewConfig()
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		fatalIfErr(slog.Default(), fmt.Errorf("failed to create config: %w", err))
 	}
 	defer config.Close()
 
-	logOptions := slog.HandlerOptions{
-		Level:       config.LogLevel,
-		ReplaceAttr: utils.SlogReplacer,
-	}
-	var logHandler slog.Handler = slog.NewJSONHandler(config.LogOutput, &logOptions)
-	if config.Generate {
-		logHandler = slog.NewTextHandler(config.LogOutput, &logOptions)
-	}
-	logger := slog.New(logHandler).With(slog.String("version", utils.GetVersionShort()))
-
-	migrator, err := database.NewMigrator(sqlite.GetMigrationsFS(), config.Database, logger)
-	if err != nil {
-		logger.Error("failed to create migrator", utils.ErrAttr(err))
-		os.Exit(1)
-	}
-	if err := migrator.Migrate(); err != nil {
-		logger.Error("failed to migrate database", utils.ErrAttr(err))
-		os.Exit(1)
-	}
+	logger := getLogger(config)
 
 	g, err := generator(config, logger)
 	if err != nil {
-		logger.Error("failed to create generator", utils.ErrAttr(err))
-		os.Exit(1)
+		fatalIfErr(logger, fmt.Errorf("failed to create generator: %w", err))
 	}
 
 	hub := rpc.NewHub(logger, g)
@@ -163,19 +134,27 @@ func main() {
 	})
 
 	if err := hub.GenerateDocs(); err != nil {
-		logger.Error("failed to generate API docs", utils.ErrAttr(err))
-		os.Exit(1)
+		fatalIfErr(logger, fmt.Errorf("failed to generate API docs: %w", err))
 	}
 	if config.Generate {
 		logger.Info("Exiting after generating docs")
 		return
 	}
 
+	migrator, err := database.NewMigrator(logger, sqlite.GetMigrationsFS(), config.Database)
+	if err != nil {
+		fatalIfErr(logger, fmt.Errorf("failed to create migrator: %w", err))
+	}
+	if err := migrator.Migrate(); err != nil {
+		fatalIfErr(logger, fmt.Errorf("failed to migrate database: %w", err))
+	}
+
 	go hub.Run()
-	go simulate(hub)
+	go simulate(hub) // TODO: Remove this
 
 	logger.Info("Registering WS-RPC at /ws")
 	mux.HandleFunc("/ws", hub.ServeWS())
+
 	logger.Info("Registering HTTP-RPC at /rpc")
 	mux.HandleFunc("/rpc", hub.ServeHTTP())
 
@@ -230,4 +209,36 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 			Description: "A JSON-RPC API over HTTP and Websockets",
 		},
 	})
+}
+
+// TODO: Remove this
+func simulate(h *rpc.Hub) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		h.PublishEvent(rpc.NewEvent(string(rpctypes.EventKindDataCreated), map[string]any{"id": uuid.NewString()}))
+	}
+}
+
+func getLogger(config *app.Config) *slog.Logger {
+	logOptions := slog.HandlerOptions{
+		Level:       config.LogLevel,
+		ReplaceAttr: utils.SlogReplacer,
+	}
+
+	var logHandler slog.Handler = slog.NewJSONHandler(config.LogOutput, &logOptions)
+	if config.Generate {
+		logHandler = slog.NewTextHandler(config.LogOutput, &logOptions)
+	}
+	return slog.New(logHandler).With(slog.String("version", utils.GetVersionShort()))
+}
+
+func fatalIfErr(l *slog.Logger, err error) {
+	if err == nil {
+		return
+	}
+
+	l.Error("error", utils.ErrAttr(err))
+	os.Exit(1)
 }

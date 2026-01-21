@@ -2,7 +2,6 @@ package generate
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -10,38 +9,23 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 	"time"
-
-	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/getkin/kin-openapi/openapi3gen"
 
 	"ws-json-rpc/internal/database/sqlite"
 	"ws-json-rpc/pkg/database"
 	"ws-json-rpc/pkg/utils"
 )
 
-// Generator is the main interface for generating API documentation and type definitions.
-// It orchestrates schema parsing, type registration, and documentation generation.
-type Generator interface {
-	// Generate produces the final API documentation file and database schema.
-	Generate() error
-	// AddEventType registers a WebSocket event with its response type and documentation.
-	AddEventType(name string, resp any, docs EventDocs)
-	// AddHandlerType registers an RPC method with its request/response types and documentation.
-	AddHandlerType(name string, req any, resp any, docs MethodDocs)
-}
-
 // GeneratorImpl is the concrete implementation of the Generator interface.
 // It manages type registration and documentation generation.
 // Types are registered as methods/events are added during server startup.
 type GeneratorImpl struct {
-	l                *slog.Logger           // Logger for debugging and error reporting
-	d                *Docs                  // API documentation structure
-	schemaGen        *openapi3gen.Generator // OpenAPI schema generator for JSON schemas
-	componentSchemas openapi3.Schemas       // Shared component schemas for all types
-	guts             *GutsGenerator         // TypeScript AST parser
-	docsFilePath     string                 // Output path for API docs JSON
-	dbSchemaFilePath string                 // Output path for database schema SQL
+	l                *slog.Logger   // Logger for debugging and error reporting
+	d                *Docs          // API documentation structure
+	guts             *GutsGenerator // TypeScript AST parser and metadata extractor
+	docsFilePath     string         // Output path for API docs JSON
+	dbSchemaFilePath string         // Output path for database schema SQL
 }
 
 // GeneratorOptions contains all configuration needed to create a Generator.
@@ -61,6 +45,11 @@ type GeneratorOptions struct {
 //
 // Types are registered dynamically when methods/events are added.
 func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
+	l.Debug("Creating API documentation generator",
+		slog.String("docsOutput", opts.DocsFileOutputPath),
+		slog.String("tsOutput", opts.TSTypesOutputPath),
+		slog.String("schemaOutput", opts.DatabaseSchemaFileOutputPath))
+
 	if opts.DocsFileOutputPath == "" {
 		return nil, fmt.Errorf("docs file path is required")
 	}
@@ -68,12 +57,11 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 		return nil, fmt.Errorf("schema file path is required")
 	}
 
-	gutsGenerator, err := NewGutsGenerator(opts.GoTypesDirPath)
+	gutsGenerator, err := NewGutsGenerator(l.With("component", "guts-generator"), opts.GoTypesDirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GutsGenerator: %w", err)
 	}
 
-	// TODO: make the output path configurable
 	if err := gutsGenerator.WriteTypescriptASTToFile(gutsGenerator.tsParser, opts.TSTypesOutputPath); err != nil {
 		return nil, fmt.Errorf("failed to write TypeScript AST to file: %w", err)
 	}
@@ -81,13 +69,12 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 	g := &GeneratorImpl{
 		l:                l.With(slog.String("component", "generator")),
 		d:                NewDocs(opts.DocsOptions),
-		schemaGen:        newOpenAPISchemaGenerator(),
-		componentSchemas: make(openapi3.Schemas),
 		guts:             gutsGenerator,
 		docsFilePath:     opts.DocsFileOutputPath,
 		dbSchemaFilePath: opts.DatabaseSchemaFileOutputPath,
 	}
 
+	l.Info("API documentation generator created successfully")
 	return g, nil
 }
 
@@ -95,27 +82,28 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 // It creates a temporary SQLite database, runs all migrations, and dumps the resulting schema.
 // Returns the schema as a string for inclusion in API documentation.
 func (g *GeneratorImpl) GetDatabaseSchema() (string, error) {
-	mig, err := database.NewMigrator(
-		sqlite.GetMigrationsFS(),
-		fmt.Sprintf("%s-%d", os.TempDir(), time.Now().Unix()),
-		g.l,
-	)
+	g.l.Debug("Generating database schema from migrations")
+
+	tempDBPath := fmt.Sprintf("%s-%d", os.TempDir(), time.Now().Unix())
+	mig, err := database.NewMigrator(g.l, sqlite.GetMigrationsFS(), tempDBPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to create migrator: %w", err)
 	}
+
 	if err := mig.Migrate(); err != nil {
 		return "", fmt.Errorf("failed to migrate database: %w", err)
 	}
 
-	err = mig.DumpSchema(g.dbSchemaFilePath)
-	if err != nil {
+	if err = mig.DumpSchema(g.dbSchemaFilePath); err != nil {
 		return "", fmt.Errorf("failed to dump schema: %w", err)
 	}
+
 	schemaBytes, err := os.ReadFile(g.dbSchemaFilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read schema file: %w", err)
 	}
 
+	g.l.Info("Database schema generated", slog.String("file", g.dbSchemaFilePath))
 	return string(bytes.TrimSpace(schemaBytes)), nil
 }
 
@@ -127,6 +115,11 @@ func (g *GeneratorImpl) GetDatabaseSchema() (string, error) {
 // This should be called after all methods and events have been registered via
 // AddHandlerType and AddEventType.
 func (g *GeneratorImpl) Generate() error {
+	g.l.Info("Starting API documentation generation",
+		slog.Int("methods", len(g.d.Methods)),
+		slog.Int("events", len(g.d.Events)),
+		slog.Int("types", len(g.d.Types)))
+
 	// Get database schema
 	schema, err := g.GetDatabaseSchema()
 	if err != nil {
@@ -135,9 +128,15 @@ func (g *GeneratorImpl) Generate() error {
 	g.d.DatabaseSchema = schema
 
 	// Compute back-references for all types
+	g.l.Debug("Computing type back-references")
 	g.computeBackReferences()
 
+	// Compute usedBy information for all types
+	g.l.Debug("Computing type usage information")
+	g.computeUsedBy()
+
 	// Write API docs to file
+	g.l.Debug("Writing API documentation to file", slog.String("file", g.docsFilePath))
 	docsFile, err := os.Create(g.docsFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to create api docs file: %w", err)
@@ -147,7 +146,8 @@ func (g *GeneratorImpl) Generate() error {
 	if err := utils.ToJSONStreamIndent(docsFile, g.d); err != nil {
 		return fmt.Errorf("failed to write api docs: %w", err)
 	}
-	g.l.Info("API docs generated", slog.String("file", "api_docs.json"))
+
+	g.l.Info("API documentation generated successfully", slog.String("file", g.docsFilePath))
 
 	return nil
 }
@@ -182,15 +182,88 @@ func (g *GeneratorImpl) computeBackReferences() {
 	}
 
 	// Sort ReferencedBy lists for deterministic output
+	totalBackRefs := 0
 	for name := range g.d.Types {
 		typeDocs := g.d.Types[name]
 		if len(typeDocs.ReferencedBy) > 0 {
 			sort.Strings(typeDocs.ReferencedBy)
 			g.d.Types[name] = typeDocs
+			totalBackRefs += len(typeDocs.ReferencedBy)
 		}
 	}
 
-	g.l.Debug("Computed back-references for all types")
+	g.l.Debug("Computed back-references for all types", slog.Int("totalBackRefs", totalBackRefs))
+}
+
+// computeUsedBy computes which methods and events use each type.
+// For each type, records where it's used as a parameter or result.
+func (g *GeneratorImpl) computeUsedBy() {
+	// First, clear all existing usedBy information
+	for name := range g.d.Types {
+		typeDocs := g.d.Types[name]
+		typeDocs.UsedBy = nil
+		g.d.Types[name] = typeDocs
+	}
+
+	// Add usedBy information from methods
+	for methodName, methodDocs := range g.d.Methods {
+		// Add parameter type usage
+		if methodDocs.ParamType.Ref != "" && methodDocs.ParamType.Ref != "null" {
+			paramTypeDocs, exists := g.d.Types[methodDocs.ParamType.Ref]
+			if exists {
+				paramTypeDocs.UsedBy = append(paramTypeDocs.UsedBy, UsedBy{
+					Type: "method", Target: methodName, Role: "param",
+				})
+				g.d.Types[methodDocs.ParamType.Ref] = paramTypeDocs
+			}
+		}
+
+		// Add result type usage
+		if methodDocs.ResultType.Ref != "" && methodDocs.ResultType.Ref != "null" {
+			resultTypeDocs, exists := g.d.Types[methodDocs.ResultType.Ref]
+			if exists {
+				resultTypeDocs.UsedBy = append(resultTypeDocs.UsedBy, UsedBy{
+					Type: "method", Target: methodName, Role: "result",
+				})
+				g.d.Types[methodDocs.ResultType.Ref] = resultTypeDocs
+			}
+		}
+	}
+
+	// Add usedBy information from events
+	for eventName, eventDocs := range g.d.Events {
+		// Add result type usage
+		if eventDocs.ResultType.Ref != "" && eventDocs.ResultType.Ref != "null" {
+			resultTypeDocs, exists := g.d.Types[eventDocs.ResultType.Ref]
+			if exists {
+				resultTypeDocs.UsedBy = append(resultTypeDocs.UsedBy, UsedBy{
+					Type: "event", Target: eventName, Role: "result",
+				})
+				g.d.Types[eventDocs.ResultType.Ref] = resultTypeDocs
+			}
+		}
+	}
+
+	// Sort UsedBy lists for deterministic output
+	totalUsages := 0
+	for name := range g.d.Types {
+		typeDocs := g.d.Types[name]
+		if len(typeDocs.UsedBy) > 0 {
+			sort.Slice(typeDocs.UsedBy, func(i, j int) bool {
+				if typeDocs.UsedBy[i].Type != typeDocs.UsedBy[j].Type {
+					return typeDocs.UsedBy[i].Type < typeDocs.UsedBy[j].Type
+				}
+				if typeDocs.UsedBy[i].Target != typeDocs.UsedBy[j].Target {
+					return typeDocs.UsedBy[i].Target < typeDocs.UsedBy[j].Target
+				}
+				return typeDocs.UsedBy[i].Role < typeDocs.UsedBy[j].Role
+			})
+			g.d.Types[name] = typeDocs
+			totalUsages += len(typeDocs.UsedBy)
+		}
+	}
+
+	g.l.Debug("Computed usedBy information for all types", slog.Int("totalUsages", totalUsages))
 }
 
 // AddEventType registers a WebSocket event with its response type and documentation.
@@ -207,15 +280,15 @@ func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 	if _, exists := g.d.Events[name]; exists {
 		g.fatalIfErr(errors.New("event already registered: " + name))
 	}
+
+	docs.NoNilSlices()
 	if err := docs.Validate(); err != nil {
-		g.fatalIfErr(err)
+		g.fatalIfErr(fmt.Errorf("failed to validate event docs: %w", err))
 	}
 
 	for idx, ex := range docs.Examples {
 		docs.Examples[idx].Result = string(utils.MustToJSON(ex.ResultObj))
 	}
-
-	docs.NoNilSlices()
 
 	docs.Protocols.WS = true
 	// Events are only available for WebSocket connections
@@ -227,6 +300,7 @@ func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 	g.registerType(resultTypeName, resp)
 
 	g.d.Events[name] = docs
+	g.l.Debug("Event registered", slog.String("event", name), slog.String("resultType", resultTypeName))
 }
 
 // AddHandlerType registers an RPC method with its request/response types and documentation.
@@ -244,16 +318,15 @@ func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs Meth
 		g.fatalIfErr(errors.New("method already registered: " + name))
 	}
 
+	docs.NoNilSlices()
 	if err := docs.Validate(); err != nil {
-		g.fatalIfErr(err)
+		g.fatalIfErr(fmt.Errorf("failed to validate method docs: %w", err))
 	}
 
 	for idx, ex := range docs.Examples {
 		docs.Examples[idx].Result = string(utils.MustToJSONIndent(ex.ResultObj))
 		docs.Examples[idx].Params = string(utils.MustToJSONIndent(ex.ParamsObj))
 	}
-
-	docs.NoNilSlices()
 
 	docs.Protocols.HTTP = !docs.NoHTTP
 	docs.Protocols.WS = true
@@ -268,11 +341,16 @@ func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs Meth
 	g.registerType(resultTypeName, resp)
 
 	g.d.Methods[name] = docs
+	g.l.Debug("Method registered",
+		slog.String("method", name),
+		slog.String("paramType", paramTypeName),
+		slog.String("resultType", resultTypeName),
+		slog.Bool("http", docs.Protocols.HTTP))
 }
 
-// registerType registers a type with its JSON instance and JSON schema.
-// Creates a new type entry if it doesn't exist, or updates an existing one.
-// Parses the Go type to extract AST information for documentation.
+// registerType registers a type with optional JSON instance.
+// If v is nil, only TypeScript type information is registered (for discovered types).
+// If v is not nil, also includes JSON representation (for explicitly registered types).
 func (g *GeneratorImpl) registerType(name string, v any) {
 	if name == "null" {
 		return
@@ -280,104 +358,105 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 
 	// Check if type already exists
 	if docs, exists := g.d.Types[name]; exists {
-		// Type already registered, just verify we don't overwrite
+		// Type already registered with JSON instance, don't overwrite
 		if docs.JsonRepresentation != "" {
 			g.l.Debug("Type already registered with JSON instance", slog.String("type", name))
 			return
 		}
 	}
 
-	g.l.Debug("Registering type", slog.String("type", name))
+	hasInstance := v != nil
+
+	g.l.Debug("Registering type", slog.String("type", name), slog.Bool("hasInstance", hasInstance))
+	var jsonRepresentation string
+
+	if hasInstance {
+		// Add JSON representation if we have a Go instance
+		jsonRepresentation = string(utils.MustToJSONIndent(v))
+	}
+
+	// Extract description from Go comments
+	description, err := g.guts.ExtractTypeDescription(name)
+	if err != nil {
+		g.l.Warn("Failed to extract description from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+	}
+
+	// Extract TypeScript type from AST
 	tsType, err := g.guts.SerializeNode(name)
 	if err != nil {
 		g.fatalIfErr(fmt.Errorf("failed to serialize TypeScript AST node: %w", err))
 	}
 
-	// Extract references from TypeScript AST
-	references, err := g.guts.ExtractReferences(name)
-	if err != nil {
-		g.l.Warn("Failed to extract references from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
-		references = []string{}
-	}
+	// Extract all type metadata from TypeScript AST
+	metadata := g.extractTypeMetadata(name)
 
-	// Generate JSON schema from Go type
-	jsonSchema, schemaRef, err := g.getJsonSchema(name, v)
-	g.fatalIfErr(err)
-
-	// Create new type docs with JSON instance and schema
 	typeDocs := TypeDocs{
-		Description:        schemaRef.Value.Description,
-		JsonRepresentation: string(utils.MustToJSONIndent(v)),
-		JsonSchema:         jsonSchema,
-		References:         references,
+		Description:        strings.TrimSpace(description),
+		JsonRepresentation: jsonRepresentation,
 		TSType:             tsType,
+		Kind:               metadata.kind,
+		Fields:             metadata.fields,
+		References:         metadata.references,
+		EnumValues:         metadata.enumValues,
 	}
 
 	g.d.Types[name] = typeDocs
 
 	// Recursively register any referenced types that haven't been registered yet
-	for _, refName := range references {
+	for _, refName := range metadata.references {
 		if _, exists := g.d.Types[refName]; !exists {
-			g.registerDiscoveredType(refName)
+			g.l.Debug("Registering referenced type", slog.String("type", refName), slog.String("referencedBy", name))
+			g.registerType(refName, nil)
 		}
 	}
 }
 
-// registerDiscoveredType registers a type that was discovered through references
-// but wasn't explicitly registered via AddHandlerType or AddEventType.
-// These types only have TypeScript definitions and possibly JSON schemas from componentSchemas.
-func (g *GeneratorImpl) registerDiscoveredType(name string) {
-	// Check if already registered (prevent infinite recursion)
-	if _, exists := g.d.Types[name]; exists {
-		return
-	}
+// typeMetadata holds extracted metadata from TypeScript AST.
+type typeMetadata struct {
+	kind       string
+	fields     []FieldMetadata
+	references []string
+	enumValues []string
+}
 
-	g.l.Debug("Registering discovered type", slog.String("type", name))
+// extractTypeMetadata extracts all metadata from TypeScript AST for a type.
+// Handles errors by logging warnings and returning sensible defaults.
+func (g *GeneratorImpl) extractTypeMetadata(name string) typeMetadata {
+	var metadata typeMetadata
 
-	// Get TypeScript type from AST
-	tsType, err := g.guts.SerializeNode(name)
+	// Extract type kind
+	kind, err := g.guts.ExtractTypeKind(name)
 	if err != nil {
-		g.l.Warn("Failed to serialize discovered type", slog.String("type", name), slog.String("error", err.Error()))
-		return
+		g.l.Warn("Failed to extract type kind from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+		kind = "Unknown"
 	}
+	metadata.kind = kind
 
-	// Extract references from this type
+	// Extract field metadata
+	fields, err := g.guts.ExtractFields(name)
+	if err != nil {
+		g.l.Warn("Failed to extract fields from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+		fields = []FieldMetadata{}
+	}
+	metadata.fields = fields
+
+	// Extract references
 	references, err := g.guts.ExtractReferences(name)
 	if err != nil {
-		g.l.Warn("Failed to extract references from discovered type", slog.String("type", name), slog.String("error", err.Error()))
+		g.l.Warn("Failed to extract references from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
 		references = []string{}
 	}
+	metadata.references = references
 
-	// Try to get JSON schema from componentSchemas
-	var jsonSchema string
-	var description string
-	if schemaRef, exists := g.componentSchemas[name]; exists {
-		description = schemaRef.Value.Description
-		schemaBytes, err := schemaRef.Value.MarshalJSON()
-		if err == nil {
-			var buf bytes.Buffer
-			if err := json.Indent(&buf, schemaBytes, "", "  "); err == nil {
-				jsonSchema = buf.String()
-			}
-		}
+	// Extract type-level enum values
+	enumValues, err := g.guts.ExtractTypeEnumValues(name)
+	if err != nil {
+		g.l.Warn("Failed to extract enum values from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+		enumValues = []string{}
 	}
+	metadata.enumValues = enumValues
 
-	// Create type docs with available data (no JSON representation since we don't have Go instance)
-	typeDocs := TypeDocs{
-		Description: description,
-		JsonSchema:  jsonSchema,
-		References:  references,
-		TSType:      tsType,
-	}
-
-	g.d.Types[name] = typeDocs
-
-	// Recursively register any referenced types
-	for _, refName := range references {
-		if _, exists := g.d.Types[refName]; !exists {
-			g.registerDiscoveredType(refName)
-		}
-	}
+	return metadata
 }
 
 // fatalIfErr logs the error and exits the program if err is not nil.

@@ -11,15 +11,34 @@ type Ref struct {
 	Ref string `json:"$ref"` // Type name (e.g., "PingParams")
 }
 
+// FieldMetadata contains documentation and type information for a single field.
+type FieldMetadata struct {
+	Name        string   `json:"name"`                  // Field name
+	Type        string   `json:"type"`                  // TypeScript type representation
+	Description string   `json:"description,omitempty"` // Field description from comments
+	Optional    bool     `json:"optional"`              // Whether field is optional (has ?)
+	EnumValues  []string `json:"enumValues,omitempty"`  // Possible values if type is an enum/union
+}
+
+// UsedBy represents where a type is used (method parameter, method result, or event result).
+type UsedBy struct {
+	Type   string `json:"type"`   // "method" or "event"
+	Target string `json:"target"` // Method/event name
+	Role   string `json:"role"`   // "param" or "result"
+}
+
 // TypeDocs contains all documentation and code representations for a single type.
-// This includes descriptions, examples, JSON schema, and metadata about the type structure.
+// This includes descriptions, examples, and metadata about the type structure.
 type TypeDocs struct {
-	Description        string   `json:"description"`            // Human-readable type description
-	JsonRepresentation string   `json:"jsonRepresentation"`     // Example JSON instance
-	JsonSchema         string   `json:"jsonSchema"`             // JSON Schema generated from Go type
-	TSType             string   `json:"tsType"`                 // TypeScript type definition
-	References         []string `json:"references,omitempty"`   // Types this type references
-	ReferencedBy       []string `json:"referencedBy,omitempty"` // Types that reference this type (computed)
+	Description        string          `json:"description"`                  // Human-readable type description
+	JsonRepresentation string          `json:"jsonRepresentation,omitempty"` // Example JSON instance (only for explicitly registered types)
+	TSType             string          `json:"tsType"`                       // TypeScript type definition
+	Kind               string          `json:"kind"`                         // Type kind (e.g., "Object", "String Enum", "Union")
+	EnumValues         []string        `json:"enumValues,omitempty"`         // Possible values if type is an enum/union
+	Fields             []FieldMetadata `json:"fields,omitempty"`             // Field metadata extracted from TypeScript AST
+	References         []string        `json:"references,omitempty"`         // Types this type references
+	ReferencedBy       []string        `json:"referencedBy,omitempty"`       // Types that reference this type (computed)
+	UsedBy             []UsedBy        `json:"usedBy,omitempty"`             // Methods/events that use this type (computed)
 }
 
 // Protocols indicates which communication protocols support a method or event.
@@ -164,9 +183,8 @@ func NewDocs(opt DocsOptions) *Docs {
 			Version:     utils.GetVersionShort(),
 			Description: opt.Description,
 		},
-		Methods:        make(map[string]MethodDocs),
-		Events:         make(map[string]EventDocs),
-		Types:          make(map[string]TypeDocs),
-		DatabaseSchema: "",
+		Methods: make(map[string]MethodDocs),
+		Events:  make(map[string]EventDocs),
+		Types:   make(map[string]TypeDocs),
 	}
 }

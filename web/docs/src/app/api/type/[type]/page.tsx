@@ -1,8 +1,7 @@
-import { BsFileEarmarkCode } from "react-icons/bs";
-import { TbJson, TbLink, TbBrandTypescript } from "react-icons/tb";
+import { TbJson, TbBrandTypescript, TbInfoCircle } from "react-icons/tb";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
-import { TypeReferences } from "@/components/type-references";
+import { TypeMetadata } from "@/components/type-metadata";
 import { docs, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -37,26 +36,9 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
             <TabbedCardWrapper
                 tabs={[
                     {
-                        title: "JSON",
-                        icon: <TbJson className='w-8 h-8 text-lang-json' />,
-                        code: (
-                            <CodeWrapper
-                                code={data.jsonRepresentation}
-                                lang='json'
-                                label={{ text: type }}
-                            />
-                        ),
-                    },
-                    {
-                        title: "JSON Schema",
-                        icon: <BsFileEarmarkCode className='w-8 h-8 text-lang-schema' />,
-                        code: (
-                            <CodeWrapper
-                                code={data.jsonSchema}
-                                lang='json'
-                                label={{ text: type }}
-                            />
-                        ),
+                        title: "Overview",
+                        icon: <TbInfoCircle className='w-8 h-8 text-lang-overview' />,
+                        code: <TypeMetadata data={data} typeName={type} />,
                     },
                     {
                         title: "TypeScript",
@@ -70,14 +52,20 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                         ),
                     },
                     {
-                        title: "References",
-                        icon: <TbLink className='w-8 h-8 text-lang-references' />,
-                        code: (
-                            <TypeReferences
-                                typeName={type}
-                                data={data}
-                            />
-                        ),
+                        title: "JSON",
+                        icon: <TbJson className='w-8 h-8 text-lang-json' />,
+                        code:
+                            "jsonRepresentation" in data && data.jsonRepresentation ? (
+                                <CodeWrapper
+                                    code={data.jsonRepresentation}
+                                    lang='json'
+                                    label={{ text: type }}
+                                />
+                            ) : (
+                                <p className='text-sm text-text-tertiary p-4'>
+                                    No JSON representation available for this type.
+                                </p>
+                            ),
                     },
                 ]}
             />

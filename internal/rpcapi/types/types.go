@@ -22,10 +22,6 @@ const (
 	PingStatusError PingStatus = "error"
 )
 
-func (e DataCreated) SchemaDescription() string {
-	return "User account information"
-}
-
 // Valid returns true if the PingStatus value is valid
 func (e PingStatus) Valid() bool {
 	switch e {

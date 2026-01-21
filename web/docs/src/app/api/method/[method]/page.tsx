@@ -32,8 +32,8 @@ export default async function Method(props: PageProps<"/api/method/[method]">) {
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
             <div>
-                <h1 className='text-4xl font-bold mb-3 text-text-primary'>{method}</h1>
-                <h2 className='text-xl text-text-primary mb-4'>{data.title}</h2>
+                <h1 className='text-4xl font-bold mb-3 text-text-primary'>{data.title}</h1>
+                <h2 className='text-xl text-text-primary mb-4'>{method}</h2>
 
                 <Deprecation
                     type='method'

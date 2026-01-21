@@ -20,7 +20,7 @@ type Migrator struct {
 
 // TODO: Set a common set of PRAGMA settings for SQLite connections
 // TODO: Test if we can edit db from a db browser while working
-func NewMigrator(fs embed.FS, sqlPath string, l *slog.Logger) (*Migrator, error) {
+func NewMigrator(l *slog.Logger, fs embed.FS, sqlPath string) (*Migrator, error) {
 	if sqlPath == "" {
 		return nil, fmt.Errorf("sqlPath is required")
 	}

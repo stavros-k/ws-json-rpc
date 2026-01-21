@@ -127,72 +127,191 @@
   },
   "types": {
     "DataCreated": {
-      "description": "User account information",
+      "description": "SomeEvent - Result for the SomeEvent method",
       "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
-      "jsonSchema": "{\n  \"description\": \"User account information\",\n  \"properties\": {\n    \"id\": {}\n  },\n  \"type\": \"object\"\n}",
-      "tsType": "// From rpctypes/types.go\nexport type DataCreated = {\n    /**\n     * The unique identifier for the result\n     */\n    // this is likely an enum in an external package \"github.com/google/uuid.UUID\"\n    id: string;\n};",
+      "tsType": "// From rpctypes/types.go\n/**\n * SomeEvent - Result for the SomeEvent method\n */\nexport type DataCreated = {\n    /**\n     * The unique identifier for the result\n     */\n    // this is likely an enum in an external package \"github.com/google/uuid.UUID\"\n    id: string;\n};",
+      "kind": "Object",
+      "fields": [
+        {
+          "name": "id",
+          "type": "string",
+          "description": "this is likely an enum in an external package \"github.com/google/uuid.UUID\" The unique identifier for the result",
+          "optional": false
+        }
+      ],
       "referencedBy": [
         "SubscribeParams"
+      ],
+      "usedBy": [
+        {
+          "type": "event",
+          "target": "data.created",
+          "role": "result"
+        }
       ]
     },
     "EventKind": {
       "description": "",
-      "jsonRepresentation": "",
-      "jsonSchema": "",
       "tsType": "// From rpctypes/coretypes.go\nexport type EventKind = \"data.created\" | \"data.updated\";",
+      "kind": "String Enum",
+      "enumValues": [
+        "data.created",
+        "data.updated"
+      ],
       "referencedBy": [
         "SubscribeParams",
         "UnsubscribeParams"
       ]
     },
     "PingResult": {
-      "description": "",
+      "description": "PingResult - Result for the Ping method",
       "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"message\": {\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
-      "tsType": "// From rpctypes/types.go\nexport type PingResult = {\n    /**\n     * A message describing the result\n     */\n    message: string;\n    /**\n     * The status of the ping\n     */\n    status: PingStatus;\n};",
+      "tsType": "// From rpctypes/types.go\n/**\n * PingResult - Result for the Ping method\n */\nexport type PingResult = {\n    /**\n     * A message describing the result\n     */\n    message: string;\n    /**\n     * The status of the ping\n     */\n    status: PingStatus;\n};",
+      "kind": "Object",
+      "fields": [
+        {
+          "name": "message",
+          "type": "string",
+          "description": "A message describing the result",
+          "optional": false
+        },
+        {
+          "name": "status",
+          "type": "PingStatus",
+          "description": "The status of the ping",
+          "optional": false,
+          "enumValues": [
+            "error",
+            "success"
+          ]
+        }
+      ],
       "references": [
         "PingStatus"
+      ],
+      "usedBy": [
+        {
+          "type": "method",
+          "target": "ping",
+          "role": "result"
+        }
       ]
     },
     "PingStatus": {
       "description": "",
-      "jsonRepresentation": "",
-      "jsonSchema": "",
       "tsType": "// From rpctypes/types.go\nexport type PingStatus = \"error\" | \"success\";",
+      "kind": "String Enum",
+      "enumValues": [
+        "error",
+        "success"
+      ],
       "referencedBy": [
         "PingResult"
       ]
     },
     "SubscribeParams": {
-      "description": "",
+      "description": "SubscribeParams - Parameters for the Subscribe method",
       "jsonRepresentation": "{\n  \"event\": \"\",\n  \"data\": {\n    \"id\": \"00000000-0000-0000-0000-000000000000\"\n  }\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"data\": {\n      \"$ref\": \"#/components/schemas/DataCreated\"\n    },\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
-      "tsType": "// From rpctypes/types.go\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n    data: DataCreated;\n};",
+      "tsType": "// From rpctypes/types.go\n/**\n * SubscribeParams - Parameters for the Subscribe method\n */\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n    data: DataCreated;\n};",
+      "kind": "Object",
+      "fields": [
+        {
+          "name": "event",
+          "type": "EventKind",
+          "description": "The event topic to subscribe to",
+          "optional": false,
+          "enumValues": [
+            "data.created",
+            "data.updated"
+          ]
+        },
+        {
+          "name": "data",
+          "type": "DataCreated",
+          "optional": false
+        }
+      ],
       "references": [
         "DataCreated",
         "EventKind"
+      ],
+      "usedBy": [
+        {
+          "type": "method",
+          "target": "subscribe",
+          "role": "param"
+        }
       ]
     },
     "SubscribeResult": {
-      "description": "",
+      "description": "SubscribeResult - Result for the Subscribe method",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"success\": {\n      \"type\": \"boolean\"\n    }\n  },\n  \"type\": \"object\"\n}",
-      "tsType": "// From rpctypes/types.go\nexport type SubscribeResult = {\n    /**\n     * Whether the subscribe was successful\n     */\n    success: boolean;\n};"
+      "tsType": "// From rpctypes/types.go\n/**\n * SubscribeResult - Result for the Subscribe method\n */\nexport type SubscribeResult = {\n    /**\n     * Whether the subscribe was successful\n     */\n    success: boolean;\n};",
+      "kind": "Object",
+      "fields": [
+        {
+          "name": "success",
+          "type": "boolean",
+          "description": "Whether the subscribe was successful",
+          "optional": false
+        }
+      ],
+      "usedBy": [
+        {
+          "type": "method",
+          "target": "subscribe",
+          "role": "result"
+        }
+      ]
     },
     "UnsubscribeParams": {
-      "description": "",
+      "description": "UnsubscribeParams - Parameters for the Unsubscribe method",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"event\": {\n      \"type\": \"string\"\n    }\n  },\n  \"type\": \"object\"\n}",
-      "tsType": "// From rpctypes/types.go\nexport type UnsubscribeParams = {\n    /**\n     * The event topic to unsubscribe from\n     */\n    event: EventKind;\n};",
+      "tsType": "// From rpctypes/types.go\n/**\n * UnsubscribeParams - Parameters for the Unsubscribe method\n */\nexport type UnsubscribeParams = {\n    /**\n     * The event topic to unsubscribe from\n     */\n    event: EventKind;\n};",
+      "kind": "Object",
+      "fields": [
+        {
+          "name": "event",
+          "type": "EventKind",
+          "description": "The event topic to unsubscribe from",
+          "optional": false,
+          "enumValues": [
+            "data.created",
+            "data.updated"
+          ]
+        }
+      ],
       "references": [
         "EventKind"
+      ],
+      "usedBy": [
+        {
+          "type": "method",
+          "target": "unsubscribe",
+          "role": "param"
+        }
       ]
     },
     "UnsubscribeResult": {
-      "description": "",
+      "description": "UnsubscribeResult - Result for the Unsubscribe method",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "jsonSchema": "{\n  \"properties\": {\n    \"success\": {\n      \"type\": \"boolean\"\n    }\n  },\n  \"type\": \"object\"\n}",
-      "tsType": "// From rpctypes/types.go\nexport type UnsubscribeResult = {\n    /**\n     * Whether the unsubscribe was successful\n     */\n    success: boolean;\n};"
+      "tsType": "// From rpctypes/types.go\n/**\n * UnsubscribeResult - Result for the Unsubscribe method\n */\nexport type UnsubscribeResult = {\n    /**\n     * Whether the unsubscribe was successful\n     */\n    success: boolean;\n};",
+      "kind": "Object",
+      "fields": [
+        {
+          "name": "success",
+          "type": "boolean",
+          "description": "Whether the unsubscribe was successful",
+          "optional": false
+        }
+      ],
+      "usedBy": [
+        {
+          "type": "method",
+          "target": "unsubscribe",
+          "role": "result"
+        }
+      ]
     }
   },
   "databaseSchema": "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (version varchar(128) primary key);\nCREATE TABLE IF NOT EXISTS \"user\" (\n  \"id\" INTEGER PRIMARY KEY,\n  \"name\" TEXT NOT NULL,\n  \"email\" TEXT NOT NULL,\n  \"password\" TEXT NOT NULL,\n  \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, \"last_login\" TIMESTAMP);\n-- Dbmate schema migrations\nINSERT INTO \"schema_migrations\" (version) VALUES\n  ('20251009092116'),\n  ('20251009104248');"
