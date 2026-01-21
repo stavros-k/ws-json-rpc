@@ -1,5 +1,5 @@
 # TODO
 
-- [ ] Add a `ws-client` example to the examples folder
+- [ ] Move sub/unsub to ws hub, dont require consumer to register those
+- [ ] Design the MQTT registration process + Docs
 - [ ] Create a go-ws-client package (for testing purposes)
-- [ ] Create a csharp-ws-client package and it's types
