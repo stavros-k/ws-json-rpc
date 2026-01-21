@@ -27,6 +27,14 @@ type GutsGenerator struct {
 func NewGutsGenerator(l *slog.Logger, goTypesDirPath string) (*GutsGenerator, error) {
 	var err error
 	l = l.With(slog.String("component", "guts-generator"))
+
+	// Prepend "./" to the path if it's not already there, this is
+	// to make the package parser to know that it's a local package
+	// and not a standard library package
+	goTypesDirPath = strings.TrimPrefix(goTypesDirPath, "./")
+	goTypesDirPath = strings.TrimPrefix(goTypesDirPath, "/")
+	goTypesDirPath = "./" + goTypesDirPath
+
 	l.Debug("Creating guts generator", slog.String("goTypesDirPath", goTypesDirPath))
 
 	gutsGenerator := &GutsGenerator{l: l}
