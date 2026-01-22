@@ -36,6 +36,7 @@ func NewMigrator(l *slog.Logger, fs embed.FS, sqlPath string) (*Migrator, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse database url: %w", err)
 	}
+
 	db := dbmate.New(u)
 	db.Strict = true
 	db.FS = fs
@@ -55,6 +56,7 @@ func NewMigrator(l *slog.Logger, fs embed.FS, sqlPath string) (*Migrator, error)
 
 func (m *Migrator) Migrate() error {
 	m.l.Info("Migrating database")
+
 	if err := m.db.Migrate(); err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}

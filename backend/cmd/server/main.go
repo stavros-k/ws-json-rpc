@@ -36,6 +36,7 @@ func main() {
 	if err != nil {
 		fatalIfErr(slog.Default(), fmt.Errorf("failed to create config: %w", err))
 	}
+
 	defer func() {
 		if err := config.Close(); err != nil {
 			fatalIfErr(slog.Default(), fmt.Errorf("failed to close config: %w", err))
@@ -64,6 +65,7 @@ func main() {
 	if err := hub.GenerateDocs(); err != nil {
 		fatalIfErr(logger, fmt.Errorf("failed to generate API docs: %w", err))
 	}
+
 	if config.Generate {
 		logger.Info("Exiting after generating docs")
 
@@ -74,6 +76,7 @@ func main() {
 	if err != nil {
 		fatalIfErr(logger, fmt.Errorf("failed to create migrator: %w", err))
 	}
+
 	if err := migrator.Migrate(); err != nil {
 		fatalIfErr(logger, fmt.Errorf("failed to migrate database: %w", err))
 	}
@@ -106,6 +109,7 @@ func main() {
 	// Start HTTP/WS server
 	go func() {
 		logger.Info("http/ws server listening", slog.String("address", addr))
+
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("server failed", utils.ErrAttr(err))
 			sigCancel()
@@ -118,6 +122,7 @@ func main() {
 
 	// Shutdown / Cleanup
 	logger.Info("http/ws server shutting down...")
+
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
 

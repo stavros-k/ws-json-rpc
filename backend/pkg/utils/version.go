@@ -51,6 +51,7 @@ func getVCSInfo() (commit string, buildTime string, modified string) {
 // Example output: "v1.0.0 (abc1234) built at 2024-01-15T10:30:00Z".
 func GetBuildVersion() string {
 	commit, buildTime, modified := getVCSInfo()
+
 	suffix := ""
 	if modified == "true" {
 		suffix = "-dirty"
@@ -61,6 +62,7 @@ func GetBuildVersion() string {
 
 func GetVersionShort() string {
 	commit, _, modified := getVCSInfo()
+
 	suffix := ""
 	if modified == "true" {
 		suffix = "-dirty"

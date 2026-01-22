@@ -42,13 +42,14 @@ func NewConfig() (*Config, error) {
 	dbPath := filepath.Join(dataDir, "database.sqlite")
 	logPath := filepath.Join(dataDir, "app.log")
 
-	var logOutput io.Writer
-	logOutput = os.Stdout
+	var logOutput io.Writer = os.Stdout
+
 	if getBoolEnv(EnvLogToFile, false) {
 		f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open log file: %w", err)
 		}
+
 		logOutput = f
 	}
 
@@ -86,6 +87,7 @@ func getBoolEnv(key EnvKey, defaultVal bool) bool {
 	if !exists {
 		return defaultVal
 	}
+
 	val = strings.ToLower(val)
 	switch val {
 	case "true", "1":

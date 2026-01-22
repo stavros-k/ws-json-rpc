@@ -133,8 +133,11 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 		wrapped = options.Middlewares[i](wrapped)
 	}
 
-	var reqZero TParams
-	var respZero TResult
+	var (
+		reqZero  TParams
+		respZero TResult
+	)
+
 	h.generator.AddHandlerType(method, reqZero, respZero, options.Docs)
 
 	h.registerHandler(method, Method{
@@ -255,9 +258,11 @@ func (h *Hub) Subscribe(client *WSClient, event string) error {
 // Unsubscribe removes a client from an event subscription.
 func (h *Hub) Unsubscribe(client *WSClient, event string) {
 	h.subscriptionsMutex.Lock()
+
 	if subscribers, ok := h.subscriptions[event]; ok {
 		delete(subscribers, client)
 	}
+
 	h.subscriptionsMutex.Unlock()
 
 	client.logger.Info("unsubscribed from event", slog.String("event", event))
@@ -292,11 +297,13 @@ func (h *Hub) Run() {
 func (h *Hub) registerEvent(eventName string) {
 	h.subscriptionsMutex.Lock()
 	defer h.subscriptionsMutex.Unlock()
+
 	if _, exists := h.subscriptions[eventName]; exists {
 		h.logger.Warn("event already registered", slog.String("event", eventName))
 
 		return
 	}
+
 	h.subscriptions[eventName] = make(map[*WSClient]struct{})
 	h.logger.Debug("event registered", slog.String("event", eventName))
 }

@@ -27,6 +27,7 @@ type GutsGenerator struct {
 // NewGutsGenerator parses the Go types directory and generates a TypeScript AST for metadata extraction.
 func NewGutsGenerator(l *slog.Logger, goTypesDirPath string) (*GutsGenerator, error) {
 	var err error
+
 	l = l.With(slog.String("component", "guts-generator"))
 
 	// Prepend "./" to the path if it's not already there, this is
@@ -64,6 +65,7 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	if err != nil {
 		return nil, fmt.Errorf("failed to create guts parser: %w", err)
 	}
+
 	goParser.PreserveComments()
 
 	if _, err := os.Stat(goTypesDirPath); os.IsNotExist(err) {
@@ -75,14 +77,17 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	}
 
 	hasErrors := false
+
 	for _, pkg := range goParser.Pkgs {
 		if len(pkg.Errors) > 0 {
 			hasErrors = true
 		}
+
 		for _, e := range pkg.Errors {
 			l.Error("failed to parse go types", slog.String("pkg", pkg.PkgPath), slog.String("error", e.Error()))
 		}
 	}
+
 	if hasErrors {
 		return nil, errors.New("failed to parse go types")
 	}
@@ -145,10 +150,12 @@ func (g *GutsGenerator) SerializeNode(name string) (string, error) {
 	}
 
 	var str strings.Builder
+
 	for line := range strings.SplitSeq(serializedNode, "\n") {
 		if strings.HasPrefix(line, "// From") {
 			continue
 		}
+
 		str.WriteString(line + "\n")
 	}
 
@@ -250,6 +257,7 @@ func (g *GutsGenerator) ExtractTypeKind(name string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to get type kind for alias %s: %w", name, err)
 		}
+
 		g.l.Debug("Extracted type kind", slog.String("type", name), slog.String("kind", kind))
 
 		return kind, nil
@@ -334,6 +342,7 @@ func (g *GutsGenerator) getTypeKindFromExpression(expr bindings.ExpressionType) 
 	case *bindings.ReferenceType:
 		// Try to resolve the reference and get its kind
 		refName := e.Name.String()
+
 		refNode, exists := g.tsParser.Node(refName)
 		if !exists {
 			return "Type Reference", nil
@@ -379,6 +388,7 @@ func (g *GutsGenerator) extractFieldsFromExpressionType(expr bindings.Expression
 	}
 
 	var fields []FieldMetadata
+
 	for _, member := range typeLiteral.Members {
 		typeStr, err := g.serializeExpressionType(member.Type)
 		if err != nil {
@@ -427,10 +437,12 @@ func (g *GutsGenerator) extractComments(sc bindings.SupportComments) string {
 	}
 
 	var builder strings.Builder
+
 	for i, comment := range comments {
 		if i > 0 {
 			builder.WriteString(" ")
 		}
+
 		builder.WriteString(strings.TrimSpace(comment.Text))
 	}
 
@@ -477,6 +489,7 @@ func (g *GutsGenerator) extractEnumValues(expr bindings.ExpressionType) []string
 // extractLiteralsFromUnion extracts string literal values from a union, ignoring other types.
 func (g *GutsGenerator) extractLiteralsFromUnion(union *bindings.UnionType) []string {
 	var values []string
+
 	for _, member := range union.Types {
 		lit, ok := member.(*bindings.LiteralType)
 		if !ok {

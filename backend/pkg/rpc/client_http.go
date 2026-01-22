@@ -29,6 +29,7 @@ func (c *HTTPClient) handleRequest(ctx context.Context, req RPCRequest) {
 	c.hub.methodsMutex.RLock()
 	method, exists := c.hub.methods[req.Method]
 	c.hub.methodsMutex.RUnlock()
+
 	if !exists {
 		c.sendError(req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method))
 
@@ -113,7 +114,9 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 		if err != nil {
 			// Create a minimal error response
 			resp := NewRPCResponse(uuid.Nil, nil, &RPCErrorObj{Code: ErrCodeParse, Message: "Invalid JSON in request body"})
+
 			w.Header().Set("Content-Type", "application/json")
+
 			if err := utils.ToJSONStream(w, resp); err != nil {
 				// Log the error but cannot do much else
 				httpLogger.Error("failed to encode HTTP response", utils.ErrAttr(err))

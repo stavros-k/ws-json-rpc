@@ -52,11 +52,13 @@ func (wa WebApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if f.IsDir() {
 				continue
 			}
+
 			http.ServeFileFS(w, r, wa.fs, altPath)
 
 			return
 		}
 	}
+
 	wa.l.Warn("File not found", slog.String("path", path))
 
 	// File not found, redirect to base URL

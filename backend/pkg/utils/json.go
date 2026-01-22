@@ -16,6 +16,7 @@ func FromJSON[T any](data []byte) (T, error) {
 	if len(data) == 0 {
 		return result, nil
 	}
+
 	retult, err := FromJSONStream[T](bytes.NewReader(data))
 
 	return retult, err
@@ -26,6 +27,7 @@ func FromJSON[T any](data []byte) (T, error) {
 //nolint:ireturn
 func FromJSONStream[T any](r io.Reader) (T, error) {
 	var result T
+
 	decoder := json.NewDecoder(r)
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(&result)

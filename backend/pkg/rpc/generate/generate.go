@@ -54,6 +54,7 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (*GeneratorImpl, error)
 	if opts.DocsFileOutputPath == "" {
 		return nil, errors.New("docs file path is required")
 	}
+
 	if opts.DatabaseSchemaFileOutputPath == "" {
 		return nil, errors.New("schema file path is required")
 	}
@@ -85,6 +86,7 @@ func (g *GeneratorImpl) GetDatabaseSchema() (string, error) {
 	g.l.Debug("Generating database schema from migrations")
 
 	tempDBPath := fmt.Sprintf("%s-%d", os.TempDir(), time.Now().Unix())
+
 	mig, err := database.NewMigrator(g.l, sqlite.GetMigrationsFS(), tempDBPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to create migrator: %w", err)
@@ -121,6 +123,7 @@ func (g *GeneratorImpl) Generate() error {
 	if err != nil {
 		return fmt.Errorf("failed to get database schema: %w", err)
 	}
+
 	g.d.DatabaseSchema = schema
 
 	// Compute back-references for all types
@@ -133,10 +136,12 @@ func (g *GeneratorImpl) Generate() error {
 
 	// Write API docs to file
 	g.l.Debug("Writing API documentation to file", slog.String("file", g.docsFilePath))
+
 	docsFile, err := os.Create(g.docsFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to create api docs file: %w", err)
 	}
+
 	defer func() {
 		if err := docsFile.Close(); err != nil {
 			g.l.Error("failed to close api docs file", utils.ErrAttr(err))
@@ -159,6 +164,7 @@ func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 	}
 
 	docs.NoNilSlices()
+
 	if err := docs.Validate(); err != nil {
 		g.fatalIfErr(fmt.Errorf("failed to validate event docs: %w", err))
 	}
@@ -187,6 +193,7 @@ func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs Meth
 	}
 
 	docs.NoNilSlices()
+
 	if err := docs.Validate(); err != nil {
 		g.fatalIfErr(fmt.Errorf("failed to validate method docs: %w", err))
 	}
@@ -247,6 +254,7 @@ func (g *GeneratorImpl) computeBackReferences() {
 
 	// Sort ReferencedBy lists for deterministic output
 	totalBackRefs := 0
+
 	for name := range g.d.Types {
 		typeDocs := g.d.Types[name]
 		if len(typeDocs.ReferencedBy) > 0 {
@@ -265,6 +273,7 @@ func usedByLess(usedBy []UsedBy) func(i, j int) bool {
 		if usedBy[i].Type != usedBy[j].Type {
 			return usedBy[i].Type < usedBy[j].Type
 		}
+
 		if usedBy[i].Target != usedBy[j].Target {
 			return usedBy[i].Target < usedBy[j].Target
 		}
@@ -295,6 +304,7 @@ func (g *GeneratorImpl) computeUsedBy() {
 
 	// Sort UsedBy lists for deterministic output
 	totalUsages := 0
+
 	for name := range g.d.Types {
 		typeDocs := g.d.Types[name]
 		if len(typeDocs.UsedBy) > 0 {
@@ -346,6 +356,7 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 	hasInstance := v != nil
 
 	g.l.Debug("Registering type", slog.String("type", name), slog.Bool("hasInstance", hasInstance))
+
 	var jsonRepresentation string
 
 	if hasInstance {
@@ -405,32 +416,40 @@ func (g *GeneratorImpl) extractTypeMetadata(name string) typeMetadata {
 	kind, err := g.guts.ExtractTypeKind(name)
 	if err != nil {
 		g.l.Warn("Failed to extract type kind from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+
 		kind = "Unknown"
 	}
+
 	metadata.kind = kind
 
 	// Extract field metadata
 	fields, err := g.guts.ExtractFields(name)
 	if err != nil {
 		g.l.Warn("Failed to extract fields from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+
 		fields = []FieldMetadata{}
 	}
+
 	metadata.fields = fields
 
 	// Extract references
 	references, err := g.guts.ExtractReferences(name)
 	if err != nil {
 		g.l.Warn("Failed to extract references from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+
 		references = []string{}
 	}
+
 	metadata.references = references
 
 	// Extract type-level enum values
 	enumValues, err := g.guts.ExtractTypeEnumValues(name)
 	if err != nil {
 		g.l.Warn("Failed to extract enum values from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+
 		enumValues = []string{}
 	}
+
 	metadata.enumValues = enumValues
 
 	return metadata

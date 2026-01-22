@@ -111,6 +111,7 @@ func (e *EventDocs) NoNilSlices() {
 	if e.Examples == nil {
 		e.Examples = make([]Example, 0)
 	}
+
 	if e.Tags == nil {
 		e.Tags = make([]string, 0)
 	}
@@ -150,9 +151,11 @@ func (m *MethodDocs) NoNilSlices() {
 	if m.Examples == nil {
 		m.Examples = make([]Example, 0)
 	}
+
 	if m.Errors == nil {
 		m.Errors = make([]ErrorDoc, 0)
 	}
+
 	if m.Tags == nil {
 		m.Tags = make([]string, 0)
 	}

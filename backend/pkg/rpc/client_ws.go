@@ -31,6 +31,7 @@ func (c *WSClient) readPump(ctx context.Context) {
 	defer func() {
 		c.logger.Info("client read pump exited")
 		c.cancel()
+
 		c.hub.unregister <- c
 	}()
 
@@ -64,6 +65,7 @@ func (c *WSClient) readPump(ctx context.Context) {
 		req, err := utils.FromJSON[RPCRequest](message)
 		if err != nil {
 			c.logger.Warn("parse error", utils.ErrAttr(err))
+
 			if err := c.sendError(ctx, uuid.Nil, ErrCodeParse, err.Error()); err != nil {
 				c.logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
@@ -108,6 +110,7 @@ func (c *WSClient) writePump(ctx context.Context) {
 			// Write message with a timeout
 			writeCtx, cancel := context.WithTimeout(ctx, MAX_RESPONSE_TIMEOUT)
 			err := c.conn.Write(writeCtx, websocket.MessageText, message)
+
 			cancel()
 
 			if err != nil {
@@ -128,6 +131,7 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 	c.hub.methodsMutex.RLock()
 	method, exists := c.hub.methods[req.Method]
 	c.hub.methodsMutex.RUnlock()
+
 	if !exists {
 		if err := c.sendError(ctx, req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method)); err != nil {
 			reqLogger.Error("failed to send error response", utils.ErrAttr(err))
@@ -140,6 +144,7 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 	typedParams, err := method.parser(req.Params)
 	if err != nil {
 		reqLogger.Error("unmarshal error", utils.ErrAttr(err))
+
 		if err := c.sendError(ctx, req.ID, ErrCodeInvalidParams, fmt.Sprintf("Failed to parse params on method %q: %s", req.Method, err.Error())); err != nil {
 			reqLogger.Error("failed to send error response", utils.ErrAttr(err))
 		}
@@ -230,6 +235,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 		}
 
 		ctx, cancel := context.WithCancel(r.Context())
+
 		clientID := r.URL.Query().Get("clientID")
 		if clientID == "" {
 			wsLogger.Warn("no client ID provided, generating one", slog.String("remote_addr", remoteHost))
@@ -272,6 +278,7 @@ func (h *Hub) clientRegister(client *WSClient) {
 // clientUnregister removes a client from the hub.
 func (h *Hub) clientUnregister(client *WSClient) {
 	h.clientsMutex.Lock()
+
 	if _, ok := h.clients[client]; ok {
 		delete(h.clients, client)
 
@@ -280,11 +287,14 @@ func (h *Hub) clientUnregister(client *WSClient) {
 		h.clientCountMutex.Unlock()
 
 		h.subscriptionsMutex.Lock()
+
 		for _, subscribers := range h.subscriptions {
 			delete(subscribers, client)
 		}
+
 		h.subscriptionsMutex.Unlock()
 	}
+
 	h.clientsMutex.Unlock()
 	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_host", client.remoteHost))
 }
@@ -292,6 +302,7 @@ func (h *Hub) clientUnregister(client *WSClient) {
 func (h *Hub) broadcastEvent(event RPCEvent) {
 	h.subscriptionsMutex.RLock()
 	defer h.subscriptionsMutex.RUnlock()
+
 	subscribers, ok := h.subscriptions[event.EventName]
 	if !ok {
 		h.logger.Warn("attempted to publish to unregistered event", slog.String("event", event.EventName))
@@ -314,18 +325,22 @@ func (h *Hub) broadcastEvent(event RPCEvent) {
 
 	count := 0
 	dropped := 0
+
 	for client := range subscribers {
 		select {
 		case client.sendChannel <- result:
 			count++
 		default:
 			dropped++
+
 			client.logger.Warn("send channel full, dropping event broadcast", slog.String("event", event.EventName))
 		}
 	}
+
 	log := h.logger.Debug
 	if dropped > 0 {
 		log = h.logger.Warn
 	}
+
 	log("event broadcast", slog.String("event", event.EventName), slog.Int("recipients", len(subscribers)), slog.Int("delivered", count), slog.Int("dropped", dropped))
 }
