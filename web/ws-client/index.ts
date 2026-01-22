@@ -401,12 +401,15 @@ export class WebSocketClient {
      * Returns a function that can be called to detach the handler.
      * You can also call removeEventListener() to detach the handler.
      */
-    addEventListener<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): () => void {
+    async addEventListener<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): Promise<() => void> {
         let handlers = this.eventHandlers.get(event);
         if (!handlers) {
             handlers = new Set();
             this.eventHandlers.set(event, handlers);
         }
+
+        if (!this.serverSubscriptions.has(event)) await this.subscribe(event);
+
         // Cast needed due to TypeScript variance with Set
         handlers.add(handler as EventHandler<APIEvents[EventKind]>);
         return () => this.removeEventListener(event, handler);
@@ -424,7 +427,7 @@ export class WebSocketClient {
                 "You passed an inline function instead of a bound function, ie `() => {}` vs `myFunction`",
                 "You called removeEventListener() twice with the same handler",
                 "You never registered the handler with addEventListener()",
-                "Tip: Use the detach function returned by addEventListener() instead: const detach = client.addEventListener(...); detach();",
+                "Tip: Use the detach function returned by addEventListener() instead: const detach = await client.addEventListener(...); detach();",
                 "Using the detach function allows you to pass inline functions without issues.",
             ];
             this.logger("warn", `Handler not found for event: ${String(event)}. Reasons: ${reasons.join("\n")}`);
@@ -434,7 +437,13 @@ export class WebSocketClient {
         // Cast needed due to TypeScript variance with Set
         handlers.delete(handler as EventHandler<APIEvents[EventKind]>);
         // If no more handlers for this event, remove the entry
-        if (handlers.size === 0) this.eventHandlers.delete(event);
+        if (handlers.size === 0) {
+            this.eventHandlers.delete(event);
+            // Fire-and-forget unsubscribe
+            this.unsubscribe(event).catch((error) => {
+                this.logger("error", `Failed to unsubscribe from event ${String(event)}: ${error}`);
+            });
+        }
     }
 
     /**
