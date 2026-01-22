@@ -16,7 +16,6 @@ type HTTPClient struct {
 	r          *http.Request
 	hub        *Hub
 	remoteHost string
-	cancel     context.CancelFunc
 	id         string
 	logger     *slog.Logger
 }
@@ -134,7 +133,6 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 			r:          r,
 			hub:        h,
 			remoteHost: remoteHost,
-			cancel:     cancel,
 			id:         clientID,
 			logger: httpLogger.With(
 				slog.String("client_id", clientID),
