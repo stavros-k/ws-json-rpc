@@ -2,9 +2,9 @@
 
 // From rpctypes/types.go
 /**
- * DataCreated - Result for the DataCreated event
+ * DataCreatedEvent - Result for the [EventKindDataCreated] event
  */
-export type DataCreated = {
+export type DataCreatedEvent = {
     /**
      * The unique identifier for the result
      */
@@ -24,7 +24,7 @@ export const MethodKinds: MethodKind[] = ["ping", "subscribe", "unsubscribe", "u
 
 // From rpctypes/types.go
 /**
- * PingResult - Result for the Ping method
+ * PingResult - Result for the [MethodKindPing] method
  */
 export type PingResult = {
     /**
@@ -44,7 +44,7 @@ export const PingStatuses: PingStatus[] = ["error", "success"];
 
 // From rpctypes/types.go
 /**
- * SubscribeParams - Parameters for the Subscribe method
+ * SubscribeParams - Parameters for the [MethodKindSubscribe] method
  */
 export type SubscribeParams = {
     /**
@@ -55,7 +55,7 @@ export type SubscribeParams = {
 
 // From rpctypes/types.go
 /**
- * SubscribeResult - Result for the Subscribe method
+ * SubscribeResult - Result for the [MethodKindSubscribe] method
  */
 export type SubscribeResult = {
     /**
@@ -66,7 +66,7 @@ export type SubscribeResult = {
 
 // From rpctypes/types.go
 /**
- * UnsubscribeParams - Parameters for the Unsubscribe method
+ * UnsubscribeParams - Parameters for the [MethodKindUnsubscribe] method
  */
 export type UnsubscribeParams = {
     /**
@@ -77,7 +77,7 @@ export type UnsubscribeParams = {
 
 // From rpctypes/types.go
 /**
- * UnsubscribeResult - Result for the Unsubscribe method
+ * UnsubscribeResult - Result for the [MethodKindUnsubscribe] method
  */
 export type UnsubscribeResult = {
     /**

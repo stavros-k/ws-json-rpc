@@ -117,7 +117,7 @@ func main() {
 }
 
 func registerEvents(h *rpc.Hub) {
-	rpc.RegisterEvent[rpctypes.DataCreated](h, string(rpctypes.EventKindDataCreated), rpc.EventOptions{
+	rpc.RegisterEvent[rpctypes.DataCreatedEvent](h, string(rpctypes.EventKindDataCreated), rpc.EventOptions{
 		Docs: generate.EventDocs{
 			Title:       "DataCreated",
 			Description: "Event fired when new data is created",
@@ -127,7 +127,7 @@ func registerEvents(h *rpc.Hub) {
 				{
 					Title:       "Basic example",
 					Description: "Subscribe to the DataCreated event",
-					ResultObj:   rpctypes.DataCreated{ID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")},
+					ResultObj:   rpctypes.DataCreatedEvent{ID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")},
 				},
 			},
 		},

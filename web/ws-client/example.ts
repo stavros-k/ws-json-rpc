@@ -1,4 +1,4 @@
-import type { DataCreated } from "./generated";
+import type { DataCreatedEvent } from "./generated";
 import { WebSocketClient } from "./index";
 
 const client = new WebSocketClient({
@@ -42,7 +42,7 @@ detach2();
 await client.subscribe("data.created");
 
 // Pass a bound function as listener and manually remove it
-const myFunc = (event: DataCreated) => console.log(event.id);
+const myFunc = (event: DataCreatedEvent) => console.log(event.id);
 await client.addEventListener("data.created", myFunc);
 // Can't pass inline function here, need to pass the same reference
 client.removeEventListener("data.created", myFunc);
