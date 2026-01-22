@@ -398,9 +398,10 @@ export class WebSocketClient {
 
     /**
      * Add an event handler.
-     * Will automatically resubscribe if the connection is lost.
+     * Returns a function that can be called to detach the handler.
+     * You can also call removeEventListener() to detach the handler.
      */
-    on<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): void {
+    addEventListener<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): () => void {
         let handlers = this.eventHandlers.get(event);
         if (!handlers) {
             handlers = new Set();
@@ -408,20 +409,23 @@ export class WebSocketClient {
         }
         // Cast needed due to TypeScript variance with Set
         handlers.add(handler as EventHandler<APIEvents[EventKind]>);
+        return () => this.removeEventListener(event, handler);
     }
 
     /**
-     * Remove an event handler.
+     * Remove an event handler. It's recommended to use the function returned by addEventListener() instead.
      */
-    off<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): void {
+    removeEventListener<E extends EventKind>(event: E, handler: EventHandler<APIEvents[E]>): void {
         const handlers = this.eventHandlers.get(event);
         if (!handlers) return;
 
         if (!handlers.has(handler as EventHandler<APIEvents[EventKind]>)) {
             const reasons = [
                 "You passed an inline function instead of a bound function, ie `() => {}` vs `myFunction`",
-                "You called off() twice with the same handler",
-                "You never registered the handler with on()",
+                "You called removeEventListener() twice with the same handler",
+                "You never registered the handler with addEventListener()",
+                "Tip: Use the detach function returned by addEventListener() instead: const detach = client.addEventListener(...); detach();",
+                "Using the detach function allows you to pass inline functions without issues.",
             ];
             this.logger("warn", `Handler not found for event: ${String(event)}. Reasons: ${reasons.join("\n")}`);
             return;

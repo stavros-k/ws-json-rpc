@@ -20,8 +20,13 @@ const createdFn = (event: DataCreated) => {
     console.log("data.created", event);
 };
 
-client.on("data.created", createdFn);
-client.off("data.created", createdFn);
+const detach1 = client.addEventListener("data.created", createdFn);
+const detach2 = client.addEventListener("data.created", () => {
+    console.log("Another handler for data.created");
+});
+
+detach1();
+detach2();
 
 // No need to .off() the handlers, they are automatically removed when the event is unsubscribed
 await client.unsubscribe("data.created");
