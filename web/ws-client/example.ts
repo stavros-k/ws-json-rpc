@@ -1,4 +1,4 @@
-import { DataCreated } from "./generated";
+import type { DataCreated } from "./generated";
 import { WebSocketClient } from "./index";
 
 const client = new WebSocketClient({
