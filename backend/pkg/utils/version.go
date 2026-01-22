@@ -55,6 +55,7 @@ func GetBuildVersion() string {
 	if modified == "true" {
 		suffix = "-dirty"
 	}
+
 	return fmt.Sprintf("v%s (%s%s) built at %s", Version, commit, suffix, buildTime)
 }
 
@@ -64,6 +65,7 @@ func GetVersionShort() string {
 	if modified == "true" {
 		suffix = "-dirty"
 	}
+
 	return fmt.Sprintf("v%s (%s%s)", Version, commit, suffix)
 }
 

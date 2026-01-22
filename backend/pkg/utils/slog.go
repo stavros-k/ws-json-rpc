@@ -21,6 +21,7 @@ func (w *logWriter) Write(p []byte) (n int, err error) {
 	if len(msg) > 0 {
 		w.logger.Info(string(msg))
 	}
+
 	return len(p), nil
 }
 

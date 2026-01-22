@@ -51,61 +51,28 @@ linters:
     - intrange
     - iotamixing
     - ireturn
-
-  # lll
-  # Reports long lines.
-  # loggercheck
-  # Checks key value pairs for common logger libraries (kitlog,klog,logr,slog,zap).
-  # maintidx
-  # Maintidx measures the maintainability index of each function.
-  # makezero
-  # Find slice declarations with non-zero initial length.
-  # mirror
-  # Reports wrong mirror patterns of bytes/strings usage.
-  # Autofix
-  # misspell
-  # Finds commonly misspelled English words.
-  # Autofix
-  # mnd
-  # An analyzer to detect magic numbers.
-  # modernize
-  # A suite of analyzers that suggest simplifications to Go code, using modern language and library features.
-  # musttag
-  # Enforce field tags in (un)marshaled structs.
-  # nakedret
-  # Checks that functions with naked returns are not longer than a maximum size (can be zero).
-  # Autofix
-  # nestif
-  # Reports deeply nested if statements.
-  # nilerr
-  # Find the code that returns nil even if it checks that the error is not nil.
-  # nilnesserr
-  # Reports constructs that checks for err != nil, but returns a different nil value error. Powered by nilness and nilerr.
-  # nilnil
-  # Checks that there is no simultaneous return of nil error and an invalid value.
-  # nlreturn
-  # Checks for a new line before return and branch statements to increase code clarity.
-  # Autofix
-  # noctx
-  # Detects function and method with missing usage of context.Context.
-  # noinlineerr
-  # Disallows inline error handling (if err := ...; err != nil {).
-  # nolintlint
-  # Reports ill-formed or insufficient nolint directives.
-  # Autofix
-  # nonamedreturns
-  # Reports all named returns.
-  # nosprintfhostport
-  # Checks for misuse of Sprintf to construct a host with port in a URL.
-  # paralleltest
-  # Detects missing usage of t.Parallel() method in your Go test.
-  # perfsprint
-  # Checks that fmt.Sprintf can be replaced with a faster alternative.
-  # Autofix
-  # prealloc
-  # Find slice declarations that could potentially be pre-allocated.
-  # predeclared
-  # Find code that shadows one of Go’s predeclared identifiers.
+    # - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - mirror
+    - misspell
+    # - mnd
+    - modernize
+    - musttag
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - nlreturn
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - predeclared
   # promlinter
   # Check Prometheus metrics naming via promlint.
   # protogetter

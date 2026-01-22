@@ -53,6 +53,7 @@ func (wa WebApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			http.ServeFileFS(w, r, wa.fs, altPath)
+
 			return
 		}
 	}

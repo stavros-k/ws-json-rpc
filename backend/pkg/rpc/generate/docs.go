@@ -77,6 +77,7 @@ func (e *Example) Validate() error {
 	if e.Params != "" || e.Result != "" {
 		return errors.New("example should use ParamsObj and ResultObj fields instead of Params and Result strings")
 	}
+
 	return nil
 }
 
@@ -100,6 +101,7 @@ func (e *EventDocs) Validate() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -138,6 +140,7 @@ func (m *MethodDocs) Validate() error {
 			return err
 		}
 	}
+
 	return nil
 }
 

@@ -68,6 +68,7 @@ func (c *Config) Close() error {
 			return f.Close()
 		}
 	}
+
 	return nil
 }
 
@@ -76,6 +77,7 @@ func getStringEnv(key EnvKey, defaultVal string) string {
 	if !exists {
 		return defaultVal
 	}
+
 	return val
 }
 

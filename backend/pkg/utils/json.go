@@ -17,6 +17,7 @@ func FromJSON[T any](data []byte) (T, error) {
 		return result, nil
 	}
 	retult, err := FromJSONStream[T](bytes.NewReader(data))
+
 	return retult, err
 }
 
@@ -28,6 +29,7 @@ func FromJSONStream[T any](r io.Reader) (T, error) {
 	decoder := json.NewDecoder(r)
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(&result)
+
 	return result, err
 }
 
@@ -40,6 +42,7 @@ func MustFromJSON[T any](data []byte) T {
 		slog.Error("failed to unmarshal JSON", ErrAttr(err))
 		os.Exit(1)
 	}
+
 	return result
 }
 
@@ -48,6 +51,7 @@ func newJsonEncoder(w io.Writer) *json.Encoder {
 	encoder := json.NewEncoder(w)
 	encoder.SetEscapeHTML(false)
 	encoder.SetIndent("", "")
+
 	return encoder
 }
 
@@ -57,6 +61,7 @@ func ToJSON(v any) ([]byte, error) {
 	if err := ToJSONStream(&buf, v); err != nil {
 		return nil, err
 	}
+
 	return bytes.TrimSpace(buf.Bytes()), nil
 }
 
@@ -66,12 +71,14 @@ func ToJSONIndent(v any) ([]byte, error) {
 	if err := ToJSONStreamIndent(&buf, v); err != nil {
 		return nil, err
 	}
+
 	return bytes.TrimSpace(buf.Bytes()), nil
 }
 
 // ToJSONStream encodes to JSON and writes to io.Writer (streaming version).
 func ToJSONStream(w io.Writer, v any) error {
 	encoder := newJsonEncoder(w)
+
 	return encoder.Encode(v)
 }
 
@@ -79,6 +86,7 @@ func ToJSONStream(w io.Writer, v any) error {
 func ToJSONStreamIndent(w io.Writer, v any) error {
 	encoder := newJsonEncoder(w)
 	encoder.SetIndent("", "  ")
+
 	return encoder.Encode(v)
 }
 
@@ -88,6 +96,7 @@ func MustToJSON(v any) []byte {
 		slog.Error("failed to marshal JSON", ErrAttr(err))
 		os.Exit(1)
 	}
+
 	return data
 }
 
@@ -97,5 +106,6 @@ func MustToJSONIndent(v any) []byte {
 		slog.Error("failed to marshal JSON", ErrAttr(err))
 		os.Exit(1)
 	}
+
 	return data
 }

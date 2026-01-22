@@ -24,5 +24,6 @@ func (h *Handlers) Unsubscribe(ctx context.Context, hctx *rpc.HandlerContext, pa
 	}
 
 	h.hub.Unsubscribe(hctx.WSConn, string(params.Event))
+
 	return rpctypes.UnsubscribeResult{Success: true}, nil
 }

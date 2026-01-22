@@ -52,10 +52,10 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (*GeneratorImpl, error)
 		slog.String("schemaOutput", opts.DatabaseSchemaFileOutputPath))
 
 	if opts.DocsFileOutputPath == "" {
-		return nil, fmt.Errorf("docs file path is required")
+		return nil, errors.New("docs file path is required")
 	}
 	if opts.DatabaseSchemaFileOutputPath == "" {
-		return nil, fmt.Errorf("schema file path is required")
+		return nil, errors.New("schema file path is required")
 	}
 
 	gutsGenerator, err := NewGutsGenerator(l, opts.GoTypesDirPath)
@@ -76,6 +76,7 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (*GeneratorImpl, error)
 	}
 
 	l.Info("API documentation generator created successfully")
+
 	return g, nil
 }
 
@@ -103,6 +104,7 @@ func (g *GeneratorImpl) GetDatabaseSchema() (string, error) {
 	}
 
 	g.l.Info("Database schema generated", slog.String("file", g.dbSchemaFilePath))
+
 	return string(bytes.TrimSpace(schemaBytes)), nil
 }
 
@@ -266,6 +268,7 @@ func usedByLess(usedBy []UsedBy) func(i, j int) bool {
 		if usedBy[i].Target != usedBy[j].Target {
 			return usedBy[i].Target < usedBy[j].Target
 		}
+
 		return usedBy[i].Role < usedBy[j].Role
 	}
 }
@@ -335,6 +338,7 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 		// Type already registered with JSON instance, don't overwrite
 		if docs.JsonRepresentation != "" {
 			g.l.Debug("Type already registered with JSON instance", slog.String("type", name))
+
 			return
 		}
 	}

@@ -48,6 +48,7 @@ func (c *WSClient) readPump(ctx context.Context) {
 			default:
 				c.logger.Error("unknown websocket error", utils.ErrAttr(err))
 			}
+
 			break
 		}
 		// Only support text based messages
@@ -55,6 +56,7 @@ func (c *WSClient) readPump(ctx context.Context) {
 			if err := c.sendError(ctx, uuid.Nil, ErrCodeInvalid, "Invalid message type. Only text messages are supported."); err != nil {
 				c.logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
+
 			continue
 		}
 
@@ -65,6 +67,7 @@ func (c *WSClient) readPump(ctx context.Context) {
 			if err := c.sendError(ctx, uuid.Nil, ErrCodeParse, err.Error()); err != nil {
 				c.logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
+
 			continue
 		}
 
@@ -89,6 +92,7 @@ func (c *WSClient) writePump(ctx context.Context) {
 			if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 				c.logger.Error("failed to close connection", utils.ErrAttr(err))
 			}
+
 			return
 		// Exit if channel is closed otherwise send the message
 		case message, ok := <-c.sendChannel:
@@ -97,6 +101,7 @@ func (c *WSClient) writePump(ctx context.Context) {
 				if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 					c.logger.Error("failed to close connection", utils.ErrAttr(err))
 				}
+
 				return
 			}
 
@@ -107,6 +112,7 @@ func (c *WSClient) writePump(ctx context.Context) {
 
 			if err != nil {
 				c.logger.Error("write error", utils.ErrAttr(err))
+
 				continue
 			}
 		}
@@ -126,6 +132,7 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 		if err := c.sendError(ctx, req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method)); err != nil {
 			reqLogger.Error("failed to send error response", utils.ErrAttr(err))
 		}
+
 		return
 	}
 
@@ -136,6 +143,7 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 		if err := c.sendError(ctx, req.ID, ErrCodeInvalidParams, fmt.Sprintf("Failed to parse params on method %q: %s", req.Method, err.Error())); err != nil {
 			reqLogger.Error("failed to send error response", utils.ErrAttr(err))
 		}
+
 		return
 	}
 
@@ -156,6 +164,7 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 			if err := c.sendError(reqCtx, req.ID, he.Code(), he.Error()); err != nil {
 				hctx.Logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
+
 			return
 		}
 
@@ -163,6 +172,7 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 		if err := c.sendError(reqCtx, req.ID, ErrCodeInternal, fmt.Sprintf("Failed to handle request on method %q: %s", req.Method, err.Error())); err != nil {
 			hctx.Logger.Error("failed to send error response", utils.ErrAttr(err))
 		}
+
 		return
 	}
 
@@ -200,10 +210,12 @@ func (c *WSClient) sendData(ctx context.Context, r RPCResponse) error {
 // This is called for every new connection.
 func (h *Hub) ServeWS() http.HandlerFunc {
 	wsLogger := h.logger.With(slog.String("handler", "ws"))
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 		if err != nil {
 			wsLogger.Error("upgrade failed", utils.ErrAttr(err))
+
 			return
 		}
 
@@ -213,6 +225,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 		remoteHost, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			wsLogger.Error("failed to parse remote address", utils.ErrAttr(err), slog.String("remote_addr", r.RemoteAddr))
+
 			return
 		}
 
@@ -282,17 +295,20 @@ func (h *Hub) broadcastEvent(event RPCEvent) {
 	subscribers, ok := h.subscriptions[event.EventName]
 	if !ok {
 		h.logger.Warn("attempted to publish to unregistered event", slog.String("event", event.EventName))
+
 		return
 	}
 
 	if len(subscribers) == 0 {
 		h.logger.Debug("no subscribers for event", slog.String("event", event.EventName))
+
 		return
 	}
 
 	result, err := utils.ToJSON(event)
 	if err != nil {
 		h.logger.Error("failed to marshal event", slog.String("event", event.EventName), utils.ErrAttr(err))
+
 		return
 	}
 

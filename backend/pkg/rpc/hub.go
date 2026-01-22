@@ -73,6 +73,7 @@ func NewRPCResponse(id uuid.UUID, result any, err *RPCErrorObj) RPCResponse {
 	data, jsonErr := utils.ToJSON(result)
 	if jsonErr != nil {
 		RPCErrorObj := RPCErrorObj{Code: ErrCodeInternal, Message: "Failed to serialize response"}
+
 		return RPCResponse{Version: "2.0", ID: id, Error: &RPCErrorObj}
 	}
 
@@ -114,6 +115,7 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 		if params, ok := params.(TParams); ok {
 			return handler(ctx, hctx, params)
 		}
+
 		return nil, fmt.Errorf("invalid params type: %T", params)
 	}
 
@@ -238,6 +240,7 @@ func (h *Hub) Subscribe(client *WSClient, event string) error {
 	// Check if event is registered
 	if _, ok := h.subscriptions[event]; !ok {
 		h.subscriptionsMutex.Unlock()
+
 		return fmt.Errorf("unknown event: %s", event)
 	}
 
@@ -245,6 +248,7 @@ func (h *Hub) Subscribe(client *WSClient, event string) error {
 	h.subscriptionsMutex.Unlock()
 
 	client.logger.Info("subscribed to event", slog.String("event", event))
+
 	return nil
 }
 
@@ -262,6 +266,7 @@ func (h *Hub) Unsubscribe(client *WSClient, event string) {
 // WithMiddleware adds middleware to the hub that will be applied to all registered methods.
 func (h *Hub) WithMiddleware(middlewares ...MiddlewareFunc) *Hub {
 	h.middlewares = append(h.middlewares, middlewares...)
+
 	return h
 }
 
@@ -289,6 +294,7 @@ func (h *Hub) registerEvent(eventName string) {
 	defer h.subscriptionsMutex.Unlock()
 	if _, exists := h.subscriptions[eventName]; exists {
 		h.logger.Warn("event already registered", slog.String("event", eventName))
+
 		return
 	}
 	h.subscriptions[eventName] = make(map[*WSClient]struct{})

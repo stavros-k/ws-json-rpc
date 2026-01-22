@@ -2,6 +2,7 @@ package database
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -23,7 +24,7 @@ type Migrator struct {
 // TODO: Test if we can edit db from a db browser while working.
 func NewMigrator(l *slog.Logger, fs embed.FS, sqlPath string) (*Migrator, error) {
 	if sqlPath == "" {
-		return nil, fmt.Errorf("sqlPath is required")
+		return nil, errors.New("sqlPath is required")
 	}
 
 	_, err := fs.ReadDir("migrations")

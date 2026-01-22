@@ -66,6 +66,7 @@ func main() {
 	}
 	if config.Generate {
 		logger.Info("Exiting after generating docs")
+
 		return
 	}
 
@@ -220,6 +221,7 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 	if !config.Generate {
 		return &generate.MockGenerator{}, nil
 	}
+
 	return generate.NewGenerator(logger, generate.GeneratorOptions{
 		GoTypesDirPath:               "backend/internal/rpcapi/types",
 		DocsFileOutputPath:           "api_docs.json",
@@ -252,6 +254,7 @@ func getLogger(config *app.Config) *slog.Logger {
 	if config.Generate {
 		logHandler = slog.NewTextHandler(config.LogOutput, &logOptions)
 	}
+
 	return slog.New(logHandler).With(slog.String("version", utils.GetVersionShort()))
 }
 
