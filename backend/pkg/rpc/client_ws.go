@@ -21,13 +21,12 @@ type WSClient struct {
 	sendChannel chan []byte
 	hub         *Hub
 	remoteHost  string
-	ctx         context.Context
 	cancel      context.CancelFunc
 	id          string
 	logger      *slog.Logger
 }
 
-func (c *WSClient) readPump() {
+func (c *WSClient) readPump(ctx context.Context) {
 	// When readPump exits, cancel the context and unregister the client
 	defer func() {
 		c.logger.Info("client read pump exited")
@@ -37,7 +36,7 @@ func (c *WSClient) readPump() {
 
 	for {
 		// Read next message
-		msgType, message, err := c.conn.Read(c.ctx)
+		msgType, message, err := c.conn.Read(ctx)
 		if err != nil {
 			// In case of a ws close error, stop the loop
 			var ce websocket.CloseError
@@ -53,7 +52,7 @@ func (c *WSClient) readPump() {
 		}
 		// Only support text based messages
 		if msgType != websocket.MessageText {
-			if err := c.sendError(uuid.Nil, ErrCodeInvalid, "Invalid message type. Only text messages are supported."); err != nil {
+			if err := c.sendError(ctx, uuid.Nil, ErrCodeInvalid, "Invalid message type. Only text messages are supported."); err != nil {
 				c.logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
 			continue
@@ -63,18 +62,18 @@ func (c *WSClient) readPump() {
 		req, err := utils.FromJSON[RPCRequest](message)
 		if err != nil {
 			c.logger.Warn("parse error", utils.ErrAttr(err))
-			if err := c.sendError(uuid.Nil, ErrCodeParse, err.Error()); err != nil {
+			if err := c.sendError(ctx, uuid.Nil, ErrCodeParse, err.Error()); err != nil {
 				c.logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
 			continue
 		}
 
 		// Handle the request
-		go c.handleRequest(req)
+		go c.handleRequest(ctx, req)
 	}
 }
 
-func (c *WSClient) writePump() {
+func (c *WSClient) writePump(ctx context.Context) {
 	// When writePump exits, cancel the context and close the send channel
 	defer func() {
 		c.logger.Info("client write pump exited")
@@ -85,21 +84,25 @@ func (c *WSClient) writePump() {
 	for {
 		select {
 		// Exit if context is cancelled
-		case <-c.ctx.Done():
+		case <-ctx.Done():
 			// Close connection on context cancellation
-			c.conn.Close(websocket.StatusNormalClosure, "")
+			if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
+				c.logger.Error("failed to close connection", utils.ErrAttr(err))
+			}
 			return
 		// Exit if channel is closed otherwise send the message
 		case message, ok := <-c.sendChannel:
 			// If the send channel is closed, close the connection
 			if !ok {
-				c.conn.Close(websocket.StatusNormalClosure, "")
+				if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
+					c.logger.Error("failed to close connection", utils.ErrAttr(err))
+				}
 				return
 			}
 
 			// Write message with a timeout
-			ctx, cancel := context.WithTimeout(c.ctx, MAX_RESPONSE_TIMEOUT)
-			err := c.conn.Write(ctx, websocket.MessageText, message)
+			writeCtx, cancel := context.WithTimeout(ctx, MAX_RESPONSE_TIMEOUT)
+			err := c.conn.Write(writeCtx, websocket.MessageText, message)
 			cancel()
 
 			if err != nil {
@@ -110,7 +113,7 @@ func (c *WSClient) writePump() {
 	}
 }
 
-func (c *WSClient) handleRequest(req RPCRequest) {
+func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 	// Derive a logger from the original for this request
 	reqLogger := c.logger.With(slog.String("method", req.Method))
 	reqLogger = reqLogger.With(slog.String("id", req.ID.String()))
@@ -120,7 +123,7 @@ func (c *WSClient) handleRequest(req RPCRequest) {
 	method, exists := c.hub.methods[req.Method]
 	c.hub.methodsMutex.RUnlock()
 	if !exists {
-		if err := c.sendError(req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method)); err != nil {
+		if err := c.sendError(ctx, req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method)); err != nil {
 			reqLogger.Error("failed to send error response", utils.ErrAttr(err))
 		}
 		return
@@ -130,52 +133,52 @@ func (c *WSClient) handleRequest(req RPCRequest) {
 	typedParams, err := method.parser(req.Params)
 	if err != nil {
 		reqLogger.Error("unmarshal error", utils.ErrAttr(err))
-		if err := c.sendError(req.ID, ErrCodeInvalidParams, fmt.Sprintf("Failed to parse params on method %q: %s", req.Method, err.Error())); err != nil {
+		if err := c.sendError(ctx, req.ID, ErrCodeInvalidParams, fmt.Sprintf("Failed to parse params on method %q: %s", req.Method, err.Error())); err != nil {
 			reqLogger.Error("failed to send error response", utils.ErrAttr(err))
 		}
 		return
 	}
 
 	// Set a timeout for the request
-	ctx, cancel := context.WithTimeout(c.ctx, MAX_REQUEST_TIMEOUT)
+	reqCtx, cancel := context.WithTimeout(ctx, MAX_REQUEST_TIMEOUT)
 	defer cancel()
 
 	// Create a new HandlerContext
 	hctx := &HandlerContext{Logger: reqLogger, WSConn: c}
 
 	// Call the handler
-	result, err := method.handler(ctx, hctx, typedParams)
+	result, err := method.handler(reqCtx, hctx, typedParams)
 	if err != nil {
 		hctx.Logger.Error("handler error", utils.ErrAttr(err))
 		// If its a handler error, let handler specify code/message
 		if err, ok := err.(HandlerError); ok {
-			if err := c.sendError(req.ID, err.Code(), err.Error()); err != nil {
+			if err := c.sendError(reqCtx, req.ID, err.Code(), err.Error()); err != nil {
 				hctx.Logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
 			return
 		}
 
 		// Unknown errors, send internal error
-		if err := c.sendError(req.ID, ErrCodeInternal, fmt.Sprintf("Failed to handle request on method %q: %s", req.Method, err.Error())); err != nil {
+		if err := c.sendError(reqCtx, req.ID, ErrCodeInternal, fmt.Sprintf("Failed to handle request on method %q: %s", req.Method, err.Error())); err != nil {
 			hctx.Logger.Error("failed to send error response", utils.ErrAttr(err))
 		}
 		return
 	}
 
-	if err := c.sendSuccess(req.ID, result); err != nil {
+	if err := c.sendSuccess(reqCtx, req.ID, result); err != nil {
 		hctx.Logger.Error("failed to send success response", utils.ErrAttr(err))
 	}
 }
 
-func (c *WSClient) sendSuccess(id uuid.UUID, result any) error {
-	return c.sendData(NewRPCResponse(id, result, nil))
+func (c *WSClient) sendSuccess(ctx context.Context, id uuid.UUID, result any) error {
+	return c.sendData(ctx, NewRPCResponse(id, result, nil))
 }
 
-func (c *WSClient) sendError(id uuid.UUID, code int, message string) error {
-	return c.sendData(NewRPCResponse(id, nil, &RPCErrorObj{Code: code, Message: message}))
+func (c *WSClient) sendError(ctx context.Context, id uuid.UUID, code int, message string) error {
+	return c.sendData(ctx, NewRPCResponse(id, nil, &RPCErrorObj{Code: code, Message: message}))
 }
 
-func (c *WSClient) sendData(r RPCResponse) error {
+func (c *WSClient) sendData(ctx context.Context, r RPCResponse) error {
 	msg, err := utils.ToJSON(r)
 	if err != nil {
 		return err
@@ -187,8 +190,8 @@ func (c *WSClient) sendData(r RPCResponse) error {
 		return nil
 	case <-time.After(MAX_SEND_CHANNEL_TIMEOUT):
 		return fmt.Errorf("send channel full, timeout after %v waiting to queue response", MAX_SEND_CHANNEL_TIMEOUT)
-	case <-c.ctx.Done():
-		return c.ctx.Err()
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -212,7 +215,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			return
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(r.Context())
 		clientID := r.URL.Query().Get("clientID")
 		if clientID == "" {
 			wsLogger.Warn("no client ID provided, generating one", slog.String("remote_addr", remoteHost))
@@ -224,7 +227,6 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			conn:        conn,
 			id:          clientID,
 			remoteHost:  remoteHost,
-			ctx:         ctx,
 			cancel:      cancel,
 			sendChannel: make(chan []byte, MAX_QUEUED_EVENTS_PER_CLIENT),
 			logger: wsLogger.With(
@@ -235,8 +237,8 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 
 		h.register <- client
 
-		go client.writePump()
-		go client.readPump()
+		go client.writePump(ctx)
+		go client.readPump(ctx)
 	}
 }
 

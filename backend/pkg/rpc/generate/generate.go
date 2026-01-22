@@ -135,7 +135,11 @@ func (g *GeneratorImpl) Generate() error {
 	if err != nil {
 		return fmt.Errorf("failed to create api docs file: %w", err)
 	}
-	defer docsFile.Close()
+	defer func() {
+		if err := docsFile.Close(); err != nil {
+			g.l.Error("failed to close api docs file", utils.ErrAttr(err))
+		}
+	}()
 
 	if err := utils.ToJSONStreamIndent(docsFile, g.d); err != nil {
 		return fmt.Errorf("failed to write api docs: %w", err)
