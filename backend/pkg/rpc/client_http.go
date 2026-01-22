@@ -16,13 +16,12 @@ type HTTPClient struct {
 	r          *http.Request
 	hub        *Hub
 	remoteHost string
-	ctx        context.Context
 	cancel     context.CancelFunc
 	id         string
 	logger     *slog.Logger
 }
 
-func (c *HTTPClient) handleRequest(req RPCRequest) {
+func (c *HTTPClient) handleRequest(ctx context.Context, req RPCRequest) {
 	reqLogger := c.logger.With(slog.String("method", req.Method))
 	reqLogger = reqLogger.With(slog.String("id", req.ID.String()))
 
@@ -44,7 +43,7 @@ func (c *HTTPClient) handleRequest(req RPCRequest) {
 	}
 
 	// Set a timeout for the request
-	ctx, cancel := context.WithTimeout(c.r.Context(), MAX_REQUEST_TIMEOUT)
+	ctx, cancel := context.WithTimeout(ctx, MAX_REQUEST_TIMEOUT)
 	defer cancel()
 
 	// Create a new HandlerContext
@@ -121,7 +120,7 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 			return
 		}
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()
 
 		clientID := r.Header.Get("X-Client-ID")
@@ -135,7 +134,6 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 			r:          r,
 			hub:        h,
 			remoteHost: remoteHost,
-			ctx:        ctx,
 			cancel:     cancel,
 			id:         clientID,
 			logger: httpLogger.With(
@@ -145,6 +143,6 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 		}
 
 		// Handle the request
-		client.handleRequest(req)
+		client.handleRequest(ctx, req)
 	}
 }
