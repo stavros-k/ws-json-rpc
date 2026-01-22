@@ -1,6 +1,6 @@
 package rpctypes
 
-// EventKind - All the available event topics
+// EventKind - All the available event topics.
 type EventKind string
 
 const (
@@ -8,7 +8,7 @@ const (
 	EventKindDataUpdated EventKind = "data.updated"
 )
 
-// MethodKind - All the available RPC methods
+// MethodKind - All the available RPC methods.
 type MethodKind string
 
 const (

@@ -26,7 +26,8 @@ import (
 )
 
 const (
-	shutdownTimeout = 30 * time.Second
+	shutdownTimeout   = 30 * time.Second
+	readHeaderTimeout = 5 * time.Second
 )
 
 //nolint:funlen
@@ -92,7 +93,11 @@ func main() {
 	})
 
 	addr := fmt.Sprintf(":%d", config.Port)
-	httpServer := &http.Server{Addr: addr, Handler: mux}
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
 
 	sigCtx, sigCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer sigCancel()
@@ -226,7 +231,7 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 	})
 }
 
-// TODO: Remove this
+// TODO: Remove this.
 func simulate(h *rpc.Hub) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()

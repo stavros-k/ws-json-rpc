@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// WSClient represents a connected WebSocket client
+// WSClient represents a connected WebSocket client.
 type WSClient struct {
 	conn        *websocket.Conn
 	sendChannel chan []byte
@@ -197,7 +197,7 @@ func (c *WSClient) sendData(ctx context.Context, r RPCResponse) error {
 }
 
 // ServeWS handles websocket requests from clients
-// This is called for every new connection
+// This is called for every new connection.
 func (h *Hub) ServeWS() http.HandlerFunc {
 	wsLogger := h.logger.With(slog.String("handler", "ws"))
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -243,7 +243,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 	}
 }
 
-// clientRegister adds a new client to the hub
+// clientRegister adds a new client to the hub.
 func (h *Hub) clientRegister(client *WSClient) {
 	h.clientsMutex.Lock()
 	h.clients[client] = struct{}{}
@@ -256,7 +256,7 @@ func (h *Hub) clientRegister(client *WSClient) {
 	h.logger.Info("client registered", slog.String("client_id", client.id), slog.String("remote_host", client.remoteHost))
 }
 
-// clientUnregister removes a client from the hub
+// clientUnregister removes a client from the hub.
 func (h *Hub) clientUnregister(client *WSClient) {
 	h.clientsMutex.Lock()
 	if _, ok := h.clients[client]; ok {

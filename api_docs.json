@@ -1,7 +1,7 @@
 {
   "info": {
     "title": "Local API",
-    "version": "vdev (298c219-dirty)",
+    "version": "vdev (b674f8c-dirty)",
     "description": "A JSON-RPC API over HTTP and Websockets"
   },
   "methods": {
@@ -127,9 +127,9 @@
   },
   "types": {
     "DataCreatedEvent": {
-      "description": "DataCreatedEvent - Result for the [EventKindDataCreated] event",
+      "description": "DataCreatedEvent - Result for the [EventKindDataCreated] event.",
       "jsonRepresentation": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\"\n}",
-      "tsType": "/**\n * DataCreatedEvent - Result for the [EventKindDataCreated] event\n */\nexport type DataCreatedEvent = {\n    /**\n     * The unique identifier for the result\n     */\n    // this is likely an enum in an external package \"github.com/google/uuid.UUID\"\n    id: string;\n};",
+      "tsType": "/**\n * DataCreatedEvent - Result for the [EventKindDataCreated] event.\n */\nexport type DataCreatedEvent = {\n    /**\n     * The unique identifier for the result\n     */\n    // this is likely an enum in an external package \"github.com/google/uuid.UUID\"\n    id: string;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -161,9 +161,9 @@
       ]
     },
     "PingResult": {
-      "description": "PingResult - Result for the [MethodKindPing] method",
+      "description": "PingResult - Result for the [MethodKindPing] method.",
       "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
-      "tsType": "/**\n * PingResult - Result for the [MethodKindPing] method\n */\nexport type PingResult = {\n    /**\n     * A message describing the result\n     */\n    message: string;\n    /**\n     * The status of the ping\n     */\n    status: PingStatus;\n};",
+      "tsType": "/**\n * PingResult - Result for the [MethodKindPing] method.\n */\nexport type PingResult = {\n    /**\n     * A message describing the result\n     */\n    message: string;\n    /**\n     * The status of the ping\n     */\n    status: PingStatus;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -207,9 +207,9 @@
       ]
     },
     "SubscribeParams": {
-      "description": "SubscribeParams - Parameters for the [MethodKindSubscribe] method",
+      "description": "SubscribeParams - Parameters for the [MethodKindSubscribe] method.",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "tsType": "/**\n * SubscribeParams - Parameters for the [MethodKindSubscribe] method\n */\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n};",
+      "tsType": "/**\n * SubscribeParams - Parameters for the [MethodKindSubscribe] method.\n */\nexport type SubscribeParams = {\n    /**\n     * The event topic to subscribe to\n     */\n    event: EventKind;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -235,9 +235,9 @@
       ]
     },
     "SubscribeResult": {
-      "description": "SubscribeResult - Result for the [MethodKindSubscribe] method",
+      "description": "SubscribeResult - Result for the [MethodKindSubscribe] method.",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "tsType": "/**\n * SubscribeResult - Result for the [MethodKindSubscribe] method\n */\nexport type SubscribeResult = {\n    /**\n     * Whether the subscribe was successful\n     */\n    success: boolean;\n};",
+      "tsType": "/**\n * SubscribeResult - Result for the [MethodKindSubscribe] method.\n */\nexport type SubscribeResult = {\n    /**\n     * Whether the subscribe was successful\n     */\n    success: boolean;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -256,9 +256,9 @@
       ]
     },
     "UnsubscribeParams": {
-      "description": "UnsubscribeParams - Parameters for the [MethodKindUnsubscribe] method",
+      "description": "UnsubscribeParams - Parameters for the [MethodKindUnsubscribe] method.",
       "jsonRepresentation": "{\n  \"event\": \"\"\n}",
-      "tsType": "/**\n * UnsubscribeParams - Parameters for the [MethodKindUnsubscribe] method\n */\nexport type UnsubscribeParams = {\n    /**\n     * The event topic to unsubscribe from\n     */\n    event: EventKind;\n};",
+      "tsType": "/**\n * UnsubscribeParams - Parameters for the [MethodKindUnsubscribe] method.\n */\nexport type UnsubscribeParams = {\n    /**\n     * The event topic to unsubscribe from\n     */\n    event: EventKind;\n};",
       "kind": "Object",
       "fields": [
         {
@@ -284,9 +284,9 @@
       ]
     },
     "UnsubscribeResult": {
-      "description": "UnsubscribeResult - Result for the [MethodKindUnsubscribe] method",
+      "description": "UnsubscribeResult - Result for the [MethodKindUnsubscribe] method.",
       "jsonRepresentation": "{\n  \"success\": false\n}",
-      "tsType": "/**\n * UnsubscribeResult - Result for the [MethodKindUnsubscribe] method\n */\nexport type UnsubscribeResult = {\n    /**\n     * Whether the unsubscribe was successful\n     */\n    success: boolean;\n};",
+      "tsType": "/**\n * UnsubscribeResult - Result for the [MethodKindUnsubscribe] method.\n */\nexport type UnsubscribeResult = {\n    /**\n     * Whether the unsubscribe was successful\n     */\n    success: boolean;\n};",
       "kind": "Object",
       "fields": [
         {

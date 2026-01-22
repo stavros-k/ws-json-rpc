@@ -112,7 +112,7 @@ func (g *GutsGenerator) WriteTypescriptASTToFile(ts *guts.Typescript, filePath s
 		return fmt.Errorf("failed to serialize TypeScript AST: %w", err)
 	}
 
-	err = os.WriteFile(filePath, []byte(str), 0644)
+	err = os.WriteFile(filePath, []byte(str), 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write TypeScript AST to file: %w", err)
 	}

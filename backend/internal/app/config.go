@@ -34,7 +34,7 @@ func NewConfig() (*Config, error) {
 	dataDir := getStringEnv(EnvDataDir, "data")
 
 	// Ensure data directory exists
-	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+	if err := os.MkdirAll(dataDir, 0o750); err != nil {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 
@@ -45,7 +45,7 @@ func NewConfig() (*Config, error) {
 	var logOutput io.Writer
 	logOutput = os.Stdout
 	if getBoolEnv(EnvLogToFile, false) {
-		f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
+		f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o600)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open log file: %w", err)
 		}

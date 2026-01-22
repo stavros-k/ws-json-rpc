@@ -29,7 +29,7 @@ const (
 	ErrCodeInternal      = -32603 // Internal JSON-RPC error.
 )
 
-// RPCRequest represents an object from the client
+// RPCRequest represents an object from the client.
 type RPCRequest struct {
 	Version string          `json:"jsonrpc"`
 	ID      uuid.UUID       `json:"id"`
@@ -37,13 +37,13 @@ type RPCRequest struct {
 	Params  json.RawMessage `json:"params,omitempty"`
 }
 
-// RPCEvent represents an RPCEvent that can be broadcast to subscribers
+// RPCEvent represents an RPCEvent that can be broadcast to subscribers.
 type RPCEvent struct {
 	EventName string `json:"event"`
 	Data      any    `json:"data"`
 }
 
-// NewEvent creates a new event
+// NewEvent creates a new event.
 func NewEvent(eventName string, data any) RPCEvent {
 	return RPCEvent{EventName: eventName, Data: data}
 }
@@ -52,14 +52,14 @@ type EventOptions struct {
 	Docs generate.EventDocs
 }
 
-// RegisterEvent registers an event with the hub
+// RegisterEvent registers an event with the hub.
 func RegisterEvent[TResult any](h *Hub, eventName string, options EventOptions) {
 	var eventZero TResult
 	h.generator.AddEventType(eventName, eventZero, options.Docs)
 	h.registerEvent(eventName)
 }
 
-// RPCResponse represents a response from the server
+// RPCResponse represents a response from the server.
 type RPCResponse struct {
 	Version string          `json:"jsonrpc"`
 	ID      uuid.UUID       `json:"id"`
@@ -79,23 +79,23 @@ func NewRPCResponse(id uuid.UUID, result any, err *RPCErrorObj) RPCResponse {
 	return RPCResponse{Version: "2.0", ID: id, Result: data, Error: err}
 }
 
-// RPCErrorObj represents an error on a response
+// RPCErrorObj represents an error on a response.
 type RPCErrorObj struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    any    `json:"data,omitempty"`
 }
 
-// HandlerFunc is a function that handles a method call
+// HandlerFunc is a function that handles a method call.
 type HandlerFunc func(ctx context.Context, hctx *HandlerContext, params any) (any, error)
 
-// TypedHandlerFunc is a function that handles a method call with typed parameters
+// TypedHandlerFunc is a function that handles a method call with typed parameters.
 type TypedHandlerFunc[TParams any, TResult any] func(ctx context.Context, hctx *HandlerContext, params TParams) (TResult, error)
 
-// MiddlewareFunc is a function that wraps a HandlerFunc with additional behavior
+// MiddlewareFunc is a function that wraps a HandlerFunc with additional behavior.
 type MiddlewareFunc func(HandlerFunc) HandlerFunc
 
-// Method represents a registered method in the hub
+// Method represents a registered method in the hub.
 type Method struct {
 	// The actual handler function
 	handler HandlerFunc
@@ -108,7 +108,7 @@ type RegisterMethodOptions struct {
 	Docs        generate.MethodDocs
 }
 
-// RegisterMethod registers a method with the hub
+// RegisterMethod registers a method with the hub.
 func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler TypedHandlerFunc[TParams, TResult], options RegisterMethodOptions) {
 	wrapped := func(ctx context.Context, hctx *HandlerContext, params any) (any, error) {
 		if params, ok := params.(TParams); ok {
@@ -141,7 +141,7 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 	})
 }
 
-// HandlerContext contains data that a handler might need
+// HandlerContext contains data that a handler might need.
 type HandlerContext struct {
 	Logger   *slog.Logger // Logger for this specific request (has method name and request ID)
 	WSConn   *WSClient    // WSConn is the WebSocket client (nil for HTTP requests)
@@ -153,7 +153,7 @@ type HandlerError interface {
 	Code() int
 }
 
-// handlerError is the default implementation of HandlerError
+// handlerError is the default implementation of HandlerError.
 type handlerError struct {
 	code    int
 	message string
@@ -167,12 +167,12 @@ func (e handlerError) Code() int {
 	return e.code
 }
 
-// NewHandlerError creates a new HandlerError
+// NewHandlerError creates a new HandlerError.
 func NewHandlerError(code int, message string) HandlerError {
 	return handlerError{code: code, message: message}
 }
 
-// Hub maintains active clients and broadcasts messages
+// Hub maintains active clients and broadcasts messages.
 type Hub struct {
 	logger *slog.Logger
 
@@ -197,7 +197,7 @@ type Hub struct {
 	generator generate.Generator
 }
 
-// NewHub creates a new Hub instance
+// NewHub creates a new Hub instance.
 func NewHub(l *slog.Logger, g generate.Generator) *Hub {
 	logger := l.With(slog.String("component", "hub"))
 
@@ -227,12 +227,12 @@ func (h *Hub) GenerateDocs() error {
 	return h.generator.Generate()
 }
 
-// PublishEvent sends an event to all subscribed clients
+// PublishEvent sends an event to all subscribed clients.
 func (h *Hub) PublishEvent(event RPCEvent) {
 	h.eventChan <- event
 }
 
-// Subscribe adds a client to an event subscription
+// Subscribe adds a client to an event subscription.
 func (h *Hub) Subscribe(client *WSClient, event string) error {
 	h.subscriptionsMutex.Lock()
 	// Check if event is registered
@@ -248,7 +248,7 @@ func (h *Hub) Subscribe(client *WSClient, event string) error {
 	return nil
 }
 
-// Unsubscribe removes a client from an event subscription
+// Unsubscribe removes a client from an event subscription.
 func (h *Hub) Unsubscribe(client *WSClient, event string) {
 	h.subscriptionsMutex.Lock()
 	if subscribers, ok := h.subscriptions[event]; ok {
@@ -259,13 +259,13 @@ func (h *Hub) Unsubscribe(client *WSClient, event string) {
 	client.logger.Info("unsubscribed from event", slog.String("event", event))
 }
 
-// WithMiddleware adds middleware to the hub that will be applied to all registered methods
+// WithMiddleware adds middleware to the hub that will be applied to all registered methods.
 func (h *Hub) WithMiddleware(middlewares ...MiddlewareFunc) *Hub {
 	h.middlewares = append(h.middlewares, middlewares...)
 	return h
 }
 
-// Run starts the hub's main loop
+// Run starts the hub's main loop.
 func (h *Hub) Run() {
 	h.logger.Info("hub started")
 
@@ -283,7 +283,7 @@ func (h *Hub) Run() {
 	}
 }
 
-// registerEvent registers an event that clients can subscribe to
+// registerEvent registers an event that clients can subscribe to.
 func (h *Hub) registerEvent(eventName string) {
 	h.subscriptionsMutex.Lock()
 	defer h.subscriptionsMutex.Unlock()
@@ -295,7 +295,7 @@ func (h *Hub) registerEvent(eventName string) {
 	h.logger.Debug("event registered", slog.String("event", eventName))
 }
 
-// registerHandler registers a method handler
+// registerHandler registers a method handler.
 func (h *Hub) registerHandler(methodName string, handler Method) {
 	h.methodsMutex.Lock()
 	h.methods[methodName] = handler

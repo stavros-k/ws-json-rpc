@@ -36,22 +36,14 @@ linters:
     - gocritic
     - gocyclo
     - godoclint
-# godot
-# Check if comments end in a period.
-# Autofix
-# godox
-# Detects usage of FIXME, TODO and other keywords inside comments.
-# goheader
-# Check if file header matches to pattern.
-# Autofix
-# gomoddirectives
-# Manage the use of ‘replace’, ‘retract’, and ’excludes’ directives in go.mod.
-# gomodguard
-# Allow and blocklist linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations.
-# goprintffuncname
-# Checks that printf-like functions are named with f at the end.
-# gosec
-# Inspects source code for security problems.
+    - godot
+    # - godox
+    - goprintffuncname
+    - gosec
+  settings:
+    gosec:
+      excludes:
+        - G304
 # gosmopolitan
 # Report certain i18n/l10n anti-patterns in your Go codebase.
 # govet

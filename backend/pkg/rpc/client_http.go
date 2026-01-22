@@ -88,7 +88,7 @@ func (c *HTTPClient) sendResponse(resp RPCResponse) {
 	}
 }
 
-// ServeHTTP handles HTTP JSON-RPC requests
+// ServeHTTP handles HTTP JSON-RPC requests.
 func (h *Hub) ServeHTTP() http.HandlerFunc {
 	httpLogger := h.logger.With(slog.String("handler", "http"))
 	return func(w http.ResponseWriter, r *http.Request) {

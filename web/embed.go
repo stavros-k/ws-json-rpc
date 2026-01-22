@@ -66,12 +66,12 @@ func (wa WebApp) URLBase() string {
 	return wa.urlBase
 }
 
-// Handler returns an http.Handler that serves the WebApp at the given path
+// Handler returns an http.Handler that serves the WebApp at the given path.
 func (wa WebApp) Handler(path string) http.Handler {
 	return http.StripPrefix(path, wa)
 }
 
-// Register registers the WebApp with the given ServeMux
+// Register registers the WebApp with the given ServeMux.
 func (wa WebApp) Register(mux *http.ServeMux, l *slog.Logger) {
 	wa.l = l.With(slog.String("app", wa.name), slog.String("urlBase", wa.urlBase), slog.String("component", "file-server"))
 	wa.l.Info("Registering web app")
