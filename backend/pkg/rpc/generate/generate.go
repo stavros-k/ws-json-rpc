@@ -21,6 +21,10 @@ import (
 	"ws-json-rpc/backend/pkg/utils"
 )
 
+const (
+	NULL_TYPE_NAME = "null"
+)
+
 // GeneratorImpl is the concrete implementation of the Generator interface.
 // It manages type registration and documentation generation.
 // Types are registered as methods/events are added during server startup.
@@ -306,7 +310,7 @@ func (g *GeneratorImpl) computeUsedBy() {
 
 // addTypeUsage adds a usage record for a type if it exists and is not null.
 func (g *GeneratorImpl) addTypeUsage(typeRef, usageType, target, role string) {
-	if typeRef == "" || typeRef == "null" {
+	if typeRef == "" || typeRef == NULL_TYPE_NAME {
 		return
 	}
 
@@ -326,7 +330,7 @@ func (g *GeneratorImpl) addTypeUsage(typeRef, usageType, target, role string) {
 // If v is not nil, also includes JSON representation (for explicitly registered types).
 // Recursively registers any types this type references.
 func (g *GeneratorImpl) registerType(name string, v any) {
-	if name == "null" {
+	if name == NULL_TYPE_NAME {
 		return
 	}
 
@@ -443,7 +447,7 @@ func (g *GeneratorImpl) fatalIfErr(err error) {
 }
 
 // mustGetTypeName extracts the type name from a value, requiring it to be a named struct.
-// Returns "null" for empty struct{} (representing no params/result).
+// Returns [NULL_TYPE_NAME] for empty struct{} (representing no params/result).
 func (g *GeneratorImpl) mustGetTypeName(v any) string {
 	// Handle nil
 	if v == nil {
@@ -452,7 +456,7 @@ func (g *GeneratorImpl) mustGetTypeName(v any) string {
 
 	// This is cases where there are no params or result
 	if v == struct{}{} {
-		return "null"
+		return NULL_TYPE_NAME
 	}
 
 	t := reflect.TypeOf(v)
