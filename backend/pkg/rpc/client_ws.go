@@ -87,13 +87,17 @@ func (c *WSClient) writePump() {
 		// Exit if context is cancelled
 		case <-c.ctx.Done():
 			// Close connection on context cancellation
-			c.conn.Close(websocket.StatusNormalClosure, "")
+			if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
+				c.logger.Error("failed to close connection", utils.ErrAttr(err))
+			}
 			return
 		// Exit if channel is closed otherwise send the message
 		case message, ok := <-c.sendChannel:
 			// If the send channel is closed, close the connection
 			if !ok {
-				c.conn.Close(websocket.StatusNormalClosure, "")
+				if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
+					c.logger.Error("failed to close connection", utils.ErrAttr(err))
+				}
 				return
 			}
 

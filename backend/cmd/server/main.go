@@ -33,7 +33,11 @@ func main() {
 	if err != nil {
 		fatalIfErr(slog.Default(), fmt.Errorf("failed to create config: %w", err))
 	}
-	defer config.Close()
+	defer func() {
+		if err := config.Close(); err != nil {
+			fatalIfErr(slog.Default(), fmt.Errorf("failed to close config: %w", err))
+		}
+	}()
 
 	logger := getLogger(config)
 
