@@ -29,6 +29,7 @@ const (
 	shutdownTimeout = 30 * time.Second
 )
 
+//nolint:funlen
 func main() {
 	config, err := app.NewConfig()
 	if err != nil {
@@ -84,7 +85,7 @@ func main() {
 	logger.Info("Registering HTTP-RPC at /rpc")
 	mux.HandleFunc("/rpc", hub.ServeHTTP())
 
-	web.DocsFS.Register(mux, logger)
+	web.GetDocsApp().Register(mux, logger)
 	// Redirect root to docs
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
@@ -139,6 +140,7 @@ func registerEvents(h *rpc.Hub) {
 	})
 }
 
+//nolint:funlen
 func registerMethods(h *rpc.Hub, methods *rpcapi.Handlers) {
 	rpc.RegisterMethod(h, string(rpctypes.MethodKindPing), methods.PingHandler, rpc.RegisterMethodOptions{
 		Docs: generate.MethodDocs{

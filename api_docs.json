@@ -1,7 +1,7 @@
 {
   "info": {
     "title": "Local API",
-    "version": "vdev (8109cf6-dirty)",
+    "version": "vdev (298c219-dirty)",
     "description": "A JSON-RPC API over HTTP and Websockets"
   },
   "methods": {

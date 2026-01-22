@@ -276,6 +276,8 @@ func (g *GutsGenerator) ExtractTypeEnumValues(name string) ([]string, error) {
 }
 
 // getTypeKindFromExpression returns a human-readable type classification from an expression type.
+//
+//nolint:funlen
 func (g *GutsGenerator) getTypeKindFromExpression(expr bindings.ExpressionType) (string, error) {
 	if expr == nil {
 		return "", fmt.Errorf("expression type is nil")
