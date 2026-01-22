@@ -99,9 +99,7 @@ linters:
     - whitespace
     # - wrapcheck
     - wsl_v5
-  # zerologlint
-  # Detects the wrong usage of zerolog that a user forgets to dispatch with Send or Msg.
-
+    - zerologlint
   settings:
     gosec:
       excludes:
