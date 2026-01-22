@@ -151,8 +151,9 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 	if err != nil {
 		hctx.Logger.Error("handler error", utils.ErrAttr(err))
 		// If its a handler error, let handler specify code/message
-		if err, ok := err.(HandlerError); ok {
-			if err := c.sendError(reqCtx, req.ID, err.Code(), err.Error()); err != nil {
+		var he HandlerError
+		if errors.As(err, &he) {
+			if err := c.sendError(reqCtx, req.ID, he.Code(), he.Error()); err != nil {
 				hctx.Logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
 			return

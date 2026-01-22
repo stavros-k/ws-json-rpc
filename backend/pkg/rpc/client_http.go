@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -57,8 +58,9 @@ func (c *HTTPClient) handleRequest(ctx context.Context, req RPCRequest) {
 	if err != nil {
 		hctx.Logger.Error("handler error", utils.ErrAttr(err))
 		// If its a handler error, let handler specify code/message
-		if err, ok := err.(HandlerError); ok {
-			c.sendError(req.ID, err.Code(), err.Error())
+		var he HandlerError
+		if errors.As(err, &he) {
+			c.sendError(req.ID, he.Code(), he.Error())
 			return
 		}
 

@@ -3,5 +3,22 @@ linters:
   default: standard
   enable:
     - asciicheck
+    - bidichk
     - bodyclose
+    - containedctx
     - contextcheck
+    - copyloopvar
+    # - cyclop
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - embeddedstructfieldcheck
+    # - err113
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    # - exhaustruct
