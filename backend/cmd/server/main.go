@@ -85,7 +85,7 @@ func main() {
 	logger.Info("Registering HTTP-RPC at /rpc")
 	mux.HandleFunc("/rpc", hub.ServeHTTP())
 
-	web.GetDocsApp().Register(mux, logger)
+	web.DocsApp().Register(mux, logger)
 	// Redirect root to docs
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)

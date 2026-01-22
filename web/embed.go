@@ -12,9 +12,7 @@ import (
 //go:embed all:docs/dist
 var docsFS embed.FS
 
-func GetDocsApp() WebApp {
-	return NewWebApp("docs", docsFS, "docs/dist", "/docs/")
-}
+func DocsApp() WebApp { return NewWebApp("docs", docsFS, "docs/dist", "/docs/") }
 
 type WebApp struct {
 	name    string
