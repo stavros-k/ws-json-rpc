@@ -16,10 +16,8 @@ type PingResult struct {
 type PingStatus string
 
 const (
-	// Success
 	PingStatusSuccess PingStatus = "success"
-	// Error
-	PingStatusError PingStatus = "error"
+	PingStatusError   PingStatus = "error"
 )
 
 // Valid returns true if the [PingStatus] value is valid

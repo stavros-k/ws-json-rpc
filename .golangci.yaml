@@ -33,13 +33,9 @@ linters:
     - gochecksumtype
     - gocognit
     - goconst
-# gocritic
-# Provides diagnostics that check for bugs, performance and style issues. Extensible without recompilation through dynamic rules. Dynamic rules are written declaratively with AST patterns, filters, report message and optional suggestion.
-# Autofix
-# gocyclo
-# Computes and checks the cyclomatic complexity of functions.
-# godoclint
-# Checks Golang’s documentation practice (godoc).
+    - gocritic
+    - gocyclo
+    - godoclint
 # godot
 # Check if comments end in a period.
 # Autofix

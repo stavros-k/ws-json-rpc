@@ -4,9 +4,7 @@ package rpctypes
 type EventKind string
 
 const (
-	// Data created
 	EventKindDataCreated EventKind = "data.created"
-	// Data updated
 	EventKindDataUpdated EventKind = "data.updated"
 )
 
@@ -14,20 +12,12 @@ const (
 type MethodKind string
 
 const (
-	// Ping
-	MethodKindPing MethodKind = "ping"
-	// Subscribe
-	MethodKindSubscribe MethodKind = "subscribe"
-	// Unsubscribe
+	MethodKindPing        MethodKind = "ping"
+	MethodKindSubscribe   MethodKind = "subscribe"
 	MethodKindUnsubscribe MethodKind = "unsubscribe"
-	// Create user
-	MethodKindUserCreate MethodKind = "user.create"
-	// Update user
-	MethodKindUserUpdate MethodKind = "user.update"
-	// Delete user
-	MethodKindUserDelete MethodKind = "user.delete"
-	// List users
-	MethodKindUserList MethodKind = "user.list"
-	// Get user
-	MethodKindUserGet MethodKind = "user.get"
+	MethodKindUserCreate  MethodKind = "user.create"
+	MethodKindUserUpdate  MethodKind = "user.update"
+	MethodKindUserDelete  MethodKind = "user.delete"
+	MethodKindUserList    MethodKind = "user.list"
+	MethodKindUserGet     MethodKind = "user.get"
 )

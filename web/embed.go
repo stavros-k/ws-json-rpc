@@ -28,9 +28,7 @@ func NewWebApp(name string, app fs.FS, subDir string, urlBase string) WebApp {
 	}
 
 	// Ensure urlBase ends with /
-	if !strings.HasSuffix(urlBase, "/") {
-		urlBase = urlBase + "/"
-	}
+	urlBase = strings.TrimSuffix(urlBase, "/") + "/"
 
 	return WebApp{
 		name:    name,

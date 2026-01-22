@@ -1,8 +1,8 @@
-// Package generate provides API documentation generation from Go type definitions.
+package generate
+
 // This file (guts.go) handles TypeScript AST parsing and metadata extraction
 // using the github.com/coder/guts library to parse Go structs and generate
 // TypeScript type definitions with full metadata.
-package generate
 
 import (
 	"fmt"

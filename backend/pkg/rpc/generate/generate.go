@@ -1,7 +1,3 @@
-// Package generate provides API documentation generation from Go type definitions.
-// It extracts type metadata from Go structs, generates TypeScript definitions,
-// and produces comprehensive JSON documentation including methods, events, types,
-// and database schema information.
 package generate
 
 import (
