@@ -358,9 +358,7 @@ export class WebSocketClient {
 
             this.pendingRequests.set(id, {
                 resolve,
-                reject: () => {
-                    resolve(createErrorResponse("Connection closed"));
-                },
+                reject: () => resolve(createErrorResponse("Connection closed")),
                 timeout,
             });
 

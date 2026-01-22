@@ -39,45 +39,27 @@ export function EventSubscriber({ eventName }: EventSubscriberProps) {
     useEffect(() => {
         if (!autoSubSettled || !client || !connected || !autoSubscribe) return;
 
+        let detach: (() => void) | null = null;
+
+        // addEventListener auto-subscribes and returns a detach function
         client
-            .subscribe(eventName)
-            .then((res) => {
-                if (!res.error) {
-                    setIsSubscribed(true);
-                } else {
-                    console.error(`[${eventStr}] Failed to subscribe:`, res.error);
-                }
+            .addEventListener(eventName, (data: unknown) => {
+                setEvents((prev) => {
+                    const newEvents = [{ timestamp: Date.now(), data }, ...prev];
+                    return newEvents.slice(0, maxResultsRef.current);
+                });
             })
-            .catch((err) => {
-                console.error(`[${eventStr}] Network or client error while subscribing:`, err);
-            });
+            .then((detachFn) => {
+                detach = detachFn;
+                setIsSubscribed(true);
+            })
+            .catch((err) => console.error(`[${eventStr}] Failed to subscribe:`, err));
 
-        // Subscribe to the event - use ref to access current maxResults
-        const handleEvent = (data: unknown) => {
-            setEvents((prev) => {
-                const newEvents = [{ timestamp: Date.now(), data }, ...prev];
-                return newEvents.slice(0, maxResultsRef.current);
-            });
-        };
-
-        client.on(eventName, handleEvent);
-
-        // Cleanup: unsubscribe when event name changes or unmount
+        // Cleanup: detach listener (auto-unsubscribes when last handler removed)
         return () => {
-            client.off(eventName, handleEvent);
+            if (detach) detach();
             setEvents([]);
             setIsSubscribed(false);
-            if (connected) {
-                client
-                    .unsubscribe(eventName)
-                    .then((res) => {
-                        if (!res.error) return;
-                        console.error(`[${eventStr}] Failed to unsubscribe:`, res.error);
-                    })
-                    .catch((err) => {
-                        console.error(`[${eventStr}] Promise rejection while unsubscribing:`, err);
-                    });
-            }
         };
     }, [client, connected, eventName, autoSubscribe, autoSubSettled, eventStr]);
 
@@ -130,7 +112,7 @@ export function EventSubscriber({ eventName }: EventSubscriberProps) {
                                   </span>
                               </div>
                               <CodeWrapperClient
-                                  code={JSON.stringify(event.data)}
+                                  code={JSON.stringify(event.data, null, 2)}
                                   lang='json'
                               />
                           </div>
