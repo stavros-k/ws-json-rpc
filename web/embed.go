@@ -20,6 +20,25 @@ type WebApp struct {
 	urlBase string
 }
 
+func NewWebApp(name string, app fs.FS, subDir string, urlBase string) WebApp {
+	subFS, err := fs.Sub(app, subDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Ensure urlBase ends with /
+	if !strings.HasSuffix(urlBase, "/") {
+		urlBase = urlBase + "/"
+	}
+
+	return WebApp{
+		name:    name,
+		fs:      subFS,
+		urlBase: urlBase,
+		l:       slog.Default().With(slog.String("component", name)),
+	}
+}
+
 func (wa *WebApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	if path == "" {
@@ -66,23 +85,4 @@ func (wa *WebApp) Register(mux *http.ServeMux, l *slog.Logger) {
 
 	// Serve the app at the base URL
 	mux.Handle(wa.urlBase, wa.Handler(wa.urlBase))
-}
-
-func NewWebApp(name string, app fs.FS, subDir string, urlBase string) WebApp {
-	subFS, err := fs.Sub(app, subDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Ensure urlBase ends with /
-	if !strings.HasSuffix(urlBase, "/") {
-		urlBase = urlBase + "/"
-	}
-
-	return WebApp{
-		name:    name,
-		fs:      subFS,
-		urlBase: urlBase,
-		l:       slog.Default().With(slog.String("component", name)),
-	}
 }

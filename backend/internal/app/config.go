@@ -29,15 +29,6 @@ type Config struct {
 	LogOutput io.Writer
 }
 
-func (c *Config) Close() error {
-	if f, ok := c.LogOutput.(*os.File); ok {
-		if f != os.Stdout && f != os.Stderr {
-			return f.Close()
-		}
-	}
-	return nil
-}
-
 func NewConfig() (*Config, error) {
 	// Get data directory
 	dataDir := getStringEnv(EnvDataDir, "data")
@@ -69,6 +60,15 @@ func NewConfig() (*Config, error) {
 		LogLevel:  getLogLevelEnv(EnvLogLevel, slog.LevelInfo),
 		LogOutput: logOutput,
 	}, nil
+}
+
+func (c *Config) Close() error {
+	if f, ok := c.LogOutput.(*os.File); ok {
+		if f != os.Stdout && f != os.Stderr {
+			return f.Close()
+		}
+	}
+	return nil
 }
 
 func getStringEnv(key EnvKey, defaultVal string) string {

@@ -59,23 +59,6 @@ func RegisterEvent[TResult any](h *Hub, eventName string, options EventOptions) 
 	h.registerEvent(eventName)
 }
 
-// registerEvent registers an event that clients can subscribe to
-func (h *Hub) registerEvent(eventName string) {
-	h.subscriptionsMutex.Lock()
-	defer h.subscriptionsMutex.Unlock()
-	if _, exists := h.subscriptions[eventName]; exists {
-		h.logger.Warn("event already registered", slog.String("event", eventName))
-		return
-	}
-	h.subscriptions[eventName] = make(map[*WSClient]struct{})
-	h.logger.Debug("event registered", slog.String("event", eventName))
-}
-
-// PublishEvent sends an event to all subscribed clients
-func (h *Hub) PublishEvent(event RPCEvent) {
-	h.eventChan <- event
-}
-
 // RPCResponse represents a response from the server
 type RPCResponse struct {
 	Version string          `json:"jsonrpc"`
@@ -128,7 +111,10 @@ type RegisterMethodOptions struct {
 // RegisterMethod registers a method with the hub
 func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler TypedHandlerFunc[TParams, TResult], options RegisterMethodOptions) {
 	wrapped := func(ctx context.Context, hctx *HandlerContext, params any) (any, error) {
-		return handler(ctx, hctx, params.(TParams))
+		if params, ok := params.(TParams); ok {
+			return handler(ctx, hctx, params)
+		}
+		return nil, fmt.Errorf("invalid params type: %T", params)
 	}
 
 	parser := func(rawParams json.RawMessage) (any, error) {
@@ -153,20 +139,6 @@ func RegisterMethod[TParams any, TResult any](h *Hub, method string, handler Typ
 		handler: wrapped,
 		parser:  parser,
 	})
-}
-
-// registerHandler registers a method handler
-func (h *Hub) registerHandler(methodName string, handler Method) {
-	h.methodsMutex.Lock()
-	h.methods[methodName] = handler
-	h.methodsMutex.Unlock()
-	h.logger.Debug("method registered", slog.String("method", methodName))
-}
-
-// WithMiddleware adds middleware to the hub that will be applied to all registered methods
-func (h *Hub) WithMiddleware(middlewares ...MiddlewareFunc) *Hub {
-	h.middlewares = append(h.middlewares, middlewares...)
-	return h
 }
 
 // HandlerContext contains data that a handler might need
@@ -255,6 +227,11 @@ func (h *Hub) GenerateDocs() error {
 	return h.generator.Generate()
 }
 
+// PublishEvent sends an event to all subscribed clients
+func (h *Hub) PublishEvent(event RPCEvent) {
+	h.eventChan <- event
+}
+
 // Subscribe adds a client to an event subscription
 func (h *Hub) Subscribe(client *WSClient, event string) error {
 	h.subscriptionsMutex.Lock()
@@ -282,6 +259,12 @@ func (h *Hub) Unsubscribe(client *WSClient, event string) {
 	client.logger.Info("unsubscribed from event", slog.String("event", event))
 }
 
+// WithMiddleware adds middleware to the hub that will be applied to all registered methods
+func (h *Hub) WithMiddleware(middlewares ...MiddlewareFunc) *Hub {
+	h.middlewares = append(h.middlewares, middlewares...)
+	return h
+}
+
 // Run starts the hub's main loop
 func (h *Hub) Run() {
 	h.logger.Info("hub started")
@@ -298,4 +281,24 @@ func (h *Hub) Run() {
 			h.broadcastEvent(event)
 		}
 	}
+}
+
+// registerEvent registers an event that clients can subscribe to
+func (h *Hub) registerEvent(eventName string) {
+	h.subscriptionsMutex.Lock()
+	defer h.subscriptionsMutex.Unlock()
+	if _, exists := h.subscriptions[eventName]; exists {
+		h.logger.Warn("event already registered", slog.String("event", eventName))
+		return
+	}
+	h.subscriptions[eventName] = make(map[*WSClient]struct{})
+	h.logger.Debug("event registered", slog.String("event", eventName))
+}
+
+// registerHandler registers a method handler
+func (h *Hub) registerHandler(methodName string, handler Method) {
+	h.methodsMutex.Lock()
+	h.methods[methodName] = handler
+	h.methodsMutex.Unlock()
+	h.logger.Debug("method registered", slog.String("method", methodName))
 }

@@ -150,113 +150,6 @@ func (g *GeneratorImpl) Generate() error {
 	return nil
 }
 
-// computeBackReferences builds reverse relationships, allowing navigation from a type
-// to all types that reference it.
-func (g *GeneratorImpl) computeBackReferences() {
-	// First, clear all existing back-references
-	for name := range g.d.Types {
-		typeDocs := g.d.Types[name]
-		typeDocs.ReferencedBy = nil
-		g.d.Types[name] = typeDocs
-	}
-
-	// Build back-references by iterating through all types
-	for typeName, typeDocs := range g.d.Types {
-		// For each type this type references, add this type to its ReferencedBy list
-		for _, refName := range typeDocs.References {
-			refTypeDocs, exists := g.d.Types[refName]
-			if !exists {
-				continue
-			}
-
-			// Skip if already present
-			if slices.Contains(refTypeDocs.ReferencedBy, typeName) {
-				continue
-			}
-
-			refTypeDocs.ReferencedBy = append(refTypeDocs.ReferencedBy, typeName)
-			g.d.Types[refName] = refTypeDocs
-		}
-	}
-
-	// Sort ReferencedBy lists for deterministic output
-	totalBackRefs := 0
-	for name := range g.d.Types {
-		typeDocs := g.d.Types[name]
-		if len(typeDocs.ReferencedBy) > 0 {
-			sort.Strings(typeDocs.ReferencedBy)
-			g.d.Types[name] = typeDocs
-			totalBackRefs += len(typeDocs.ReferencedBy)
-		}
-	}
-
-	g.l.Debug("Computed back-references for all types", slog.Int("totalBackRefs", totalBackRefs))
-}
-
-// computeUsedBy records which methods and events use each type as a parameter or result.
-func (g *GeneratorImpl) computeUsedBy() {
-	// First, clear all existing usedBy information
-	for name := range g.d.Types {
-		typeDocs := g.d.Types[name]
-		typeDocs.UsedBy = nil
-		g.d.Types[name] = typeDocs
-	}
-
-	// Add usedBy information from methods
-	for methodName, methodDocs := range g.d.Methods {
-		g.addTypeUsage(methodDocs.ParamType.Ref, "method", methodName, "param")
-		g.addTypeUsage(methodDocs.ResultType.Ref, "method", methodName, "result")
-	}
-
-	// Add usedBy information from events
-	for eventName, eventDocs := range g.d.Events {
-		g.addTypeUsage(eventDocs.ResultType.Ref, "event", eventName, "result")
-	}
-
-	// Sort UsedBy lists for deterministic output
-	totalUsages := 0
-	for name := range g.d.Types {
-		typeDocs := g.d.Types[name]
-		if len(typeDocs.UsedBy) > 0 {
-			sort.Slice(typeDocs.UsedBy, usedByLess(typeDocs.UsedBy))
-			g.d.Types[name] = typeDocs
-			totalUsages += len(typeDocs.UsedBy)
-		}
-	}
-
-	g.l.Debug("Computed usedBy information for all types", slog.Int("totalUsages", totalUsages))
-}
-
-// addTypeUsage adds a usage record for a type if it exists and is not null.
-func (g *GeneratorImpl) addTypeUsage(typeRef, usageType, target, role string) {
-	if typeRef == "" || typeRef == "null" {
-		return
-	}
-
-	typeDocs, exists := g.d.Types[typeRef]
-	if !exists {
-		return
-	}
-
-	typeDocs.UsedBy = append(typeDocs.UsedBy, UsedBy{
-		Type: usageType, Target: target, Role: role,
-	})
-	g.d.Types[typeRef] = typeDocs
-}
-
-// usedByLess returns a comparison function that sorts by Type, Target, then Role.
-func usedByLess(usedBy []UsedBy) func(i, j int) bool {
-	return func(i, j int) bool {
-		if usedBy[i].Type != usedBy[j].Type {
-			return usedBy[i].Type < usedBy[j].Type
-		}
-		if usedBy[i].Target != usedBy[j].Target {
-			return usedBy[i].Target < usedBy[j].Target
-		}
-		return usedBy[i].Role < usedBy[j].Role
-	}
-}
-
 // AddEventType registers a WebSocket event with its response type and documentation.
 func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 	if _, exists := g.d.Events[name]; exists {
@@ -319,6 +212,113 @@ func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs Meth
 		slog.String("paramType", paramTypeName),
 		slog.String("resultType", resultTypeName),
 		slog.Bool("http", docs.Protocols.HTTP))
+}
+
+// computeBackReferences builds reverse relationships, allowing navigation from a type
+// to all types that reference it.
+func (g *GeneratorImpl) computeBackReferences() {
+	// First, clear all existing back-references
+	for name := range g.d.Types {
+		typeDocs := g.d.Types[name]
+		typeDocs.ReferencedBy = nil
+		g.d.Types[name] = typeDocs
+	}
+
+	// Build back-references by iterating through all types
+	for typeName, typeDocs := range g.d.Types {
+		// For each type this type references, add this type to its ReferencedBy list
+		for _, refName := range typeDocs.References {
+			refTypeDocs, exists := g.d.Types[refName]
+			if !exists {
+				continue
+			}
+
+			// Skip if already present
+			if slices.Contains(refTypeDocs.ReferencedBy, typeName) {
+				continue
+			}
+
+			refTypeDocs.ReferencedBy = append(refTypeDocs.ReferencedBy, typeName)
+			g.d.Types[refName] = refTypeDocs
+		}
+	}
+
+	// Sort ReferencedBy lists for deterministic output
+	totalBackRefs := 0
+	for name := range g.d.Types {
+		typeDocs := g.d.Types[name]
+		if len(typeDocs.ReferencedBy) > 0 {
+			sort.Strings(typeDocs.ReferencedBy)
+			g.d.Types[name] = typeDocs
+			totalBackRefs += len(typeDocs.ReferencedBy)
+		}
+	}
+
+	g.l.Debug("Computed back-references for all types", slog.Int("totalBackRefs", totalBackRefs))
+}
+
+// usedByLess returns a comparison function that sorts by Type, Target, then Role.
+func usedByLess(usedBy []UsedBy) func(i, j int) bool {
+	return func(i, j int) bool {
+		if usedBy[i].Type != usedBy[j].Type {
+			return usedBy[i].Type < usedBy[j].Type
+		}
+		if usedBy[i].Target != usedBy[j].Target {
+			return usedBy[i].Target < usedBy[j].Target
+		}
+		return usedBy[i].Role < usedBy[j].Role
+	}
+}
+
+// computeUsedBy records which methods and events use each type as a parameter or result.
+func (g *GeneratorImpl) computeUsedBy() {
+	// First, clear all existing usedBy information
+	for name := range g.d.Types {
+		typeDocs := g.d.Types[name]
+		typeDocs.UsedBy = nil
+		g.d.Types[name] = typeDocs
+	}
+
+	// Add usedBy information from methods
+	for methodName, methodDocs := range g.d.Methods {
+		g.addTypeUsage(methodDocs.ParamType.Ref, "method", methodName, "param")
+		g.addTypeUsage(methodDocs.ResultType.Ref, "method", methodName, "result")
+	}
+
+	// Add usedBy information from events
+	for eventName, eventDocs := range g.d.Events {
+		g.addTypeUsage(eventDocs.ResultType.Ref, "event", eventName, "result")
+	}
+
+	// Sort UsedBy lists for deterministic output
+	totalUsages := 0
+	for name := range g.d.Types {
+		typeDocs := g.d.Types[name]
+		if len(typeDocs.UsedBy) > 0 {
+			sort.Slice(typeDocs.UsedBy, usedByLess(typeDocs.UsedBy))
+			g.d.Types[name] = typeDocs
+			totalUsages += len(typeDocs.UsedBy)
+		}
+	}
+
+	g.l.Debug("Computed usedBy information for all types", slog.Int("totalUsages", totalUsages))
+}
+
+// addTypeUsage adds a usage record for a type if it exists and is not null.
+func (g *GeneratorImpl) addTypeUsage(typeRef, usageType, target, role string) {
+	if typeRef == "" || typeRef == "null" {
+		return
+	}
+
+	typeDocs, exists := g.d.Types[typeRef]
+	if !exists {
+		return
+	}
+
+	typeDocs.UsedBy = append(typeDocs.UsedBy, UsedBy{
+		Type: usageType, Target: target, Role: role,
+	})
+	g.d.Types[typeRef] = typeDocs
 }
 
 // registerType registers a type with optional JSON instance.
