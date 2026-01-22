@@ -215,6 +215,7 @@ func registerMethods(h *rpc.Hub, methods *rpcapi.Handlers) {
 	})
 }
 
+//nolint:ireturn
 func generator(config *app.Config, logger *slog.Logger) (generate.Generator, error) {
 	if !config.Generate {
 		return &generate.MockGenerator{}, nil

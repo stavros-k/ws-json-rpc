@@ -159,17 +159,17 @@ type handlerError struct {
 	message string
 }
 
+// NewHandlerError creates a new HandlerError.
+func NewHandlerError(code int, message string) handlerError {
+	return handlerError{code: code, message: message}
+}
+
 func (e handlerError) Error() string {
 	return e.message
 }
 
 func (e handlerError) Code() int {
 	return e.code
-}
-
-// NewHandlerError creates a new HandlerError.
-func NewHandlerError(code int, message string) HandlerError {
-	return handlerError{code: code, message: message}
 }
 
 // Hub maintains active clients and broadcasts messages.

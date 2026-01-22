@@ -45,7 +45,7 @@ type GeneratorOptions struct {
 // NewGenerator creates a Generator that validates options, initializes the TypeScript parser,
 // writes type definitions, and sets up documentation structures.
 // Types are registered dynamically as methods/events are added.
-func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
+func NewGenerator(l *slog.Logger, opts GeneratorOptions) (*GeneratorImpl, error) {
 	l.Debug("Creating API documentation generator",
 		slog.String("docsOutput", opts.DocsFileOutputPath),
 		slog.String("tsOutput", opts.TSTypesOutputPath),

@@ -9,15 +9,20 @@ import (
 )
 
 // FromJSON decodes JSON from byte slice (wrapper around streaming version).
+//
+//nolint:ireturn
 func FromJSON[T any](data []byte) (T, error) {
 	var result T
 	if len(data) == 0 {
 		return result, nil
 	}
-	return FromJSONStream[T](bytes.NewReader(data))
+	retult, err := FromJSONStream[T](bytes.NewReader(data))
+	return retult, err
 }
 
 // FromJSONStream decodes JSON from io.Reader (streaming version).
+//
+//nolint:ireturn
 func FromJSONStream[T any](r io.Reader) (T, error) {
 	var result T
 	decoder := json.NewDecoder(r)
@@ -26,6 +31,9 @@ func FromJSONStream[T any](r io.Reader) (T, error) {
 	return result, err
 }
 
+// MustFromJSON decodes JSON from byte slice (wrapper around streaming version).
+//
+//nolint:ireturn
 func MustFromJSON[T any](data []byte) T {
 	result, err := FromJSON[T](data)
 	if err != nil {
