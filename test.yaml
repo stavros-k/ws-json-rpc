@@ -1,0 +1,48 @@
+components:
+    schemas:
+        PingResponse:
+            description: PingResponse is the response to a ping request
+            properties:
+                message:
+                    description: Human-readable message
+                    type: string
+                status:
+                    description: Status of the ping
+                    enum:
+                        - ERROR
+                        - OK
+                    type: string
+            required:
+                - message
+                - status
+            type: object
+info:
+    title: ""
+    version: ""
+openapi: 3.0.3
+paths:
+    /ping:
+        get:
+            description: Check if the server is alive
+            operationId: ping
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        message: Pong
+                                        status: OK
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Successful ping response
+                "500":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Internal server error
+            summary: Ping the server
+            tags:
+                - ping

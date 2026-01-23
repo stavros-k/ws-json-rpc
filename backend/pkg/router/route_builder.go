@@ -1,7 +1,6 @@
 package router
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -9,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"ws-json-rpc/backend/pkg/utils"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3gen"
@@ -16,31 +16,48 @@ import (
 	"github.com/oasdiff/yaml"
 )
 
+// RouteBuilder is a chi router with OpenAPI support
 type RouteBuilder struct {
-	spec   *openapi3.T
-	router chi.Router
-	gen    *openapi3gen.Generator
-	l      *slog.Logger
-	prefix string
+	spec           *openapi3.T
+	router         chi.Router
+	gen            *openapi3gen.Generator
+	l              *slog.Logger
+	prefix         string
+	gutsCustomizer *GutsSchemaCustomizer
 }
 
-func NewRouteBuilder(l *slog.Logger, title, version string) *RouteBuilder {
+// RouteBuilderOptions contains configuration for creating a RouteBuilder
+type RouteBuilderOptions struct {
+	Title          string
+	Version        string
+	Description    string
+	TypesDirectory string // Path to Go types directory for guts metadata extraction
+}
+
+// NewRouteBuilder creates a new RouteBuilder
+func NewRouteBuilder(l *slog.Logger, opts RouteBuilderOptions) (*RouteBuilder, error) {
 	spec := &openapi3.T{
 		OpenAPI: "3.0.3",
 		Info: &openapi3.Info{
-			Title:   title,
-			Version: version,
+			Title:       opts.Title,
+			Version:     opts.Version,
+			Description: opts.Description,
 		},
-		Paths: openapi3.NewPaths(),
-		Components: &openapi3.Components{
-			Schemas: make(openapi3.Schemas),
-		},
+		Paths:      openapi3.NewPaths(),
+		Components: &openapi3.Components{Schemas: make(openapi3.Schemas)},
 	}
 
+	// Create guts customizer for metadata extraction
+	gutsCustomizer, err := NewGutsSchemaCustomizer(l, opts.TypesDirectory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create guts customizer: %w", err)
+	}
+
+	// Create OpenAPI generator
 	gen := openapi3gen.NewGenerator(
+		// Use guts customizer to extract metadata from Go types
+		gutsCustomizer.AsOpenAPIOption(),
 		openapi3gen.ThrowErrorOnCycle(),
-		// Customizer that takes into account interfaces for customizing schemas
-		SmartCustomizer(),
 		// Enable component schemas
 		openapi3gen.CreateComponentSchemas(openapi3gen.ExportComponentSchemasOptions{
 			ExportComponentSchemas: true,
@@ -49,19 +66,23 @@ func NewRouteBuilder(l *slog.Logger, title, version string) *RouteBuilder {
 	)
 
 	return &RouteBuilder{
-		spec:   spec,
-		router: chi.NewRouter(),
-		gen:    gen,
-		l:      l.With(slog.String("component", "route-builder")),
-	}
+		spec:           spec,
+		router:         chi.NewRouter(),
+		gen:            gen,
+		l:              l.With(slog.String("component", "route-builder")),
+		gutsCustomizer: gutsCustomizer,
+	}, nil
 }
 
+// Must exits the program if an error occurs
 func (rb *RouteBuilder) Must(err error) {
 	if err != nil {
-		panic(err)
+		rb.l.Error("Fatal error", slog.Any("error", err))
+		os.Exit(1)
 	}
 }
 
+// Route adds a new route group to the router
 func (rb *RouteBuilder) Route(path string, fn func(rb *RouteBuilder)) *RouteBuilder {
 	oldPrefix := rb.prefix
 	rb.prefix += path
@@ -69,11 +90,12 @@ func (rb *RouteBuilder) Route(path string, fn func(rb *RouteBuilder)) *RouteBuil
 	// Isolate sub-router
 	rb.router.Group(func(r chi.Router) {
 		subRB := &RouteBuilder{
-			spec:   rb.spec,
-			router: r,
-			gen:    rb.gen,
-			prefix: rb.prefix,
-			l:      rb.l.With(slog.String("prefix", rb.prefix)),
+			spec:           rb.spec,
+			router:         r,
+			gen:            rb.gen,
+			prefix:         rb.prefix,
+			l:              rb.l.With(slog.String("prefix", rb.prefix)),
+			gutsCustomizer: rb.gutsCustomizer,
 		}
 		fn(subRB)
 	})
@@ -82,16 +104,13 @@ func (rb *RouteBuilder) Route(path string, fn func(rb *RouteBuilder)) *RouteBuil
 	return rb
 }
 
+// Use adds middlewares to the router
 func (rb *RouteBuilder) Use(middlewares ...func(http.Handler) http.Handler) *RouteBuilder {
 	rb.router.Use(middlewares...)
 	return rb
 }
 
-func (rb *RouteBuilder) WithDescription(desc string) *RouteBuilder {
-	rb.spec.Info.Description = desc
-	return rb
-}
-
+// WithServer adds a server to the OpenAPI spec
 func (rb *RouteBuilder) WithServer(url, description string) *RouteBuilder {
 	rb.spec.Servers = append(rb.spec.Servers, &openapi3.Server{
 		URL:         url,
@@ -100,42 +119,60 @@ func (rb *RouteBuilder) WithServer(url, description string) *RouteBuilder {
 	return rb
 }
 
+// RouteSpec defines a specific route
 type RouteSpec struct {
-	OperationID string
-	Handler     http.HandlerFunc
-	Summary     string
-	Description string
-	Tags        []string
+	OperationID string           // OperationID is the unique identifier for the route
+	Handler     http.HandlerFunc // Handler is the function that will handle the route
+	Summary     string           // Summary is a short summary of the route
+	Description string           // Description is a longer description of the route
+	Tags        []string         // Tags are used to group routes in the OpenAPI spec
+	Deprecated  bool             // Deprecated indicates if the route is deprecated
 
-	// Regular HTTP route fields
-	RequestType any
-	Responses   map[int]ResponseSpec
+	RequestType *RequestBodySpec     // RequestType is the type of the request body, or nil if no body
+	Responses   map[int]ResponseSpec // Responses is a map of status code to response spec
 
-	// Common fields
-	Parameters map[string]ParameterSpec
+	Parameters map[string]ParameterSpec // Parameters (ie query, path, etc) is a map of parameter name to parameter spec
 
 	// Internal fields
-	localPath string
-	fullPath  string
-	method    string
+	localPath string // localPath is the path without the prefix
+	fullPath  string // fullPath is the full path with the prefix
+	method    string // method is the HTTP method (e.g., GET, POST, etc.)
 }
 
+type ParameterIn string
+
+const (
+	ParameterInPath   ParameterIn = "path"
+	ParameterInQuery  ParameterIn = "query"
+	ParameterInHeader ParameterIn = "header"
+)
+
+// ParameterSpec defines a parameter for a route
 type ParameterSpec struct {
-	In          string // "path", "query", "header", "cookie"
+	In          ParameterIn
 	Description string
 	Required    bool
 	Type        any // The Go type - validation comes from interfaces
 }
 
+type RequestBodySpec struct {
+	Type     any
+	Examples map[string]any
+}
+
 type ResponseSpec struct {
 	Description string
 	Type        any
+	Examples    map[string]any
 }
 
+// generateResponses generates the OpenAPI responses for a route
 func (rb *RouteBuilder) generateResponses(op *openapi3.Operation, spec RouteSpec) error {
 	// Regular HTTP responses
 	responseCodes := map[int]struct{}{}
+	op.Deprecated = spec.Deprecated
 
+	// Generate the schemas for each response
 	for statusCode, respSpec := range spec.Responses {
 		if statusCode < 100 || statusCode > 599 {
 			return fmt.Errorf("invalid status code %d for %s %s", statusCode, spec.method, spec.fullPath)
@@ -147,34 +184,47 @@ func (rb *RouteBuilder) generateResponses(op *openapi3.Operation, spec RouteSpec
 			return fmt.Errorf("description required for status %d", statusCode)
 		}
 
+		// Keep track of response codes
 		responseCodes[statusCode] = struct{}{}
 		statusStr := strconv.Itoa(statusCode)
 
-		if respSpec.Type != nil {
-			// Response with body
-			respSchema, err := rb.gen.NewSchemaRefForValue(respSpec.Type, rb.spec.Components.Schemas)
-			if err != nil {
-				return fmt.Errorf("failed to generate response schema: %w", err)
-			}
-			op.Responses.Set(statusStr, &openapi3.ResponseRef{
-				Value: &openapi3.Response{
-					Description: Ptr(respSpec.Description),
-					Content:     jsonContent(respSchema),
-				},
-			})
-		} else {
+		// Response without body
+		if respSpec.Type == nil {
 			// No body (e.g., 204 No Content)
 			op.Responses.Set(statusStr, &openapi3.ResponseRef{
-				Value: &openapi3.Response{
-					Description: Ptr(respSpec.Description),
-				},
+				Value: &openapi3.Response{Description: ptr(respSpec.Description)},
 			})
+			continue
 		}
+
+		// Response with body
+		respSchema, err := rb.gen.NewSchemaRefForValue(respSpec.Type, rb.spec.Components.Schemas)
+		if err != nil {
+			return fmt.Errorf("failed to generate response schema: %w", err)
+		}
+
+		op.Responses.Set(statusStr, &openapi3.ResponseRef{
+			Value: &openapi3.Response{
+				Description: ptr(respSpec.Description),
+				Content:     jsonContent(respSchema, respSpec.Examples),
+			},
+		})
 	}
 
 	return nil
 }
 
+func examplesToOpenAPIExamples(examples map[string]any) openapi3.Examples {
+	openAPIExamples := openapi3.Examples{}
+	for name, value := range examples {
+		openAPIExamples[name] = &openapi3.ExampleRef{
+			Value: &openapi3.Example{Value: value},
+		}
+	}
+	return openAPIExamples
+}
+
+// sanitizePath removes double slashes and trailing slashes from a path
 func sanitizePath(path string) string {
 	cleanPath := path
 	for strings.Contains(cleanPath, "//") {
@@ -187,6 +237,7 @@ func sanitizePath(path string) string {
 	return cleanPath
 }
 
+// validateRouteSpec validates a RouteSpec
 func validateRouteSpec(spec RouteSpec) error {
 	if spec.OperationID == "" {
 		return fmt.Errorf("field OperationID required")
@@ -204,6 +255,7 @@ func validateRouteSpec(spec RouteSpec) error {
 	return nil
 }
 
+// add adds a new route to the router
 func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 	spec.localPath = path
 	cleanPath := rb.prefix + spec.localPath
@@ -220,6 +272,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 
 	// Rest of the steps are pure OpenAPI spec generation
 	// We can probably skip this step when starting in production mode
+	// TODO: add a mode to skip OpenAPI generation for production
 
 	// 2. Build OpenAPI operation
 	op := &openapi3.Operation{
@@ -233,6 +286,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 	// 3. Add parameters
 	documentedPathParams := map[string]struct{}{}
 	paramsInPath := map[string]struct{}{}
+
 	// Extract param name from path
 	for section := range strings.SplitSeq(spec.fullPath, "/") {
 		paramsName := extractParamName(section)
@@ -243,6 +297,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 			paramsInPath[paramName] = struct{}{}
 		}
 	}
+
 	for name, paramSpec := range spec.Parameters {
 		if name == "" {
 			return fmt.Errorf("parameter name required for %s %s", spec.method, spec.fullPath)
@@ -254,7 +309,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 			return fmt.Errorf("parameter Type required for %s %s", spec.method, spec.fullPath)
 		}
 
-		validInValues := []string{"path", "query", "header", "cookie"}
+		validInValues := []ParameterIn{ParameterInPath, ParameterInQuery, ParameterInHeader}
 		if !slices.Contains(validInValues, paramSpec.In) {
 			return fmt.Errorf("parameter In must be one of %v for %s %s", validInValues, spec.method, spec.fullPath)
 		}
@@ -266,7 +321,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 
 		param := &openapi3.Parameter{
 			Name:        name,
-			In:          paramSpec.In,
+			In:          string(paramSpec.In),
 			Required:    paramSpec.Required,
 			Description: paramSpec.Description,
 			Schema:      paramSchema,
@@ -294,14 +349,17 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 
 	// 4. Generate request schema if provided
 	if spec.RequestType != nil {
-		reqSchema, err := rb.gen.NewSchemaRefForValue(spec.RequestType, rb.spec.Components.Schemas)
+		if spec.RequestType.Type == nil {
+			return fmt.Errorf("request type is nil")
+		}
+		reqSchema, err := rb.gen.NewSchemaRefForValue(spec.RequestType.Type, rb.spec.Components.Schemas)
 		if err != nil {
 			return fmt.Errorf("failed to generate request schema: %w", err)
 		}
 		op.RequestBody = &openapi3.RequestBodyRef{
 			Value: &openapi3.RequestBody{
 				Required: true,
-				Content:  jsonContent(reqSchema),
+				Content:  jsonContent(reqSchema, spec.RequestType.Examples),
 			},
 		}
 	}
@@ -318,6 +376,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 		rb.spec.Paths.Set(spec.fullPath, pathItem)
 	}
 
+	// Add the operation to the OpenAPI path item
 	switch spec.method {
 	case http.MethodGet:
 		pathItem.Get = op
@@ -333,49 +392,52 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 		return fmt.Errorf("unsupported HTTP method: %s", spec.method)
 	}
 
-	logArgs := []any{
-		slog.String("method", spec.method),
-		slog.String("path", spec.fullPath),
-		slog.String("operationID", spec.OperationID),
-	}
-	rb.l.Info("Registered route", logArgs...)
+	rb.l.Info("Registered route", slog.String("method", spec.method), slog.String("path", spec.fullPath), slog.String("operationID", spec.OperationID))
 
 	return nil
 }
 
+// Get adds a GET route to the router
 func (rb *RouteBuilder) Get(path string, spec RouteSpec) error {
 	spec.method = http.MethodGet
 	return rb.add(path, spec)
 }
 
+// Post adds a POST route to the router
 func (rb *RouteBuilder) Post(path string, spec RouteSpec) error {
 	spec.method = http.MethodPost
 	return rb.add(path, spec)
 }
 
+// Put adds a PUT route to the router
 func (rb *RouteBuilder) Put(path string, spec RouteSpec) error {
 	spec.method = http.MethodPut
 	return rb.add(path, spec)
 }
 
+// Patch adds a PATCH route to the router
 func (rb *RouteBuilder) Patch(path string, spec RouteSpec) error {
 	spec.method = http.MethodPatch
 	return rb.add(path, spec)
 }
 
+// Delete adds a DELETE route to the router
 func (rb *RouteBuilder) Delete(path string, spec RouteSpec) error {
 	spec.method = http.MethodDelete
 	return rb.add(path, spec)
 }
 
+// Router returns the underlying chi.Router
 func (rb *RouteBuilder) Router() chi.Router {
 	return rb.router
 }
 
+// Spec returns the OpenAPI specification
 func (rb *RouteBuilder) Spec() *openapi3.T {
 	return rb.spec
 }
 
+// SpecBytes returns the OpenAPI specification as JSON bytes
 func (rb *RouteBuilder) SpecBytes() ([]byte, error) {
 	bytes, err := rb.spec.MarshalJSON()
 	if err != nil {
@@ -384,6 +446,7 @@ func (rb *RouteBuilder) SpecBytes() ([]byte, error) {
 	return bytes, nil
 }
 
+// WriteSpecYAML writes the OpenAPI specification to a YAML file
 func (rb *RouteBuilder) WriteSpecYAML(filename string) error {
 	yamlData, err := yaml.Marshal(rb.spec)
 	if err != nil {
@@ -392,77 +455,15 @@ func (rb *RouteBuilder) WriteSpecYAML(filename string) error {
 	return os.WriteFile(filename, yamlData, 0644)
 }
 
+// WriteSpecJSON writes the OpenAPI specification to a JSON file
 func (rb *RouteBuilder) WriteSpecJSON(filename string) error {
-	jsonData, err := json.MarshalIndent(rb.spec, "", "  ")
+	f, err := os.Create(filename)
 	if err != nil {
-		return err
-	}
-	return os.WriteFile(filename, jsonData, 0644)
-}
-
-func Ptr[T any](v T) *T {
-	return &v
-}
-
-func jsonContent(schema *openapi3.SchemaRef) openapi3.Content {
-	return openapi3.Content{
-		"application/json": &openapi3.MediaType{Schema: schema},
-	}
-}
-
-func getSchemaName(schema *openapi3.SchemaRef) string {
-	const prefix = "#/components/schemas/"
-	if schema.Ref != "" {
-		return strings.TrimPrefix(schema.Ref, prefix)
-	}
-	return ""
-}
-
-func (rb *RouteBuilder) getSchemaValue(schema *openapi3.SchemaRef) (*openapi3.Schema, error) {
-	if schema.Ref != "" {
-		schemaName := getSchemaName(schema)
-		if compSchema, ok := rb.spec.Components.Schemas[schemaName]; ok {
-			if compSchema.Value == nil {
-				return nil, fmt.Errorf("component schema %q has no value", schemaName)
-			}
-			return compSchema.Value, nil
-		}
-	}
-	if schema.Value == nil {
-		return nil, fmt.Errorf("schema has no value")
-	}
-	return schema.Value, nil
-}
-
-func extractParamName(path string) []string {
-	dirtyParams := []string{}
-	cleanParams := []string{}
-
-	// Find the content between '{' and '}'
-	// Examples:
-	// - {userID} -> userID
-	// - {userID:[0-9]+} -> userID:[0-9]+
-	start := -1
-	for i, ch := range path {
-		if ch == '{' {
-			start = i + 1
-		} else if ch == '}' && start >= 0 {
-			dirtyParams = append(dirtyParams, path[start:i])
-			start = -1
-		}
+		return fmt.Errorf("failed to create file: %w", err)
 	}
 
-	// Now split on ':' to remove any regex matchers
-	// Examples:
-	// - userID -> userID
-	// - userID:[0-9]+ -> userID
-	for _, param := range dirtyParams {
-		parts := strings.Split(param, ":")
-		param = parts[0]
-		if param != "" {
-			cleanParams = append(cleanParams, param)
-		}
+	if err := utils.ToJSONStreamIndent(f, rb.spec); err != nil {
+		return fmt.Errorf("failed to write JSON: %w", err)
 	}
-
-	return cleanParams
+	return nil
 }
