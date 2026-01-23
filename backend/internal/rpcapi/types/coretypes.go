@@ -4,6 +4,8 @@ package rpctypes
 type EventKind string
 
 const (
+	// Only for internal use.
+	// You are warned
 	EventKindDataCreated EventKind = "data.created"
 	EventKindDataUpdated EventKind = "data.updated"
 )

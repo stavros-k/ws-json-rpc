@@ -1,7 +1,7 @@
 {
   "info": {
     "title": "Local API",
-    "version": "vdev (794496c-dirty)",
+    "version": "vdev (unknown)",
     "description": "A JSON-RPC API over HTTP and Websockets"
   },
   "methods": {
@@ -152,8 +152,12 @@
       "tsType": "export type EventKind = \"data.created\" | \"data.updated\";",
       "kind": "String Enum",
       "enumValues": [
-        "data.created",
-        "data.updated"
+        {
+          "value": "data.created"
+        },
+        {
+          "value": "data.updated"
+        }
       ],
       "referencedBy": [
         "SubscribeParams",
@@ -178,8 +182,12 @@
           "description": "The status of the ping",
           "optional": false,
           "enumValues": [
-            "error",
-            "success"
+            {
+              "value": "error"
+            },
+            {
+              "value": "success"
+            }
           ]
         }
       ],
@@ -199,8 +207,12 @@
       "tsType": "export type PingStatus = \"error\" | \"success\";",
       "kind": "String Enum",
       "enumValues": [
-        "error",
-        "success"
+        {
+          "value": "error"
+        },
+        {
+          "value": "success"
+        }
       ],
       "referencedBy": [
         "PingResult"
@@ -218,8 +230,12 @@
           "description": "The event topic to subscribe to",
           "optional": false,
           "enumValues": [
-            "data.created",
-            "data.updated"
+            {
+              "value": "data.created"
+            },
+            {
+              "value": "data.updated"
+            }
           ]
         }
       ],
@@ -267,8 +283,12 @@
           "description": "The event topic to unsubscribe from",
           "optional": false,
           "enumValues": [
-            "data.created",
-            "data.updated"
+            {
+              "value": "data.created"
+            },
+            {
+              "value": "data.updated"
+            }
           ]
         }
       ],

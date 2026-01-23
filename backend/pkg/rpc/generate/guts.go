@@ -100,7 +100,7 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	}
 
 	ts.ApplyMutations(
-		config.EnumAsTypes,
+		// config.EnumAsTypes,
 		config.EnumLists,
 		config.ExportTypes,
 		config.InterfaceToType,
@@ -273,13 +273,22 @@ func (g *GutsGenerator) ExtractTypeKind(name string) (string, error) {
 }
 
 // ExtractTypeEnumValues returns string literal values if the type is a string enum.
-func (g *GutsGenerator) ExtractTypeEnumValues(name string) ([]string, error) {
+func (g *GutsGenerator) ExtractTypeEnumValues(name string) ([]EnumValue, error) {
 	node, exists := g.tsParser.Node(name)
 	if !exists {
 		return nil, fmt.Errorf("node %s not found in TypeScript AST", name)
 	}
 
 	switch n := node.(type) {
+	case *bindings.Enum:
+		// Extract enum values with comments from enum members
+		values := g.extractEnumMemberValues(n)
+		if len(values) > 0 {
+			g.l.Debug("Extracted enum values from enum", slog.String("type", name), slog.Int("count", len(values)))
+		}
+
+		return values, nil
+
 	case *bindings.Alias:
 		// Reuse extractEnumValues logic for the alias type
 		values := g.extractEnumValues(n.Type)
@@ -451,7 +460,7 @@ func (g *GutsGenerator) extractComments(sc bindings.SupportComments) string {
 
 // extractEnumValues extracts string literal values from string enum types.
 // Handles both direct unions and references to union types.
-func (g *GutsGenerator) extractEnumValues(expr bindings.ExpressionType) []string {
+func (g *GutsGenerator) extractEnumValues(expr bindings.ExpressionType) []EnumValue {
 	if expr == nil {
 		return nil
 	}
@@ -486,9 +495,39 @@ func (g *GutsGenerator) extractEnumValues(expr bindings.ExpressionType) []string
 	return g.extractLiteralsFromUnion(union)
 }
 
+// extractEnumMemberValues extracts string literal values with comments from enum members.
+func (g *GutsGenerator) extractEnumMemberValues(enum *bindings.Enum) []EnumValue {
+	var values []EnumValue
+
+	for _, member := range enum.Members {
+		// Serialize the enum member value to get its string representation
+		valueStr, err := g.serializeExpressionType(member.Value)
+		if err != nil {
+			g.l.Warn("Failed to serialize enum member value",
+				slog.String("enum", enum.Name.String()),
+				slog.String("member", member.Name),
+				slog.String("error", err.Error()))
+
+			continue
+		}
+
+		// Remove quotes from string literals
+		valueStr = strings.Trim(valueStr, "\"'")
+
+		values = append(values, EnumValue{
+			Value:       valueStr,
+			Description: g.extractComments(member.SupportComments),
+		})
+	}
+
+	return values
+}
+
 // extractLiteralsFromUnion extracts string literal values from a union, ignoring other types.
-func (g *GutsGenerator) extractLiteralsFromUnion(union *bindings.UnionType) []string {
-	var values []string
+// Note: Union literals don't have comments, so Description will be empty.
+// For enums with comments, use extractEnumMemberValues instead.
+func (g *GutsGenerator) extractLiteralsFromUnion(union *bindings.UnionType) []EnumValue {
+	var values []EnumValue
 
 	for _, member := range union.Types {
 		lit, ok := member.(*bindings.LiteralType)
@@ -502,7 +541,7 @@ func (g *GutsGenerator) extractLiteralsFromUnion(union *bindings.UnionType) []st
 			continue
 		}
 
-		values = append(values, strVal)
+		values = append(values, EnumValue{Value: strVal})
 	}
 
 	return values

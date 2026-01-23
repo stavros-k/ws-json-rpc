@@ -405,7 +405,7 @@ type typeMetadata struct {
 	kind       string
 	fields     []FieldMetadata
 	references []string
-	enumValues []string
+	enumValues []EnumValue
 }
 
 // extractTypeMetadata extracts all metadata for a type, logging warnings and using defaults on errors.
@@ -447,7 +447,7 @@ func (g *GeneratorImpl) extractTypeMetadata(name string) typeMetadata {
 	if err != nil {
 		g.l.Warn("Failed to extract enum values from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
 
-		enumValues = []string{}
+		enumValues = []EnumValue{}
 	}
 
 	metadata.enumValues = enumValues

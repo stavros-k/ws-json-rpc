@@ -16,11 +16,16 @@ type Ref struct {
 
 // FieldMetadata contains documentation and type information for a single field.
 type FieldMetadata struct {
-	Name        string   `json:"name"`                  // Field name
-	Type        string   `json:"type"`                  // TypeScript type representation
-	Description string   `json:"description,omitempty"` // Field description from comments
-	Optional    bool     `json:"optional"`              // Whether field is optional (has ?)
-	EnumValues  []string `json:"enumValues,omitempty"`  // Possible values if type is an enum/union
+	Name        string      `json:"name"`                  // Field name
+	Type        string      `json:"type"`                  // TypeScript type representation
+	Description string      `json:"description,omitempty"` // Field description from comments
+	Optional    bool        `json:"optional"`              // Whether field is optional (has ?)
+	EnumValues  []EnumValue `json:"enumValues,omitempty"`  // Possible values if type is an enum/union
+}
+
+type EnumValue struct {
+	Description string `json:"description,omitempty"` // Field description from comments
+	Value       string `json:"value"`                 // Enum value
 }
 
 // UsedBy represents where a type is used (method parameter, method result, or event result).
@@ -37,7 +42,7 @@ type TypeDocs struct {
 	JsonRepresentation string          `json:"jsonRepresentation,omitempty"` // Example JSON instance (only for explicitly registered types)
 	TSType             string          `json:"tsType"`                       // TypeScript type definition
 	Kind               string          `json:"kind"`                         // Type kind (e.g., "Object", "String Enum", "Union")
-	EnumValues         []string        `json:"enumValues,omitempty"`         // Possible values if type is an enum/union
+	EnumValues         []EnumValue     `json:"enumValues,omitempty"`         // Possible values if type is an enum/union
 	Fields             []FieldMetadata `json:"fields,omitempty"`             // Field metadata extracted from TypeScript AST
 	References         []string        `json:"references,omitempty"`         // Types this type references
 	ReferencedBy       []string        `json:"referencedBy,omitempty"`       // Types that reference this type (computed)
