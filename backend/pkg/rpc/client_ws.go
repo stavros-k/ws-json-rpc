@@ -234,7 +234,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 			return
 		}
 
-		ctx, cancel := context.WithCancel(r.Context())
+		ctx, cancel := context.WithCancel(context.Background())
 
 		clientID := r.URL.Query().Get("clientID")
 		if clientID == "" {
@@ -257,7 +257,10 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 
 		h.register <- client
 
+		// WebSocket lifetime is independent of HTTP upgrade request context
+		//nolint:contextcheck
 		go client.writePump(ctx)
+		//nolint:contextcheck
 		go client.readPump(ctx)
 	}
 }
