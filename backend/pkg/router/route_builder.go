@@ -16,6 +16,10 @@ import (
 	"github.com/oasdiff/yaml"
 )
 
+const (
+	ExtensionReplaceWithRef = "x-replace-with-ref"
+)
+
 // RouteBuilder is a chi router with OpenAPI support
 type RouteBuilder struct {
 	spec           *openapi3.T
@@ -23,6 +27,7 @@ type RouteBuilder struct {
 	gen            *openapi3gen.Generator
 	l              *slog.Logger
 	prefix         string
+	doGen          bool
 	gutsCustomizer *GutsSchemaCustomizer
 }
 
@@ -32,6 +37,7 @@ type RouteBuilderOptions struct {
 	Version        string
 	Description    string
 	TypesDirectory string // Path to Go types directory for guts metadata extraction
+	Generate       bool   // Whether to generate the OpenAPI spec
 }
 
 // NewRouteBuilder creates a new RouteBuilder
@@ -53,6 +59,9 @@ func NewRouteBuilder(l *slog.Logger, opts RouteBuilderOptions) (*RouteBuilder, e
 		return nil, fmt.Errorf("failed to create guts customizer: %w", err)
 	}
 
+	// Give the customizer access to components for creating enum refs
+	gutsCustomizer.SetComponents(spec.Components.Schemas)
+
 	// Create OpenAPI generator
 	gen := openapi3gen.NewGenerator(
 		// Use guts customizer to extract metadata from Go types
@@ -70,6 +79,7 @@ func NewRouteBuilder(l *slog.Logger, opts RouteBuilderOptions) (*RouteBuilder, e
 		router:         chi.NewRouter(),
 		gen:            gen,
 		l:              l.With(slog.String("component", "route-builder")),
+		doGen:          opts.Generate,
 		gutsCustomizer: gutsCustomizer,
 	}, nil
 }
@@ -270,9 +280,10 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 	// 1. Register route with chi
 	rb.router.Method(spec.method, spec.fullPath, spec.Handler)
 
-	// Rest of the steps are pure OpenAPI spec generation
-	// We can probably skip this step when starting in production mode
-	// TODO: add a mode to skip OpenAPI generation for production
+	// Rest of the steps are pure OpenAPI spec generation, we skip them if we're not generating
+	if !rb.doGen {
+		return nil
+	}
 
 	// 2. Build OpenAPI operation
 	op := &openapi3.Operation{
@@ -444,6 +455,31 @@ func (rb *RouteBuilder) SpecBytes() ([]byte, error) {
 		return nil, err
 	}
 	return bytes, nil
+}
+
+func (rb *RouteBuilder) FinalizeSpec() error {
+	for _, c := range rb.spec.Components.Schemas {
+		if c.Value == nil {
+			continue
+		}
+
+		for key, prop := range c.Value.Properties {
+			if prop.Value == nil {
+				continue
+			}
+			if ext, ok := prop.Value.Extensions[ExtensionReplaceWithRef]; ok && ext.(bool) {
+				delete(prop.Value.Extensions, ExtensionReplaceWithRef)
+				if len(prop.Value.AllOf) == 0 {
+					return fmt.Errorf("cannot replace with ref, no AllOf present for %q", key)
+				}
+
+				prop.Ref = prop.Value.AllOf[0].Ref
+				prop.Value = nil
+			}
+		}
+	}
+
+	return nil
 }
 
 // WriteSpecYAML writes the OpenAPI specification to a YAML file

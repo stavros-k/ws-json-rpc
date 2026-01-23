@@ -35,7 +35,10 @@ func main() {
 
 	logger := getLogger(config)
 
-	rb, err := router.NewRouteBuilder(logger, router.RouteBuilderOptions{TypesDirectory: "backend/internal/httpapi"})
+	rb, err := router.NewRouteBuilder(logger, router.RouteBuilderOptions{
+		TypesDirectory: "backend/internal/httpapi",
+		Generate:       config.Generate,
+	})
 	fatalIfErr(logger, err)
 
 	rb.Get("/ping", router.RouteSpec{
@@ -62,7 +65,10 @@ func main() {
 		},
 	})
 
-	rb.WriteSpecYAML("test.yaml")
+	if config.Generate {
+		rb.FinalizeSpec()
+		rb.WriteSpecYAML("test.yaml")
+	}
 
 	addr := fmt.Sprintf(":%d", config.Port)
 	httpServer := &http.Server{

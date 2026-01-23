@@ -17,9 +17,10 @@ import (
 // GutsSchemaCustomizer creates an OpenAPI schema customizer that uses guts
 // to extract metadata from Go types (comments, enum values, required fields, etc.)
 type GutsSchemaCustomizer struct {
-	tsParser *guts.Typescript
-	vm       *bindings.Bindings
-	l        *slog.Logger
+	tsParser   *guts.Typescript
+	vm         *bindings.Bindings
+	l          *slog.Logger
+	components openapi3.Schemas // Reference to OpenAPI components for creating enum refs
 }
 
 // NewGutsSchemaCustomizer creates a new guts-based schema customizer
@@ -45,9 +46,16 @@ func NewGutsSchemaCustomizer(l *slog.Logger, goTypesDirPath string) (*GutsSchema
 	}
 
 	return &GutsSchemaCustomizer{
-		tsParser: tsParser,
-		vm:       vm,
+		tsParser:   tsParser,
+		vm:         vm,
+		l:          l,
+		components: nil, // Will be set later via SetComponents
 	}, nil
+}
+
+// SetComponents sets the OpenAPI components schemas map for creating enum references
+func (g *GutsSchemaCustomizer) SetComponents(components openapi3.Schemas) {
+	g.components = components
 }
 
 // parseGoTypesToTS parses Go types from a directory and generates TypeScript AST
@@ -148,9 +156,8 @@ func (g *GutsSchemaCustomizer) applyMetadata(typeName string, node bindings.Node
 
 	// Handle enums - extract values with descriptions
 	if isEnum {
-		g.applyEnumValues(schema, enumValues)
+		g.applyEnumValues(typeName, schema, enumValues)
 	}
-
 	// Handle object types - extract field metadata and determine required fields
 	if fields := g.extractFields(node); len(fields) > 0 {
 		g.applyFieldMetadata(schema, fields)
@@ -266,14 +273,10 @@ func (g *GutsSchemaCustomizer) extractLiteralsFromUnion(union *bindings.UnionTyp
 }
 
 // applyEnumValues applies enum values and descriptions to the schema
-func (g *GutsSchemaCustomizer) applyEnumValues(schema *openapi3.Schema, values []enumValueWithDesc) {
-	// Set enum values
-	schema.Enum = make([]any, len(values))
-	for i, val := range values {
-		schema.Enum[i] = val.Value
-	}
-
+// If components are available, it creates a component schema and uses a $ref
+func (g *GutsSchemaCustomizer) applyEnumValues(typeName string, schema *openapi3.Schema, values []enumValueWithDesc) {
 	// Build description with enum value documentation
+	enumDescription := schema.Description
 	hasDescriptions := false
 	for _, val := range values {
 		if val.Description != "" {
@@ -283,19 +286,56 @@ func (g *GutsSchemaCustomizer) applyEnumValues(schema *openapi3.Schema, values [
 	}
 
 	if hasDescriptions {
-		if schema.Description != "" {
-			schema.Description += "\n\nPossible values:\n"
+		if enumDescription != "" {
+			enumDescription += "\n\nPossible values:\n"
 		} else {
-			schema.Description = "Possible values:\n"
+			enumDescription = "Possible values:\n"
 		}
 
 		for _, val := range values {
 			if val.Description != "" {
-				schema.Description += fmt.Sprintf("- `%s`: %s\n", val.Value, val.Description)
+				enumDescription += fmt.Sprintf("- `%s`: %s\n", val.Value, val.Description)
 			} else {
-				schema.Description += fmt.Sprintf("- `%s`\n", val.Value)
+				enumDescription += fmt.Sprintf("- `%s`\n", val.Value)
 			}
 		}
+	}
+
+	// If we have access to components, create a component schema and use a ref
+	if g.components != nil && typeName != "" {
+		ref, exists := g.components[typeName]
+		if !exists {
+			// Create the enum component schema
+			enumSchema := &openapi3.Schema{
+				Type:        &openapi3.Types{"string"},
+				Description: enumDescription,
+				Enum:        make([]any, len(values)),
+			}
+
+			for i, val := range values {
+				enumSchema.Enum[i] = val.Value
+			}
+			enumSchemaRef := &openapi3.SchemaRef{Value: enumSchema}
+			ref = enumSchemaRef
+			g.components[typeName] = ref
+		}
+
+		// Replace current schema with a reference
+		// We can't directly make this a $ref, so we use AllOf with a single reference
+		// This is valid OpenAPI and effectively makes it a reference
+		*schema = openapi3.Schema{
+			Extensions: map[string]any{ExtensionReplaceWithRef: true},
+			AllOf: []*openapi3.SchemaRef{
+				{Ref: "#/components/schemas/" + typeName},
+			},
+		}
+	} else {
+		// Fallback: inline the enum values (old behavior)
+		schema.Enum = make([]any, len(values))
+		for i, val := range values {
+			schema.Enum[i] = val.Value
+		}
+		schema.Description = enumDescription
 	}
 }
 
