@@ -236,7 +236,7 @@ export function MethodCaller({ methodName, defaultParams = "{}" }: MethodCallerP
                                     )}
                                     {result.data !== null && result.data !== undefined && (
                                         <CodeWrapperClient
-                                            code={JSON.stringify(result.data)}
+                                            code={JSON.stringify(result.data, null, 2)}
                                             lang='json'
                                         />
                                     )}
