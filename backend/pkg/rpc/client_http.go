@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -28,8 +29,10 @@ func (c *HTTPClient) handleRequest(ctx context.Context, req RPCRequest) {
 	c.hub.methodsMutex.RLock()
 	method, exists := c.hub.methods[req.Method]
 	c.hub.methodsMutex.RUnlock()
+
 	if !exists {
 		c.sendError(req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method))
+
 		return
 	}
 
@@ -38,6 +41,7 @@ func (c *HTTPClient) handleRequest(ctx context.Context, req RPCRequest) {
 	if err != nil {
 		reqLogger.Error("unmarshal error", utils.ErrAttr(err))
 		c.sendError(req.ID, ErrCodeInvalidParams, fmt.Sprintf("Failed to parse params on method %q: %s", req.Method, err.Error()))
+
 		return
 	}
 
@@ -57,13 +61,16 @@ func (c *HTTPClient) handleRequest(ctx context.Context, req RPCRequest) {
 	if err != nil {
 		hctx.Logger.Error("handler error", utils.ErrAttr(err))
 		// If its a handler error, let handler specify code/message
-		if err, ok := err.(HandlerError); ok {
-			c.sendError(req.ID, err.Code(), err.Error())
+		var he HandlerError
+		if errors.As(err, &he) {
+			c.sendError(req.ID, he.Code(), he.Error())
+
 			return
 		}
 
 		// Unknown errors, send internal error
 		c.sendError(req.ID, ErrCodeInternal, fmt.Sprintf("Failed to handle request on method %q: %s", req.Method, err.Error()))
+
 		return
 	}
 
@@ -86,14 +93,16 @@ func (c *HTTPClient) sendResponse(resp RPCResponse) {
 	}
 }
 
-// ServeHTTP handles HTTP JSON-RPC requests
+// ServeHTTP handles HTTP JSON-RPC requests.
 func (h *Hub) ServeHTTP() http.HandlerFunc {
 	httpLogger := h.logger.With(slog.String("handler", "http"))
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Only accept POST and GET requests
 		if r.Method != http.MethodPost {
 			httpLogger.Warn("http request not allowed", slog.String("method", r.Method))
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
 			return
 		}
 
@@ -105,17 +114,21 @@ func (h *Hub) ServeHTTP() http.HandlerFunc {
 		if err != nil {
 			// Create a minimal error response
 			resp := NewRPCResponse(uuid.Nil, nil, &RPCErrorObj{Code: ErrCodeParse, Message: "Invalid JSON in request body"})
+
 			w.Header().Set("Content-Type", "application/json")
+
 			if err := utils.ToJSONStream(w, resp); err != nil {
 				// Log the error but cannot do much else
 				httpLogger.Error("failed to encode HTTP response", utils.ErrAttr(err))
 			}
+
 			return
 		}
 
 		remoteHost, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			httpLogger.Error("failed to parse remote address", utils.ErrAttr(err), slog.String("remote_addr", r.RemoteAddr))
+
 			return
 		}
 

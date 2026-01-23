@@ -1,7 +1,7 @@
-// Package generate provides API documentation generation from Go type definitions.
+package generate
+
 // This file (docs.go) defines the data structures for API documentation,
 // including types, methods, events, and their associated metadata.
-package generate
 
 import (
 	"errors"
@@ -77,6 +77,7 @@ func (e *Example) Validate() error {
 	if e.Params != "" || e.Result != "" {
 		return errors.New("example should use ParamsObj and ResultObj fields instead of Params and Result strings")
 	}
+
 	return nil
 }
 
@@ -100,6 +101,7 @@ func (e *EventDocs) Validate() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -109,6 +111,7 @@ func (e *EventDocs) NoNilSlices() {
 	if e.Examples == nil {
 		e.Examples = make([]Example, 0)
 	}
+
 	if e.Tags == nil {
 		e.Tags = make([]string, 0)
 	}
@@ -138,6 +141,7 @@ func (m *MethodDocs) Validate() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -147,9 +151,11 @@ func (m *MethodDocs) NoNilSlices() {
 	if m.Examples == nil {
 		m.Examples = make([]Example, 0)
 	}
+
 	if m.Errors == nil {
 		m.Errors = make([]ErrorDoc, 0)
 	}
+
 	if m.Tags == nil {
 		m.Tags = make([]string, 0)
 	}

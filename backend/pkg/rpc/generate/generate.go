@@ -1,7 +1,3 @@
-// Package generate provides API documentation generation from Go type definitions.
-// It extracts type metadata from Go structs, generates TypeScript definitions,
-// and produces comprehensive JSON documentation including methods, events, types,
-// and database schema information.
 package generate
 
 import (
@@ -19,6 +15,10 @@ import (
 	"ws-json-rpc/backend/internal/database/sqlite"
 	"ws-json-rpc/backend/pkg/database"
 	"ws-json-rpc/backend/pkg/utils"
+)
+
+const (
+	NULL_TYPE_NAME = "null"
 )
 
 // GeneratorImpl is the concrete implementation of the Generator interface.
@@ -45,17 +45,18 @@ type GeneratorOptions struct {
 // NewGenerator creates a Generator that validates options, initializes the TypeScript parser,
 // writes type definitions, and sets up documentation structures.
 // Types are registered dynamically as methods/events are added.
-func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
+func NewGenerator(l *slog.Logger, opts GeneratorOptions) (*GeneratorImpl, error) {
 	l.Debug("Creating API documentation generator",
 		slog.String("docsOutput", opts.DocsFileOutputPath),
 		slog.String("tsOutput", opts.TSTypesOutputPath),
 		slog.String("schemaOutput", opts.DatabaseSchemaFileOutputPath))
 
 	if opts.DocsFileOutputPath == "" {
-		return nil, fmt.Errorf("docs file path is required")
+		return nil, errors.New("docs file path is required")
 	}
+
 	if opts.DatabaseSchemaFileOutputPath == "" {
-		return nil, fmt.Errorf("schema file path is required")
+		return nil, errors.New("schema file path is required")
 	}
 
 	gutsGenerator, err := NewGutsGenerator(l, opts.GoTypesDirPath)
@@ -76,6 +77,7 @@ func NewGenerator(l *slog.Logger, opts GeneratorOptions) (Generator, error) {
 	}
 
 	l.Info("API documentation generator created successfully")
+
 	return g, nil
 }
 
@@ -84,6 +86,7 @@ func (g *GeneratorImpl) GetDatabaseSchema() (string, error) {
 	g.l.Debug("Generating database schema from migrations")
 
 	tempDBPath := fmt.Sprintf("%s-%d", os.TempDir(), time.Now().Unix())
+
 	mig, err := database.NewMigrator(g.l, sqlite.GetMigrationsFS(), tempDBPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to create migrator: %w", err)
@@ -103,6 +106,7 @@ func (g *GeneratorImpl) GetDatabaseSchema() (string, error) {
 	}
 
 	g.l.Info("Database schema generated", slog.String("file", g.dbSchemaFilePath))
+
 	return string(bytes.TrimSpace(schemaBytes)), nil
 }
 
@@ -119,6 +123,7 @@ func (g *GeneratorImpl) Generate() error {
 	if err != nil {
 		return fmt.Errorf("failed to get database schema: %w", err)
 	}
+
 	g.d.DatabaseSchema = schema
 
 	// Compute back-references for all types
@@ -131,10 +136,12 @@ func (g *GeneratorImpl) Generate() error {
 
 	// Write API docs to file
 	g.l.Debug("Writing API documentation to file", slog.String("file", g.docsFilePath))
+
 	docsFile, err := os.Create(g.docsFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to create api docs file: %w", err)
 	}
+
 	defer func() {
 		if err := docsFile.Close(); err != nil {
 			g.l.Error("failed to close api docs file", utils.ErrAttr(err))
@@ -148,6 +155,72 @@ func (g *GeneratorImpl) Generate() error {
 	g.l.Info("API documentation generated successfully", slog.String("file", g.docsFilePath))
 
 	return nil
+}
+
+// AddEventType registers a WebSocket event with its response type and documentation.
+func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
+	if _, exists := g.d.Events[name]; exists {
+		g.fatalIfErr(errors.New("event already registered: " + name))
+	}
+
+	docs.NoNilSlices()
+
+	if err := docs.Validate(); err != nil {
+		g.fatalIfErr(fmt.Errorf("failed to validate event docs: %w", err))
+	}
+
+	for idx, ex := range docs.Examples {
+		docs.Examples[idx].Result = string(utils.MustToJSON(ex.ResultObj))
+	}
+
+	docs.Protocols.WS = true
+	// Events are only available for WebSocket connections
+	docs.Protocols.HTTP = false
+	resultTypeName := g.mustGetTypeName(resp)
+	docs.ResultType = Ref{Ref: resultTypeName}
+
+	// Register type with JSON instance
+	g.registerType(resultTypeName, resp)
+
+	g.d.Events[name] = docs
+	g.l.Debug("Event registered", slog.String("event", name), slog.String("resultType", resultTypeName))
+}
+
+// AddHandlerType registers an RPC method with its request/response types and documentation.
+func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs MethodDocs) {
+	if _, exists := g.d.Methods[name]; exists {
+		g.fatalIfErr(errors.New("method already registered: " + name))
+	}
+
+	docs.NoNilSlices()
+
+	if err := docs.Validate(); err != nil {
+		g.fatalIfErr(fmt.Errorf("failed to validate method docs: %w", err))
+	}
+
+	for idx, ex := range docs.Examples {
+		docs.Examples[idx].Result = string(utils.MustToJSONIndent(ex.ResultObj))
+		docs.Examples[idx].Params = string(utils.MustToJSONIndent(ex.ParamsObj))
+	}
+
+	docs.Protocols.HTTP = !docs.NoHTTP
+	docs.Protocols.WS = true
+
+	resultTypeName := g.mustGetTypeName(resp)
+	paramTypeName := g.mustGetTypeName(req)
+	docs.ParamType = Ref{Ref: paramTypeName}
+	docs.ResultType = Ref{Ref: resultTypeName}
+
+	// Register types with JSON instances
+	g.registerType(paramTypeName, req)
+	g.registerType(resultTypeName, resp)
+
+	g.d.Methods[name] = docs
+	g.l.Debug("Method registered",
+		slog.String("method", name),
+		slog.String("paramType", paramTypeName),
+		slog.String("resultType", resultTypeName),
+		slog.Bool("http", docs.Protocols.HTTP))
 }
 
 // computeBackReferences builds reverse relationships, allowing navigation from a type
@@ -181,6 +254,7 @@ func (g *GeneratorImpl) computeBackReferences() {
 
 	// Sort ReferencedBy lists for deterministic output
 	totalBackRefs := 0
+
 	for name := range g.d.Types {
 		typeDocs := g.d.Types[name]
 		if len(typeDocs.ReferencedBy) > 0 {
@@ -191,6 +265,21 @@ func (g *GeneratorImpl) computeBackReferences() {
 	}
 
 	g.l.Debug("Computed back-references for all types", slog.Int("totalBackRefs", totalBackRefs))
+}
+
+// usedByLess returns a comparison function that sorts by Type, Target, then Role.
+func usedByLess(usedBy []UsedBy) func(i, j int) bool {
+	return func(i, j int) bool {
+		if usedBy[i].Type != usedBy[j].Type {
+			return usedBy[i].Type < usedBy[j].Type
+		}
+
+		if usedBy[i].Target != usedBy[j].Target {
+			return usedBy[i].Target < usedBy[j].Target
+		}
+
+		return usedBy[i].Role < usedBy[j].Role
+	}
 }
 
 // computeUsedBy records which methods and events use each type as a parameter or result.
@@ -215,6 +304,7 @@ func (g *GeneratorImpl) computeUsedBy() {
 
 	// Sort UsedBy lists for deterministic output
 	totalUsages := 0
+
 	for name := range g.d.Types {
 		typeDocs := g.d.Types[name]
 		if len(typeDocs.UsedBy) > 0 {
@@ -229,7 +319,7 @@ func (g *GeneratorImpl) computeUsedBy() {
 
 // addTypeUsage adds a usage record for a type if it exists and is not null.
 func (g *GeneratorImpl) addTypeUsage(typeRef, usageType, target, role string) {
-	if typeRef == "" || typeRef == "null" {
+	if typeRef == "" || typeRef == NULL_TYPE_NAME {
 		return
 	}
 
@@ -244,89 +334,12 @@ func (g *GeneratorImpl) addTypeUsage(typeRef, usageType, target, role string) {
 	g.d.Types[typeRef] = typeDocs
 }
 
-// usedByLess returns a comparison function that sorts by Type, Target, then Role.
-func usedByLess(usedBy []UsedBy) func(i, j int) bool {
-	return func(i, j int) bool {
-		if usedBy[i].Type != usedBy[j].Type {
-			return usedBy[i].Type < usedBy[j].Type
-		}
-		if usedBy[i].Target != usedBy[j].Target {
-			return usedBy[i].Target < usedBy[j].Target
-		}
-		return usedBy[i].Role < usedBy[j].Role
-	}
-}
-
-// AddEventType registers a WebSocket event with its response type and documentation.
-func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
-	if _, exists := g.d.Events[name]; exists {
-		g.fatalIfErr(errors.New("event already registered: " + name))
-	}
-
-	docs.NoNilSlices()
-	if err := docs.Validate(); err != nil {
-		g.fatalIfErr(fmt.Errorf("failed to validate event docs: %w", err))
-	}
-
-	for idx, ex := range docs.Examples {
-		docs.Examples[idx].Result = string(utils.MustToJSON(ex.ResultObj))
-	}
-
-	docs.Protocols.WS = true
-	// Events are only available for WebSocket connections
-	docs.Protocols.HTTP = false
-	resultTypeName := g.mustGetTypeName(resp)
-	docs.ResultType = Ref{Ref: resultTypeName}
-
-	// Register type with JSON instance
-	g.registerType(resultTypeName, resp)
-
-	g.d.Events[name] = docs
-	g.l.Debug("Event registered", slog.String("event", name), slog.String("resultType", resultTypeName))
-}
-
-// AddHandlerType registers an RPC method with its request/response types and documentation.
-func (g *GeneratorImpl) AddHandlerType(name string, req any, resp any, docs MethodDocs) {
-	if _, exists := g.d.Methods[name]; exists {
-		g.fatalIfErr(errors.New("method already registered: " + name))
-	}
-
-	docs.NoNilSlices()
-	if err := docs.Validate(); err != nil {
-		g.fatalIfErr(fmt.Errorf("failed to validate method docs: %w", err))
-	}
-
-	for idx, ex := range docs.Examples {
-		docs.Examples[idx].Result = string(utils.MustToJSONIndent(ex.ResultObj))
-		docs.Examples[idx].Params = string(utils.MustToJSONIndent(ex.ParamsObj))
-	}
-
-	docs.Protocols.HTTP = !docs.NoHTTP
-	docs.Protocols.WS = true
-
-	resultTypeName := g.mustGetTypeName(resp)
-	paramTypeName := g.mustGetTypeName(req)
-	docs.ParamType = Ref{Ref: paramTypeName}
-	docs.ResultType = Ref{Ref: resultTypeName}
-
-	// Register types with JSON instances
-	g.registerType(paramTypeName, req)
-	g.registerType(resultTypeName, resp)
-
-	g.d.Methods[name] = docs
-	g.l.Debug("Method registered",
-		slog.String("method", name),
-		slog.String("paramType", paramTypeName),
-		slog.String("resultType", resultTypeName),
-		slog.Bool("http", docs.Protocols.HTTP))
-}
-
 // registerType registers a type with optional JSON instance.
 // If v is nil, only TypeScript information is registered (for referenced types).
 // If v is not nil, also includes JSON representation (for explicitly registered types).
 // Recursively registers any types this type references.
 func (g *GeneratorImpl) registerType(name string, v any) {
-	if name == "null" {
+	if name == NULL_TYPE_NAME {
 		return
 	}
 
@@ -335,6 +348,7 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 		// Type already registered with JSON instance, don't overwrite
 		if docs.JsonRepresentation != "" {
 			g.l.Debug("Type already registered with JSON instance", slog.String("type", name))
+
 			return
 		}
 	}
@@ -342,6 +356,7 @@ func (g *GeneratorImpl) registerType(name string, v any) {
 	hasInstance := v != nil
 
 	g.l.Debug("Registering type", slog.String("type", name), slog.Bool("hasInstance", hasInstance))
+
 	var jsonRepresentation string
 
 	if hasInstance {
@@ -401,32 +416,40 @@ func (g *GeneratorImpl) extractTypeMetadata(name string) typeMetadata {
 	kind, err := g.guts.ExtractTypeKind(name)
 	if err != nil {
 		g.l.Warn("Failed to extract type kind from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+
 		kind = "Unknown"
 	}
+
 	metadata.kind = kind
 
 	// Extract field metadata
 	fields, err := g.guts.ExtractFields(name)
 	if err != nil {
 		g.l.Warn("Failed to extract fields from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+
 		fields = []FieldMetadata{}
 	}
+
 	metadata.fields = fields
 
 	// Extract references
 	references, err := g.guts.ExtractReferences(name)
 	if err != nil {
 		g.l.Warn("Failed to extract references from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+
 		references = []string{}
 	}
+
 	metadata.references = references
 
 	// Extract type-level enum values
 	enumValues, err := g.guts.ExtractTypeEnumValues(name)
 	if err != nil {
 		g.l.Warn("Failed to extract enum values from TypeScript AST", slog.String("type", name), slog.String("error", err.Error()))
+
 		enumValues = []string{}
 	}
+
 	metadata.enumValues = enumValues
 
 	return metadata
@@ -443,7 +466,7 @@ func (g *GeneratorImpl) fatalIfErr(err error) {
 }
 
 // mustGetTypeName extracts the type name from a value, requiring it to be a named struct.
-// Returns "null" for empty struct{} (representing no params/result).
+// Returns [NULL_TYPE_NAME] for empty struct{} (representing no params/result).
 func (g *GeneratorImpl) mustGetTypeName(v any) string {
 	// Handle nil
 	if v == nil {
@@ -452,7 +475,7 @@ func (g *GeneratorImpl) mustGetTypeName(v any) string {
 
 	// This is cases where there are no params or result
 	if v == struct{}{} {
-		return "null"
+		return NULL_TYPE_NAME
 	}
 
 	t := reflect.TypeOf(v)

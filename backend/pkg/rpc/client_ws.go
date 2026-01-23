@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// WSClient represents a connected WebSocket client
+// WSClient represents a connected WebSocket client.
 type WSClient struct {
 	conn        *websocket.Conn
 	sendChannel chan []byte
@@ -31,6 +31,7 @@ func (c *WSClient) readPump(ctx context.Context) {
 	defer func() {
 		c.logger.Info("client read pump exited")
 		c.cancel()
+
 		c.hub.unregister <- c
 	}()
 
@@ -48,6 +49,7 @@ func (c *WSClient) readPump(ctx context.Context) {
 			default:
 				c.logger.Error("unknown websocket error", utils.ErrAttr(err))
 			}
+
 			break
 		}
 		// Only support text based messages
@@ -55,6 +57,7 @@ func (c *WSClient) readPump(ctx context.Context) {
 			if err := c.sendError(ctx, uuid.Nil, ErrCodeInvalid, "Invalid message type. Only text messages are supported."); err != nil {
 				c.logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
+
 			continue
 		}
 
@@ -62,9 +65,11 @@ func (c *WSClient) readPump(ctx context.Context) {
 		req, err := utils.FromJSON[RPCRequest](message)
 		if err != nil {
 			c.logger.Warn("parse error", utils.ErrAttr(err))
+
 			if err := c.sendError(ctx, uuid.Nil, ErrCodeParse, err.Error()); err != nil {
 				c.logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
+
 			continue
 		}
 
@@ -89,6 +94,7 @@ func (c *WSClient) writePump(ctx context.Context) {
 			if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 				c.logger.Error("failed to close connection", utils.ErrAttr(err))
 			}
+
 			return
 		// Exit if channel is closed otherwise send the message
 		case message, ok := <-c.sendChannel:
@@ -97,16 +103,19 @@ func (c *WSClient) writePump(ctx context.Context) {
 				if err := c.conn.Close(websocket.StatusNormalClosure, ""); err != nil {
 					c.logger.Error("failed to close connection", utils.ErrAttr(err))
 				}
+
 				return
 			}
 
 			// Write message with a timeout
 			writeCtx, cancel := context.WithTimeout(ctx, MAX_RESPONSE_TIMEOUT)
 			err := c.conn.Write(writeCtx, websocket.MessageText, message)
+
 			cancel()
 
 			if err != nil {
 				c.logger.Error("write error", utils.ErrAttr(err))
+
 				continue
 			}
 		}
@@ -122,10 +131,12 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 	c.hub.methodsMutex.RLock()
 	method, exists := c.hub.methods[req.Method]
 	c.hub.methodsMutex.RUnlock()
+
 	if !exists {
 		if err := c.sendError(ctx, req.ID, ErrCodeNotFound, fmt.Sprintf("Method %q not found", req.Method)); err != nil {
 			reqLogger.Error("failed to send error response", utils.ErrAttr(err))
 		}
+
 		return
 	}
 
@@ -133,9 +144,11 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 	typedParams, err := method.parser(req.Params)
 	if err != nil {
 		reqLogger.Error("unmarshal error", utils.ErrAttr(err))
+
 		if err := c.sendError(ctx, req.ID, ErrCodeInvalidParams, fmt.Sprintf("Failed to parse params on method %q: %s", req.Method, err.Error())); err != nil {
 			reqLogger.Error("failed to send error response", utils.ErrAttr(err))
 		}
+
 		return
 	}
 
@@ -151,10 +164,12 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 	if err != nil {
 		hctx.Logger.Error("handler error", utils.ErrAttr(err))
 		// If its a handler error, let handler specify code/message
-		if err, ok := err.(HandlerError); ok {
-			if err := c.sendError(reqCtx, req.ID, err.Code(), err.Error()); err != nil {
+		var he HandlerError
+		if errors.As(err, &he) {
+			if err := c.sendError(reqCtx, req.ID, he.Code(), he.Error()); err != nil {
 				hctx.Logger.Error("failed to send error response", utils.ErrAttr(err))
 			}
+
 			return
 		}
 
@@ -162,6 +177,7 @@ func (c *WSClient) handleRequest(ctx context.Context, req RPCRequest) {
 		if err := c.sendError(reqCtx, req.ID, ErrCodeInternal, fmt.Sprintf("Failed to handle request on method %q: %s", req.Method, err.Error())); err != nil {
 			hctx.Logger.Error("failed to send error response", utils.ErrAttr(err))
 		}
+
 		return
 	}
 
@@ -196,13 +212,15 @@ func (c *WSClient) sendData(ctx context.Context, r RPCResponse) error {
 }
 
 // ServeWS handles websocket requests from clients
-// This is called for every new connection
+// This is called for every new connection.
 func (h *Hub) ServeWS() http.HandlerFunc {
 	wsLogger := h.logger.With(slog.String("handler", "ws"))
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 		if err != nil {
 			wsLogger.Error("upgrade failed", utils.ErrAttr(err))
+
 			return
 		}
 
@@ -212,10 +230,12 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 		remoteHost, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
 			wsLogger.Error("failed to parse remote address", utils.ErrAttr(err), slog.String("remote_addr", r.RemoteAddr))
+
 			return
 		}
 
 		ctx, cancel := context.WithCancel(r.Context())
+
 		clientID := r.URL.Query().Get("clientID")
 		if clientID == "" {
 			wsLogger.Warn("no client ID provided, generating one", slog.String("remote_addr", remoteHost))
@@ -242,7 +262,7 @@ func (h *Hub) ServeWS() http.HandlerFunc {
 	}
 }
 
-// clientRegister adds a new client to the hub
+// clientRegister adds a new client to the hub.
 func (h *Hub) clientRegister(client *WSClient) {
 	h.clientsMutex.Lock()
 	h.clients[client] = struct{}{}
@@ -255,9 +275,10 @@ func (h *Hub) clientRegister(client *WSClient) {
 	h.logger.Info("client registered", slog.String("client_id", client.id), slog.String("remote_host", client.remoteHost))
 }
 
-// clientUnregister removes a client from the hub
+// clientUnregister removes a client from the hub.
 func (h *Hub) clientUnregister(client *WSClient) {
 	h.clientsMutex.Lock()
+
 	if _, ok := h.clients[client]; ok {
 		delete(h.clients, client)
 
@@ -266,11 +287,14 @@ func (h *Hub) clientUnregister(client *WSClient) {
 		h.clientCountMutex.Unlock()
 
 		h.subscriptionsMutex.Lock()
+
 		for _, subscribers := range h.subscriptions {
 			delete(subscribers, client)
 		}
+
 		h.subscriptionsMutex.Unlock()
 	}
+
 	h.clientsMutex.Unlock()
 	h.logger.Info("client disconnected", slog.String("client_id", client.id), slog.String("remote_host", client.remoteHost))
 }
@@ -278,37 +302,45 @@ func (h *Hub) clientUnregister(client *WSClient) {
 func (h *Hub) broadcastEvent(event RPCEvent) {
 	h.subscriptionsMutex.RLock()
 	defer h.subscriptionsMutex.RUnlock()
+
 	subscribers, ok := h.subscriptions[event.EventName]
 	if !ok {
 		h.logger.Warn("attempted to publish to unregistered event", slog.String("event", event.EventName))
+
 		return
 	}
 
 	if len(subscribers) == 0 {
 		h.logger.Debug("no subscribers for event", slog.String("event", event.EventName))
+
 		return
 	}
 
 	result, err := utils.ToJSON(event)
 	if err != nil {
 		h.logger.Error("failed to marshal event", slog.String("event", event.EventName), utils.ErrAttr(err))
+
 		return
 	}
 
 	count := 0
 	dropped := 0
+
 	for client := range subscribers {
 		select {
 		case client.sendChannel <- result:
 			count++
 		default:
 			dropped++
+
 			client.logger.Warn("send channel full, dropping event broadcast", slog.String("event", event.EventName))
 		}
 	}
+
 	log := h.logger.Debug
 	if dropped > 0 {
 		log = h.logger.Warn
 	}
+
 	log("event broadcast", slog.String("event", event.EventName), slog.Int("recipients", len(subscribers)), slog.Int("delivered", count), slog.Int("dropped", dropped))
 }

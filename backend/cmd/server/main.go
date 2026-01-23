@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -25,14 +26,17 @@ import (
 )
 
 const (
-	shutdownTimeout = 30 * time.Second
+	shutdownTimeout   = 30 * time.Second
+	readHeaderTimeout = 5 * time.Second
 )
 
+//nolint:funlen
 func main() {
 	config, err := app.NewConfig()
 	if err != nil {
 		fatalIfErr(slog.Default(), fmt.Errorf("failed to create config: %w", err))
 	}
+
 	defer func() {
 		if err := config.Close(); err != nil {
 			fatalIfErr(slog.Default(), fmt.Errorf("failed to close config: %w", err))
@@ -61,8 +65,10 @@ func main() {
 	if err := hub.GenerateDocs(); err != nil {
 		fatalIfErr(logger, fmt.Errorf("failed to generate API docs: %w", err))
 	}
+
 	if config.Generate {
 		logger.Info("Exiting after generating docs")
+
 		return
 	}
 
@@ -70,6 +76,7 @@ func main() {
 	if err != nil {
 		fatalIfErr(logger, fmt.Errorf("failed to create migrator: %w", err))
 	}
+
 	if err := migrator.Migrate(); err != nil {
 		fatalIfErr(logger, fmt.Errorf("failed to migrate database: %w", err))
 	}
@@ -83,14 +90,18 @@ func main() {
 	logger.Info("Registering HTTP-RPC at /rpc")
 	mux.HandleFunc("/rpc", hub.ServeHTTP())
 
-	web.DocsFS.Register(mux, logger)
+	web.DocsApp().Register(mux, logger)
 	// Redirect root to docs
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
 	})
 
 	addr := fmt.Sprintf(":%d", config.Port)
-	httpServer := &http.Server{Addr: addr, Handler: mux}
+	httpServer := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
 
 	sigCtx, sigCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer sigCancel()
@@ -98,7 +109,8 @@ func main() {
 	// Start HTTP/WS server
 	go func() {
 		logger.Info("http/ws server listening", slog.String("address", addr))
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("server failed", utils.ErrAttr(err))
 			sigCancel()
 		}
@@ -110,6 +122,7 @@ func main() {
 
 	// Shutdown / Cleanup
 	logger.Info("http/ws server shutting down...")
+
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
 
@@ -138,6 +151,7 @@ func registerEvents(h *rpc.Hub) {
 	})
 }
 
+//nolint:funlen
 func registerMethods(h *rpc.Hub, methods *rpcapi.Handlers) {
 	rpc.RegisterMethod(h, string(rpctypes.MethodKindPing), methods.PingHandler, rpc.RegisterMethodOptions{
 		Docs: generate.MethodDocs{
@@ -207,10 +221,12 @@ func registerMethods(h *rpc.Hub, methods *rpcapi.Handlers) {
 	})
 }
 
+//nolint:ireturn
 func generator(config *app.Config, logger *slog.Logger) (generate.Generator, error) {
 	if !config.Generate {
 		return &generate.MockGenerator{}, nil
 	}
+
 	return generate.NewGenerator(logger, generate.GeneratorOptions{
 		GoTypesDirPath:               "backend/internal/rpcapi/types",
 		DocsFileOutputPath:           "api_docs.json",
@@ -223,7 +239,7 @@ func generator(config *app.Config, logger *slog.Logger) (generate.Generator, err
 	})
 }
 
-// TODO: Remove this
+// TODO: Remove this.
 func simulate(h *rpc.Hub) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -243,6 +259,7 @@ func getLogger(config *app.Config) *slog.Logger {
 	if config.Generate {
 		logHandler = slog.NewTextHandler(config.LogOutput, &logOptions)
 	}
+
 	return slog.New(logHandler).With(slog.String("version", utils.GetVersionShort()))
 }
 

@@ -6,16 +6,18 @@ import (
 )
 
 // Version information that can be set at build time using ldflags
+//
+//nolint:gochecknoglobals
 var (
-	// Version is the semantic version of the build
+	// Version is the semantic version of the build.
 	Version = "dev"
-	// Commit is the git commit hash
+	// Commit is the git commit hash.
 	Commit = "unknown"
-	// BuildTime is when the binary was built
+	// BuildTime is when the binary was built.
 	BuildTime = "unknown"
 )
 
-// getVCSInfo retrieves VCS information from runtime/debug if available
+// getVCSInfo retrieves VCS information from runtime/debug if available.
 func getVCSInfo() (commit string, buildTime string, modified string) {
 	commit = Commit
 	buildTime = BuildTime
@@ -46,27 +48,31 @@ func getVCSInfo() (commit string, buildTime string, modified string) {
 
 // GetBuildVersion returns a formatted build version string
 // It combines the version, commit hash, and build time into a single string
-// Example output: "v1.0.0 (abc1234) built at 2024-01-15T10:30:00Z"
+// Example output: "v1.0.0 (abc1234) built at 2024-01-15T10:30:00Z".
 func GetBuildVersion() string {
 	commit, buildTime, modified := getVCSInfo()
+
 	suffix := ""
 	if modified == "true" {
 		suffix = "-dirty"
 	}
+
 	return fmt.Sprintf("v%s (%s%s) built at %s", Version, commit, suffix, buildTime)
 }
 
 func GetVersionShort() string {
 	commit, _, modified := getVCSInfo()
+
 	suffix := ""
 	if modified == "true" {
 		suffix = "-dirty"
 	}
+
 	return fmt.Sprintf("v%s (%s%s)", Version, commit, suffix)
 }
 
 // GetBuildInfo returns detailed build information including Go version and dependencies
-// This uses runtime/debug to get VCS information if available (Go 1.18+)
+// This uses runtime/debug to get VCS information if available (Go 1.18+).
 func GetBuildInfo() map[string]string {
 	commit, buildTime, modified := getVCSInfo()
 

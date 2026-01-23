@@ -2,6 +2,7 @@ package database
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -18,11 +19,12 @@ type Migrator struct {
 	l       *slog.Logger
 }
 
+// NewMigrator creates a new Migrator instance.
 // TODO: Set a common set of PRAGMA settings for SQLite connections
-// TODO: Test if we can edit db from a db browser while working
+// TODO: Test if we can edit db from a db browser while working.
 func NewMigrator(l *slog.Logger, fs embed.FS, sqlPath string) (*Migrator, error) {
 	if sqlPath == "" {
-		return nil, fmt.Errorf("sqlPath is required")
+		return nil, errors.New("sqlPath is required")
 	}
 
 	_, err := fs.ReadDir("migrations")
@@ -34,6 +36,7 @@ func NewMigrator(l *slog.Logger, fs embed.FS, sqlPath string) (*Migrator, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse database url: %w", err)
 	}
+
 	db := dbmate.New(u)
 	db.Strict = true
 	db.FS = fs
@@ -53,6 +56,7 @@ func NewMigrator(l *slog.Logger, fs embed.FS, sqlPath string) (*Migrator, error)
 
 func (m *Migrator) Migrate() error {
 	m.l.Info("Migrating database")
+
 	if err := m.db.Migrate(); err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}

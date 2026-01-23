@@ -21,6 +21,7 @@ func (w *logWriter) Write(p []byte) (n int, err error) {
 	if len(msg) > 0 {
 		w.logger.Info(string(msg))
 	}
+
 	return len(p), nil
 }
 
@@ -31,6 +32,7 @@ func ErrAttr(err error) slog.Attr {
 func SlogReplacer(groups []string, a slog.Attr) slog.Attr {
 	timeFormat := "2006-01-02 15:04:05"
 
+	//nolint:exhaustive
 	switch a.Value.Kind() {
 	case slog.KindTime:
 		a.Value = slog.StringValue(a.Value.Time().Format(timeFormat))

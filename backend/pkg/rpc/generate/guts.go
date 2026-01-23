@@ -1,10 +1,11 @@
-// Package generate provides API documentation generation from Go type definitions.
+package generate
+
 // This file (guts.go) handles TypeScript AST parsing and metadata extraction
 // using the github.com/coder/guts library to parse Go structs and generate
 // TypeScript type definitions with full metadata.
-package generate
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -26,6 +27,7 @@ type GutsGenerator struct {
 // NewGutsGenerator parses the Go types directory and generates a TypeScript AST for metadata extraction.
 func NewGutsGenerator(l *slog.Logger, goTypesDirPath string) (*GutsGenerator, error) {
 	var err error
+
 	l = l.With(slog.String("component", "guts-generator"))
 
 	// Prepend "./" to the path if it's not already there, this is
@@ -50,6 +52,7 @@ func NewGutsGenerator(l *slog.Logger, goTypesDirPath string) (*GutsGenerator, er
 	}
 
 	l.Info("Guts generator created successfully")
+
 	return gutsGenerator, nil
 }
 
@@ -62,6 +65,7 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	if err != nil {
 		return nil, fmt.Errorf("failed to create guts parser: %w", err)
 	}
+
 	goParser.PreserveComments()
 
 	if _, err := os.Stat(goTypesDirPath); os.IsNotExist(err) {
@@ -73,16 +77,19 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	}
 
 	hasErrors := false
+
 	for _, pkg := range goParser.Pkgs {
 		if len(pkg.Errors) > 0 {
 			hasErrors = true
 		}
+
 		for _, e := range pkg.Errors {
 			l.Error("failed to parse go types", slog.String("pkg", pkg.PkgPath), slog.String("error", e.Error()))
 		}
 	}
+
 	if hasErrors {
-		return nil, fmt.Errorf("failed to parse go types")
+		return nil, errors.New("failed to parse go types")
 	}
 
 	l.Debug("Generating TypeScript AST from Go types")
@@ -100,6 +107,7 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	)
 
 	l.Debug("TypeScript AST generated successfully")
+
 	return ts, nil
 }
 
@@ -112,12 +120,13 @@ func (g *GutsGenerator) WriteTypescriptASTToFile(ts *guts.Typescript, filePath s
 		return fmt.Errorf("failed to serialize TypeScript AST: %w", err)
 	}
 
-	err = os.WriteFile(filePath, []byte(str), 0644)
+	err = os.WriteFile(filePath, []byte(str), 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write TypeScript AST to file: %w", err)
 	}
 
 	g.l.Info("TypeScript types written", slog.String("file", filePath))
+
 	return nil
 }
 
@@ -141,10 +150,12 @@ func (g *GutsGenerator) SerializeNode(name string) (string, error) {
 	}
 
 	var str strings.Builder
+
 	for line := range strings.SplitSeq(serializedNode, "\n") {
 		if strings.HasPrefix(line, "// From") {
 			continue
 		}
+
 		str.WriteString(line + "\n")
 	}
 
@@ -171,6 +182,7 @@ func (g *GutsGenerator) ExtractReferences(name string) ([]string, error) {
 	sort.Strings(refList)
 
 	g.l.Debug("Extracted type references", slog.String("type", name), slog.Int("count", len(refList)))
+
 	return refList, nil
 }
 
@@ -194,6 +206,7 @@ func (g *GutsGenerator) ExtractFields(name string) ([]FieldMetadata, error) {
 			typeStr, err := g.serializeExpressionType(prop.Type)
 			if err != nil {
 				g.l.Warn("Failed to serialize field type", slog.String("type", name), slog.String("field", prop.Name), slog.String("error", err.Error()))
+
 				return nil, fmt.Errorf("failed to serialize type for field %s in %s: %w", prop.Name, name, err)
 			}
 
@@ -208,6 +221,7 @@ func (g *GutsGenerator) ExtractFields(name string) ([]FieldMetadata, error) {
 	}
 
 	g.l.Debug("Extracted fields", slog.String("type", name), slog.Int("count", len(fields)))
+
 	return fields, nil
 }
 
@@ -243,11 +257,14 @@ func (g *GutsGenerator) ExtractTypeKind(name string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed to get type kind for alias %s: %w", name, err)
 		}
+
 		g.l.Debug("Extracted type kind", slog.String("type", name), slog.String("kind", kind))
+
 		return kind, nil
 
 	case *bindings.Interface:
 		g.l.Debug("Extracted type kind", slog.String("type", name), slog.String("kind", "Object"))
+
 		return "Object", nil
 
 	default:
@@ -269,6 +286,7 @@ func (g *GutsGenerator) ExtractTypeEnumValues(name string) ([]string, error) {
 		if len(values) > 0 {
 			g.l.Debug("Extracted enum values", slog.String("type", name), slog.Int("count", len(values)))
 		}
+
 		return values, nil
 	default:
 		return nil, fmt.Errorf("node %s is not a supported type (%T)", name, node)
@@ -276,9 +294,11 @@ func (g *GutsGenerator) ExtractTypeEnumValues(name string) ([]string, error) {
 }
 
 // getTypeKindFromExpression returns a human-readable type classification from an expression type.
+//
+//nolint:funlen
 func (g *GutsGenerator) getTypeKindFromExpression(expr bindings.ExpressionType) (string, error) {
 	if expr == nil {
-		return "", fmt.Errorf("expression type is nil")
+		return "", errors.New("expression type is nil")
 	}
 
 	switch e := expr.(type) {
@@ -290,6 +310,7 @@ func (g *GutsGenerator) getTypeKindFromExpression(expr bindings.ExpressionType) 
 			lit, ok := member.(*bindings.LiteralType)
 			if !ok {
 				allString, allNumber = false, false
+
 				break
 			}
 
@@ -321,6 +342,7 @@ func (g *GutsGenerator) getTypeKindFromExpression(expr bindings.ExpressionType) 
 	case *bindings.ReferenceType:
 		// Try to resolve the reference and get its kind
 		refName := e.Name.String()
+
 		refNode, exists := g.tsParser.Node(refName)
 		if !exists {
 			return "Type Reference", nil
@@ -366,10 +388,12 @@ func (g *GutsGenerator) extractFieldsFromExpressionType(expr bindings.Expression
 	}
 
 	var fields []FieldMetadata
+
 	for _, member := range typeLiteral.Members {
 		typeStr, err := g.serializeExpressionType(member.Type)
 		if err != nil {
 			g.l.Warn("Failed to serialize field type in type literal", slog.String("field", member.Name), slog.String("error", err.Error()))
+
 			continue
 		}
 
@@ -388,7 +412,7 @@ func (g *GutsGenerator) extractFieldsFromExpressionType(expr bindings.Expression
 // serializeExpressionType converts an expression type to its TypeScript string representation.
 func (g *GutsGenerator) serializeExpressionType(expr bindings.ExpressionType) (string, error) {
 	if expr == nil {
-		return "", fmt.Errorf("expression type is nil")
+		return "", errors.New("expression type is nil")
 	}
 
 	// Convert expression to TypeScript node and serialize
@@ -413,10 +437,12 @@ func (g *GutsGenerator) extractComments(sc bindings.SupportComments) string {
 	}
 
 	var builder strings.Builder
+
 	for i, comment := range comments {
 		if i > 0 {
 			builder.WriteString(" ")
 		}
+
 		builder.WriteString(strings.TrimSpace(comment.Text))
 	}
 
@@ -463,6 +489,7 @@ func (g *GutsGenerator) extractEnumValues(expr bindings.ExpressionType) []string
 // extractLiteralsFromUnion extracts string literal values from a union, ignoring other types.
 func (g *GutsGenerator) extractLiteralsFromUnion(union *bindings.UnionType) []string {
 	var values []string
+
 	for _, member := range union.Types {
 		lit, ok := member.(*bindings.LiteralType)
 		if !ok {
@@ -477,6 +504,7 @@ func (g *GutsGenerator) extractLiteralsFromUnion(union *bindings.UnionType) []st
 
 		values = append(values, strVal)
 	}
+
 	return values
 }
 

@@ -11,7 +11,8 @@ import (
 
 //go:embed all:docs/dist
 var docsFS embed.FS
-var DocsFS = NewWebApp("docs", docsFS, "docs/dist", "/docs/")
+
+func DocsApp() WebApp { return NewWebApp("docs", docsFS, "docs/dist", "/docs/") }
 
 type WebApp struct {
 	name    string
@@ -20,7 +21,24 @@ type WebApp struct {
 	urlBase string
 }
 
-func (wa *WebApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func NewWebApp(name string, app fs.FS, subDir string, urlBase string) WebApp {
+	subFS, err := fs.Sub(app, subDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Ensure urlBase ends with /
+	urlBase = strings.TrimSuffix(urlBase, "/") + "/"
+
+	return WebApp{
+		name:    name,
+		fs:      subFS,
+		urlBase: urlBase,
+		l:       slog.Default().With(slog.String("component", name)),
+	}
+}
+
+func (wa WebApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/")
 	if path == "" {
 		path = "index.html"
@@ -34,27 +52,30 @@ func (wa *WebApp) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if f.IsDir() {
 				continue
 			}
+
 			http.ServeFileFS(w, r, wa.fs, altPath)
+
 			return
 		}
 	}
+
 	wa.l.Warn("File not found", slog.String("path", path))
 
 	// File not found, redirect to base URL
 	http.Redirect(w, r, wa.urlBase, http.StatusTemporaryRedirect)
 }
 
-func (wa *WebApp) URLBase() string {
+func (wa WebApp) URLBase() string {
 	return wa.urlBase
 }
 
-// Handler returns an http.Handler that serves the WebApp at the given path
-func (wa *WebApp) Handler(path string) http.Handler {
+// Handler returns an http.Handler that serves the WebApp at the given path.
+func (wa WebApp) Handler(path string) http.Handler {
 	return http.StripPrefix(path, wa)
 }
 
-// Register registers the WebApp with the given ServeMux
-func (wa *WebApp) Register(mux *http.ServeMux, l *slog.Logger) {
+// Register registers the WebApp with the given ServeMux.
+func (wa WebApp) Register(mux *http.ServeMux, l *slog.Logger) {
 	wa.l = l.With(slog.String("app", wa.name), slog.String("urlBase", wa.urlBase), slog.String("component", "file-server"))
 	wa.l.Info("Registering web app")
 
@@ -66,23 +87,4 @@ func (wa *WebApp) Register(mux *http.ServeMux, l *slog.Logger) {
 
 	// Serve the app at the base URL
 	mux.Handle(wa.urlBase, wa.Handler(wa.urlBase))
-}
-
-func NewWebApp(name string, app fs.FS, subDir string, urlBase string) WebApp {
-	subFS, err := fs.Sub(app, subDir)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Ensure urlBase ends with /
-	if !strings.HasSuffix(urlBase, "/") {
-		urlBase = urlBase + "/"
-	}
-
-	return WebApp{
-		name:    name,
-		fs:      subFS,
-		urlBase: urlBase,
-		l:       slog.Default().With(slog.String("component", name)),
-	}
 }
