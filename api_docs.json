@@ -149,10 +149,11 @@
     },
     "EventKind": {
       "description": "",
-      "tsType": "export type EventKind = \"data.created\" | \"data.updated\";",
-      "kind": "String Enum",
+      "tsType": "export enum EventKind {\n    /**\n     * Only for internal use.\n     * You are warned\n     */\n    EventKindDataCreated = \"data.created\",\n    EventKindDataUpdated = \"data.updated\"\n}",
+      "kind": "Unknown",
       "enumValues": [
         {
+          "description": "Only for internal use. You are warned",
           "value": "data.created"
         },
         {
@@ -180,15 +181,7 @@
           "name": "status",
           "type": "PingStatus",
           "description": "The status of the ping",
-          "optional": false,
-          "enumValues": [
-            {
-              "value": "error"
-            },
-            {
-              "value": "success"
-            }
-          ]
+          "optional": false
         }
       ],
       "references": [
@@ -204,8 +197,8 @@
     },
     "PingStatus": {
       "description": "",
-      "tsType": "export type PingStatus = \"error\" | \"success\";",
-      "kind": "String Enum",
+      "tsType": "export enum PingStatus {\n    PingStatusError = \"error\",\n    PingStatusSuccess = \"success\"\n}",
+      "kind": "Unknown",
       "enumValues": [
         {
           "value": "error"
@@ -228,15 +221,7 @@
           "name": "event",
           "type": "EventKind",
           "description": "The event topic to subscribe to",
-          "optional": false,
-          "enumValues": [
-            {
-              "value": "data.created"
-            },
-            {
-              "value": "data.updated"
-            }
-          ]
+          "optional": false
         }
       ],
       "references": [
@@ -281,15 +266,7 @@
           "name": "event",
           "type": "EventKind",
           "description": "The event topic to unsubscribe from",
-          "optional": false,
-          "enumValues": [
-            {
-              "value": "data.created"
-            },
-            {
-              "value": "data.updated"
-            }
-          ]
+          "optional": false
         }
       ],
       "references": [

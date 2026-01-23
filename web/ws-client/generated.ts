@@ -13,14 +13,26 @@ export type DataCreatedEvent = {
 };
 
 // From rpctypes/coretypes.go
-export type EventKind = "data.created" | "data.updated";
-
-export const EventKinds: EventKind[] = ["data.created", "data.updated"];
+export enum EventKind {
+    /**
+     * Only for internal use.
+     * You are warned
+     */
+    EventKindDataCreated = "data.created",
+    EventKindDataUpdated = "data.updated"
+}
 
 // From rpctypes/coretypes.go
-export type MethodKind = "ping" | "subscribe" | "unsubscribe" | "user.create" | "user.delete" | "user.get" | "user.list" | "user.update";
-
-export const MethodKinds: MethodKind[] = ["ping", "subscribe", "unsubscribe", "user.create", "user.delete", "user.get", "user.list", "user.update"];
+export enum MethodKind {
+    MethodKindPing = "ping",
+    MethodKindSubscribe = "subscribe",
+    MethodKindUnsubscribe = "unsubscribe",
+    MethodKindUserCreate = "user.create",
+    MethodKindUserDelete = "user.delete",
+    MethodKindUserGet = "user.get",
+    MethodKindUserList = "user.list",
+    MethodKindUserUpdate = "user.update"
+}
 
 // From rpctypes/types.go
 /**
@@ -38,9 +50,10 @@ export type PingResult = {
 };
 
 // From rpctypes/types.go
-export type PingStatus = "error" | "success";
-
-export const PingStatuses: PingStatus[] = ["error", "success"];
+export enum PingStatus {
+    PingStatusError = "error",
+    PingStatusSuccess = "success"
+}
 
 // From rpctypes/types.go
 /**
