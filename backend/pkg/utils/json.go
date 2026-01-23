@@ -17,9 +17,9 @@ func FromJSON[T any](data []byte) (T, error) {
 		return result, nil
 	}
 
-	retult, err := FromJSONStream[T](bytes.NewReader(data))
+	result, err := FromJSONStream[T](bytes.NewReader(data))
 
-	return retult, err
+	return result, err
 }
 
 // FromJSONStream decodes JSON from io.Reader (streaming version).
