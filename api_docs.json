@@ -1,7 +1,7 @@
 {
   "info": {
     "title": "Local API",
-    "version": "vdev (28f2daa-dirty)",
+    "version": "vdev (794496c-dirty)",
     "description": "A JSON-RPC API over HTTP and Websockets"
   },
   "methods": {
@@ -120,7 +120,7 @@
           "title": "Basic example",
           "description": "Subscribe to the DataCreated event",
           "params": "",
-          "result": "{\"id\":\"123e4567-e89b-12d3-a456-426614174000\"}"
+          "result": "{\n  \"id\": \"123e4567-e89b-12d3-a456-426614174000\"\n}"
         }
       ]
     }

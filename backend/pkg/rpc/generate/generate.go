@@ -170,7 +170,7 @@ func (g *GeneratorImpl) AddEventType(name string, resp any, docs EventDocs) {
 	}
 
 	for idx, ex := range docs.Examples {
-		docs.Examples[idx].Result = string(utils.MustToJSON(ex.ResultObj))
+		docs.Examples[idx].Result = string(utils.MustToJSONIndent(ex.ResultObj))
 	}
 
 	docs.Protocols.WS = true
