@@ -1,7 +1,7 @@
 components:
     schemas:
         CreateUserRequest:
-            description: CreateUserRequest is the request to create a new user
+            description: CreateUserRequest is the request to create a new user.
             properties:
                 password:
                     description: Password to create
@@ -14,7 +14,7 @@ components:
                 - password
             type: object
         CreateUserResponse:
-            description: CreateUserResponse is the response to a create user request
+            description: CreateUserResponse is the response to a create user request.
             properties:
                 createdAt:
                     description: Creation timestamp
@@ -28,7 +28,7 @@ components:
                 - createdAt
             type: object
         GetTeamRequest:
-            description: GetTeamRequest is the request to get a team
+            description: GetTeamRequest is the request to get a team.
             properties:
                 teamID:
                     description: ID of the team to get
@@ -37,7 +37,7 @@ components:
                 - teamID
             type: object
         GetTeamResponse:
-            description: GetTeamResponse is the response to a get team request
+            description: GetTeamResponse is the response to a get team request.
             properties:
                 teamID:
                     description: ID of the team
@@ -52,7 +52,7 @@ components:
                 - users
             type: object
         PingResponse:
-            description: PingResponse is the response to a ping request
+            description: PingResponse is the response to a ping request.
             properties:
                 message:
                     description: Human-readable message
@@ -68,17 +68,17 @@ components:
             type: object
         PingStatus:
             description: |
-                PingStatus represents the status of a ping request
+                PingStatus represents the status of a ping request.
 
                 Possible values:
-                - `ERROR`: PingStatusError means there was an error with the ping
-                - `OK`: PingStatusOK means the ping was successful
+                - `ERROR`: PingStatusError means there was an error with the ping.
+                - `OK`: PingStatusOK means the ping was successful.
             enum:
                 - ERROR
                 - OK
             type: string
         User:
-            description: User represents a user in the system
+            description: User represents a user in the system.
             properties:
                 name:
                     description: Name of the user

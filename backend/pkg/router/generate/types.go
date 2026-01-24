@@ -29,7 +29,6 @@ const (
 	FieldKindReference = "reference"
 	FieldKindEnum      = "enum"
 	FieldKindObject    = "object"
-	FieldKindUnion     = "union"
 	FieldKindUnknown   = "unknown"
 )
 
@@ -48,14 +47,12 @@ type TypeInfo struct {
 
 // FieldType represents the structured type information for a field.
 type FieldType struct {
-	Kind       string      `json:"kind"`                 // "primitive", "array", "reference", "enum", "union"
-	Type       string      `json:"type"`                 // Base type: "string", "User", etc.
-	Format     string      `json:"format,omitempty"`     // OpenAPI format (e.g., "date-time")
-	Required   bool        `json:"required"`             // Whether the field is required
-	Nullable   bool        `json:"nullable,omitempty"`   // For nullable types (T | null)
-	ItemsType  *FieldType  `json:"itemsType,omitempty"`  // For arrays: type of array elements
-	UnionTypes []FieldType `json:"unionTypes,omitempty"` // For complex unions (not just null)
-	EnumValues []EnumValue `json:"enumValues,omitempty"` // For inline enums
+	Kind      string     `json:"kind"`                // "primitive", "array", "reference", "enum", "object", "unknown"
+	Type      string     `json:"type"`                // Base type: "string", "User", etc.
+	Format    string     `json:"format,omitempty"`    // OpenAPI format (e.g., "date-time")
+	Required  bool       `json:"required"`            // Whether the field is required
+	Nullable  bool       `json:"nullable,omitempty"`  // For nullable types (T | null)
+	ItemsType *FieldType `json:"itemsType,omitempty"` // For arrays: type of array elements
 }
 
 // FieldInfo describes a field in a struct (used in high-level API documentation).

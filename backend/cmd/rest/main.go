@@ -37,7 +37,7 @@ func main() {
 	logger := getLogger(config)
 
 	// Create collector for OpenAPI generation
-	var collector generate.RouteMetadataCollector
+	var collector generate.RouteMetadataCollector = &generate.NoopCollector{}
 	if config.Generate {
 		collector, err = generate.NewOpenAPICollector(logger, generate.OpenAPICollectorOptions{
 			GoTypesDirPath:               "backend/internal/httpapi",
@@ -57,8 +57,6 @@ func main() {
 			},
 		})
 		fatalIfErr(logger, err)
-	} else {
-		collector = &generate.NoopCollector{}
 	}
 
 	rb, err := router.NewRouteBuilder(logger, collector)

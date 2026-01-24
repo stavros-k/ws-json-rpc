@@ -48,11 +48,6 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 
 // buildFieldSchema creates an OpenAPI schema for a field.
 func buildFieldSchema(field FieldInfo) (*openapi3.SchemaRef, error) {
-	// Check if field has inline enum values
-	if len(field.TypeInfo.EnumValues) > 0 {
-		return buildInlineEnumSchemaRef(field), nil
-	}
-
 	// Use structured type information
 	return buildSchemaFromFieldType(field.TypeInfo, field.Description)
 }
@@ -125,37 +120,6 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 	default:
 		// Unhandled type kind - fail with error
 		return nil, fmt.Errorf("unhandled field kind: %s", ft.Kind)
-	}
-}
-
-// buildInlineEnumSchemaRef creates an inline enum schema.
-func buildInlineEnumSchemaRef(field FieldInfo) *openapi3.SchemaRef {
-	enumValues := make([]any, len(field.TypeInfo.EnumValues))
-
-	var enumDesc strings.Builder
-
-	if field.Description != "" {
-		enumDesc.WriteString(field.Description)
-		enumDesc.WriteString("\n\n")
-	}
-
-	enumDesc.WriteString("Possible values:\n")
-
-	for i, ev := range field.TypeInfo.EnumValues {
-		enumValues[i] = ev.Value
-		if ev.Description != "" {
-			enumDesc.WriteString(fmt.Sprintf("- `%s`: %s\n", ev.Value, ev.Description))
-		} else {
-			enumDesc.WriteString(fmt.Sprintf("- `%s`\n", ev.Value))
-		}
-	}
-
-	return &openapi3.SchemaRef{
-		Value: &openapi3.Schema{
-			Type:        &openapi3.Types{"string"},
-			Enum:        enumValues,
-			Description: enumDesc.String(),
-		},
 	}
 }
 

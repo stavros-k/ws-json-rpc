@@ -14,7 +14,7 @@
     "CreateUserRequest": {
       "name": "CreateUserRequest",
       "kind": "object",
-      "description": "CreateUserRequest is the request to create a new user",
+      "description": "CreateUserRequest is the request to create a new user.",
       "fields": [
         {
           "name": "username",
@@ -41,7 +41,7 @@
     "CreateUserResponse": {
       "name": "CreateUserResponse",
       "kind": "object",
-      "description": "CreateUserResponse is the response to a create user request",
+      "description": "CreateUserResponse is the response to a create user request.",
       "fields": [
         {
           "name": "userID",
@@ -68,11 +68,11 @@
       ],
       "usedBy": [
         {
-          "operationId": "getTeam",
+          "operationID": "getTeam",
           "role": "response"
         },
         {
-          "operationId": "ping",
+          "operationID": "ping",
           "role": "response"
         }
       ]
@@ -80,7 +80,7 @@
     "GetTeamRequest": {
       "name": "GetTeamRequest",
       "kind": "object",
-      "description": "GetTeamRequest is the request to get a team",
+      "description": "GetTeamRequest is the request to get a team.",
       "fields": [
         {
           "name": "teamID",
@@ -95,7 +95,7 @@
       ],
       "usedBy": [
         {
-          "operationId": "getTeam",
+          "operationID": "getTeam",
           "role": "request"
         }
       ]
@@ -103,7 +103,7 @@
     "GetTeamResponse": {
       "name": "GetTeamResponse",
       "kind": "object",
-      "description": "GetTeamResponse is the response to a get team request",
+      "description": "GetTeamResponse is the response to a get team request.",
       "fields": [
         {
           "name": "teamID",
@@ -136,11 +136,11 @@
       ],
       "usedBy": [
         {
-          "operationId": "getTeam",
+          "operationID": "getTeam",
           "role": "response"
         },
         {
-          "operationId": "ping",
+          "operationID": "ping",
           "role": "response"
         }
       ]
@@ -148,7 +148,7 @@
     "PingResponse": {
       "name": "PingResponse",
       "kind": "object",
-      "description": "PingResponse is the response to a ping request",
+      "description": "PingResponse is the response to a ping request.",
       "fields": [
         {
           "name": "message",
@@ -186,19 +186,19 @@
       ],
       "usedBy": [
         {
-          "operationId": "getTeam",
+          "operationID": "getTeam",
           "role": "response"
         },
         {
-          "operationId": "getTeam",
+          "operationID": "getTeam",
           "role": "response"
         },
         {
-          "operationId": "ping",
+          "operationID": "ping",
           "role": "response"
         },
         {
-          "operationId": "ping",
+          "operationID": "ping",
           "role": "response"
         }
       ]
@@ -206,15 +206,15 @@
     "PingStatus": {
       "name": "PingStatus",
       "kind": "string_enum",
-      "description": "PingStatus represents the status of a ping request",
+      "description": "PingStatus represents the status of a ping request.",
       "enumValues": [
         {
           "value": "ERROR",
-          "description": "PingStatusError means there was an error with the ping"
+          "description": "PingStatusError means there was an error with the ping."
         },
         {
           "value": "OK",
-          "description": "PingStatusOK means the ping was successful"
+          "description": "PingStatusOK means the ping was successful."
         }
       ],
       "referencedBy": [
@@ -224,7 +224,7 @@
     "User": {
       "name": "User",
       "kind": "object",
-      "description": "User represents a user in the system",
+      "description": "User represents a user in the system.",
       "fields": [
         {
           "name": "userID",
@@ -256,7 +256,7 @@
     "/ping": {
       "routes": {
         "GET": {
-          "operationId": "ping",
+          "operationID": "ping",
           "summary": "Ping the server",
           "description": "Check if the server is alive",
           "tags": [
@@ -313,7 +313,7 @@
     "/team/{teamID}": {
       "routes": {
         "GET": {
-          "operationId": "getTeam",
+          "operationID": "getTeam",
           "summary": "Get a team",
           "description": "Get a team by its ID",
           "tags": [
