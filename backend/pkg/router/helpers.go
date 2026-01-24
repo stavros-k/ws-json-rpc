@@ -1,23 +1,10 @@
 package router
 
 import (
+	"fmt"
+	"reflect"
 	"strings"
-
-	"github.com/getkin/kin-openapi/openapi3"
 )
-
-func ptr[T any](v T) *T {
-	return &v
-}
-
-func jsonContent(schema *openapi3.SchemaRef, examples map[string]any) openapi3.Content {
-	return openapi3.Content{
-		"application/json": &openapi3.MediaType{
-			Schema:   schema,
-			Examples: examplesToOpenAPIExamples(examples),
-		},
-	}
-}
 
 func extractParamName(path string) []string {
 	dirtyParams := []string{}
@@ -50,4 +37,55 @@ func extractParamName(path string) []string {
 	}
 
 	return cleanParams
+}
+
+// extractTypeFromValue extracts the type name from a Go value using reflection
+func extractTypeFromValue(value any) (string, error) {
+	rt := reflect.TypeOf(value)
+	if rt == nil {
+		return "", fmt.Errorf("cannot extract type from nil value")
+	}
+
+	// Handle pointers
+	for rt.Kind() == reflect.Pointer {
+		rt = rt.Elem()
+	}
+
+	typeName := rt.Name()
+	if typeName == "" {
+		return "", fmt.Errorf("anonymous type not supported")
+	}
+
+	return typeName, nil
+}
+
+// sanitizePath removes double slashes and trailing slashes from a path
+func sanitizePath(path string) string {
+	cleanPath := path
+	for strings.Contains(cleanPath, "//") {
+		cleanPath = strings.ReplaceAll(cleanPath, "//", "/")
+	}
+	cleanPath = strings.TrimSuffix(cleanPath, "/")
+	if cleanPath == "" {
+		cleanPath = "/"
+	}
+	return cleanPath
+}
+
+// validateRouteSpec validates a RouteSpec
+func validateRouteSpec(spec RouteSpec) error {
+	if spec.OperationID == "" {
+		return fmt.Errorf("field OperationID required")
+	}
+	if spec.Summary == "" {
+		return fmt.Errorf("field Summary required")
+	}
+	if spec.Description == "" {
+		return fmt.Errorf("field Description required")
+	}
+	if len(spec.Tags) == 0 {
+		return fmt.Errorf("field Tags requires at least one tag")
+	}
+
+	return nil
 }

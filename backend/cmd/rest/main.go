@@ -13,6 +13,7 @@ import (
 	"ws-json-rpc/backend/internal/app"
 	"ws-json-rpc/backend/internal/httpapi"
 	"ws-json-rpc/backend/pkg/router"
+	"ws-json-rpc/backend/pkg/router/generate"
 	"ws-json-rpc/backend/pkg/utils"
 )
 
@@ -35,10 +36,20 @@ func main() {
 
 	logger := getLogger(config)
 
-	rb, err := router.NewRouteBuilder(logger, router.RouteBuilderOptions{
-		TypesDirectory: "backend/internal/httpapi",
-		Generate:       config.Generate,
-	})
+	// Create collector for OpenAPI generation
+	var collector generate.RouteMetadataCollector
+	if config.Generate {
+		collector, err = generate.NewOpenAPICollector(logger, generate.OpenAPICollectorOptions{
+			GoTypesDirPath:               "backend/internal/httpapi",
+			DatabaseSchemaFileOutputPath: "schema.sql",
+			DocsFileOutputPath:           "test.json",
+		})
+		fatalIfErr(logger, err)
+	} else {
+		collector = &generate.NoopCollector{}
+	}
+
+	rb, err := router.NewRouteBuilder(logger, collector)
 	fatalIfErr(logger, err)
 
 	rb.Must(rb.Get("/ping", router.RouteSpec{
@@ -66,7 +77,57 @@ func main() {
 				Description: "Invalid request",
 				Type:        httpapi.CreateUserResponse{},
 				Examples: map[string]any{
-					"example-1": httpapi.CreateUserResponse{UserID: "123", CreatedAt: time.Now()},
+					"example-1": httpapi.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)},
+				},
+			},
+			500: {
+				Description: "Internal server error",
+				Type:        httpapi.PingResponse{},
+			},
+		},
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	}))
+	rb.Must(rb.Get("/team/{teamID}", router.RouteSpec{
+		OperationID: "getTeam",
+		Summary:     "Get a team",
+		Description: "Get a team by its ID",
+		Tags:        []string{"team"},
+		RequestType: &router.RequestBodySpec{
+			Type: httpapi.GetTeamRequest{},
+			Examples: map[string]any{
+				"example-1": httpapi.GetTeamResponse{TeamID: "abxc", Users: []httpapi.User{{UserID: "Asdf"}}},
+			},
+		},
+		Parameters: map[string]router.ParameterSpec{
+			"teamID": {
+				In:          "path",
+				Description: "ID of the team to get",
+				Required:    true,
+				Type:        new(string),
+			},
+		},
+		Responses: map[int]router.ResponseSpec{
+			200: {
+				Description: "Successful ping response",
+				Type:        httpapi.PingResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.PingResponse{Message: "Pong", Status: httpapi.PingStatusOK},
+				},
+			},
+			201: {
+				Description: "Successful ping response",
+				Type:        httpapi.GetTeamResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.GetTeamResponse{TeamID: "123", Users: []httpapi.User{{UserID: "123", Name: "John"}}},
+				},
+			},
+			400: {
+				Description: "Invalid request",
+				Type:        httpapi.CreateUserResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)},
 				},
 			},
 			500: {
@@ -80,11 +141,16 @@ func main() {
 	}))
 
 	if config.Generate {
-		if err := rb.FinalizeSpec(); err != nil {
-			logger.Error("failed to finalize spec", utils.ErrAttr(err))
+		spec, err := collector.Spec()
+		if err != nil {
+			logger.Error("failed to generate spec", utils.ErrAttr(err))
 			os.Exit(1)
 		}
-		if err := rb.WriteSpecYAML("test.yaml"); err != nil {
+		spec.Info.Title = "Local API"
+		spec.Info.Description = "Local API Documentation"
+		spec.Info.Version = utils.GetVersionShort()
+
+		if err := collector.WriteSpecYAML("test.yaml"); err != nil {
 			logger.Error("failed to write spec", utils.ErrAttr(err))
 			os.Exit(1)
 		}

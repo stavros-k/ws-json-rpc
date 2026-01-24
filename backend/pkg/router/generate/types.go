@@ -1,0 +1,155 @@
+package generate
+
+import (
+	"github.com/getkin/kin-openapi/openapi3"
+)
+
+// RouteMetadataCollector is the interface that RouteBuilder uses to collect route metadata
+type RouteMetadataCollector interface {
+	RegisterRoute(route *RouteInfo)
+	GenerateOpenAPISpec() (*openapi3.T, error)
+	Spec() (*openapi3.T, error)
+	WriteSpecYAML(filename string) error
+	WithServer(url, description string)
+}
+
+// NoopCollector is a no-op implementation of RouteMetadataCollector
+type NoopCollector struct{}
+
+func (n *NoopCollector) RegisterRoute(route *RouteInfo)            {}
+func (n *NoopCollector) GenerateOpenAPISpec() (*openapi3.T, error) { return nil, nil }
+func (n *NoopCollector) Spec() (*openapi3.T, error)                { return nil, nil }
+func (n *NoopCollector) WriteSpecYAML(filename string) error       { return nil }
+func (n *NoopCollector) WithServer(url, description string)        {}
+
+// Type kind constants for TypeInfo
+const (
+	TypeKindObject     = "object"
+	TypeKindStringEnum = "string_enum"
+	TypeKindNumberEnum = "number_enum"
+	TypeKindUnion      = "union"
+	TypeKindAlias      = "alias"
+)
+
+// Field type kind constants for FieldType
+const (
+	FieldKindPrimitive = "primitive"
+	FieldKindArray     = "array"
+	FieldKindReference = "reference"
+	FieldKindEnum      = "enum"
+	FieldKindObject    = "object"
+	FieldKindUnion     = "union"
+	FieldKindUnknown   = "unknown"
+)
+
+// TypeInfo contains comprehensive metadata about a Go type extracted from guts
+type TypeInfo struct {
+	Name        string      `json:"name"`        // Type name (e.g., "PingResponse")
+	Kind        string      `json:"kind"`        // "Object", "String Enum", "Array", etc.
+	Description string      `json:"description"` // Type-level documentation
+	Fields      []FieldInfo `json:"fields,omitempty"`
+	EnumValues  []EnumValue `json:"enumValues,omitempty"`
+	References  []string    `json:"references,omitempty"` // Types this type references
+	UsedBy      []UsageInfo `json:"usedBy,omitempty"`     // Where this type is used
+	GoType      string      `json:"goType,omitempty"`     // Original Go type (for external types)
+}
+
+// FieldType represents the structured type information for a field
+type FieldType struct {
+	Kind      string     `json:"kind"`                // "primitive", "array", "reference", "enum"
+	Type      string     `json:"type"`                // Base type: "string", "User", etc.
+	Format    string     `json:"format,omitempty"`    // OpenAPI format (e.g., "date-time")
+	ItemsType *FieldType `json:"itemsType,omitempty"` // For arrays: type of array elements
+}
+
+// FieldInfo describes a field in a struct (used in high-level API documentation)
+type FieldInfo struct {
+	Name        string      `json:"name"`
+	Type        string      `json:"type"`     // TypeScript type string (for backwards compat/display)
+	TypeInfo    FieldType   `json:"typeInfo"` // Structured type information
+	Description string      `json:"description,omitempty"`
+	Required    bool        `json:"required"`
+	EnumValues  []EnumValue `json:"enumValues,omitempty"` // If field itself is an inline enum
+	GoType      string      `json:"goType,omitempty"`     // Original Go type (for external types like time.Time)
+}
+
+// FieldMetadata is the raw field metadata from guts (used internally)
+type FieldMetadata struct {
+	Name        string
+	Type        string
+	Description string
+	Optional    bool // Note: This is the inverse of Required in FieldInfo
+	EnumValues  []EnumValue
+}
+
+// EnumValue represents an enum constant with its documentation
+type EnumValue struct {
+	Value       string `json:"value"`
+	Description string `json:"description,omitempty"`
+}
+
+// UsageInfo tracks where a type is used
+type UsageInfo struct {
+	Location string `json:"location"`          // "route", "type"
+	Target   string `json:"target"`            // Route operationID or type name
+	Role     string `json:"role"`              // "request", "response", "field", "parameter"
+	Context  string `json:"context,omitempty"` // Additional context (field name, status code, etc.)
+}
+
+// RouteInfo contains metadata about a REST route
+type RouteInfo struct {
+	OperationID string               `json:"operationId"`
+	Method      string               `json:"method"`
+	Path        string               `json:"path"`
+	Summary     string               `json:"summary"`
+	Description string               `json:"description"`
+	Tags        []string             `json:"tags"`
+	Deprecated  bool                 `json:"deprecated,omitempty"`
+	Request     *RequestInfo         `json:"request,omitempty"`
+	Parameters  []ParameterInfo      `json:"parameters,omitempty"`
+	Responses   map[int]ResponseInfo `json:"responses"`
+}
+
+// RequestInfo describes a request body
+type RequestInfo struct {
+	Type        string         `json:"type"`
+	Description string         `json:"description,omitempty"`
+	Examples    map[string]any `json:"examples,omitempty"`
+}
+
+// ParameterInfo describes a route parameter
+type ParameterInfo struct {
+	Name        string `json:"name"`
+	In          string `json:"in"` // "path", "query", "header"
+	Type        string `json:"type"`
+	Description string `json:"description"`
+	Required    bool   `json:"required"`
+}
+
+// ResponseInfo describes a response
+type ResponseInfo struct {
+	StatusCode  int            `json:"statusCode"`
+	Type        string         `json:"type,omitempty"` // Empty for responses without body
+	Description string         `json:"description"`
+	Examples    map[string]any `json:"examples,omitempty"`
+}
+
+type APIInfo struct {
+	Title       string `json:"title"`
+	Version     string `json:"version"`
+	Description string `json:"description"`
+}
+
+// PathRoutes groups routes by HTTP method for a given path
+type PathRoutes struct {
+	Path   string                `json:"path"`
+	Routes map[string]*RouteInfo `json:"routes"` // Keyed by HTTP method (GET, POST, etc.)
+}
+
+// APIDocumentation is the complete API documentation structure
+type APIDocumentation struct {
+	Info           APIInfo                `json:"info"`
+	Types          map[string]*TypeInfo   `json:"types"`
+	Routes         map[string]*PathRoutes `json:"routes"` // Keyed by path
+	DatabaseSchema string                 `json:"databaseSchema"`
+}

@@ -1,10 +1,23 @@
 components:
     schemas:
+        CreateUserRequest:
+            description: CreateUserRequest is the request to create a new user
+            properties:
+                password:
+                    description: Password to create
+                    type: string
+                username:
+                    description: Username to create
+                    type: string
+            required:
+                - username
+                - password
+            type: object
         CreateUserResponse:
             description: CreateUserResponse is the response to a create user request
             properties:
                 createdAt:
-                    description: external type "time.Time", to include this type the package must be explicitly included in the parsing Creation timestamp
+                    description: Creation timestamp
                     format: date-time
                     type: string
                 userID:
@@ -13,6 +26,15 @@ components:
             required:
                 - userID
                 - createdAt
+            type: object
+        GetTeamRequest:
+            description: GetTeamRequest is the request to get a team
+            properties:
+                teamID:
+                    description: ID of the team to get
+                    type: string
+            required:
+                - teamID
             type: object
         GetTeamResponse:
             description: GetTeamResponse is the response to a get team request
@@ -34,6 +56,8 @@ components:
             properties:
                 message:
                     description: Human-readable message
+                    type: string
+                metadata:
                     type: string
                 status:
                     $ref: '#/components/schemas/PingStatus'
@@ -103,7 +127,7 @@ paths:
                             examples:
                                 example-1:
                                     value:
-                                        createdAt: "2026-01-24T11:28:05.598851+02:00"
+                                        createdAt: "2000-01-01T00:00:00Z"
                                         userID: "123"
                             schema:
                                 $ref: '#/components/schemas/CreateUserResponse'
@@ -117,3 +141,72 @@ paths:
             summary: Ping the server
             tags:
                 - ping
+    /team/{teamID}:
+        get:
+            description: Get a team by its ID
+            operationId: getTeam
+            parameters:
+                - description: ID of the team to get
+                  in: path
+                  name: teamID
+                  required: true
+                  schema:
+                    type: string
+            requestBody:
+                content:
+                    application/json:
+                        examples:
+                            example-1:
+                                value:
+                                    teamID: abxc
+                                    users:
+                                        - name: ""
+                                          userID: Asdf
+                        schema:
+                            $ref: '#/components/schemas/GetTeamRequest'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        message: Pong
+                                        status: OK
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Successful ping response
+                "201":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        teamID: "123"
+                                        users:
+                                            - name: John
+                                              userID: "123"
+                            schema:
+                                $ref: '#/components/schemas/GetTeamResponse'
+                    description: Successful ping response
+                "400":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        createdAt: "2000-01-01T00:00:00Z"
+                                        userID: "123"
+                            schema:
+                                $ref: '#/components/schemas/CreateUserResponse'
+                    description: Invalid request
+                "500":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Internal server error
+            summary: Get a team
+            tags:
+                - team
