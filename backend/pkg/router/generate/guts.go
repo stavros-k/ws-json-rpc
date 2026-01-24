@@ -702,11 +702,7 @@ func (g *OpenAPICollector) extractEnumMemberValues(enum *bindings.Enum) ([]EnumV
 // generateDisplayType creates a human-readable type string from FieldType.
 func generateDisplayType(ft FieldType) string {
 	switch ft.Kind {
-	case FieldKindPrimitive:
-		if ft.Nullable {
-			return ft.Type + " | null"
-		}
-
+	case FieldKindPrimitive, FieldKindReference, FieldKindEnum:
 		return ft.Type
 
 	case FieldKindArray:
@@ -716,20 +712,13 @@ func generateDisplayType(ft FieldType) string {
 			return itemDisplay + "[]"
 		}
 
-		return "array"
-
-	case FieldKindReference, FieldKindEnum:
-		if ft.Nullable {
-			return ft.Type + " | null"
-		}
-
-		return ft.Type
+		return "Array"
 
 	case FieldKindObject:
-		return "object"
+		return "Object"
 
 	default:
-		return "any"
+		panic(fmt.Sprintf("unexpected field kind: %s, should have been caught by type analysis", ft.Kind))
 	}
 }
 
