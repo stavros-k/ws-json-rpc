@@ -15,6 +15,7 @@
       "name": "CreateUserRequest",
       "kind": "object",
       "description": "CreateUserRequest is the request to create a new user.",
+      "deprecated": null,
       "fields": [
         {
           "name": "username",
@@ -22,9 +23,14 @@
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
-            "required": true
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
-          "description": "Username to create"
+          "description": "Username to create",
+          "deprecated": null,
+          "goType": ""
         },
         {
           "name": "password",
@@ -32,16 +38,26 @@
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
-            "required": true
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
-          "description": "Password to create"
+          "description": "Password to create",
+          "deprecated": null,
+          "goType": ""
         }
-      ]
+      ],
+      "enumValues": null,
+      "references": [],
+      "referencedBy": null,
+      "usedBy": null
     },
     "CreateUserResponse": {
       "name": "CreateUserResponse",
       "kind": "object",
       "description": "CreateUserResponse is the response to a create user request.",
+      "deprecated": null,
       "fields": [
         {
           "name": "userID",
@@ -49,9 +65,14 @@
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
-            "required": true
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
-          "description": "ID of the created user"
+          "description": "ID of the created user",
+          "deprecated": null,
+          "goType": ""
         },
         {
           "name": "createdAt",
@@ -60,12 +81,18 @@
             "kind": "primitive",
             "type": "string",
             "format": "date-time",
-            "required": true
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
           "description": "Creation timestamp",
+          "deprecated": null,
           "goType": "time.Time"
         }
       ],
+      "enumValues": null,
+      "references": [],
+      "referencedBy": null,
       "usedBy": [
         {
           "operationID": "getTeam",
@@ -81,6 +108,7 @@
       "name": "GetTeamRequest",
       "kind": "object",
       "description": "GetTeamRequest is the request to get a team.",
+      "deprecated": null,
       "fields": [
         {
           "name": "teamID",
@@ -88,11 +116,19 @@
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
-            "required": true
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
-          "description": "ID of the team to get"
+          "description": "ID of the team to get",
+          "deprecated": null,
+          "goType": ""
         }
       ],
+      "enumValues": null,
+      "references": [],
+      "referencedBy": null,
       "usedBy": [
         {
           "operationID": "getTeam",
@@ -114,9 +150,14 @@
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
-            "required": true
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
-          "description": "ID of the team"
+          "description": "ID of the team",
+          "deprecated": null,
+          "goType": ""
         },
         {
           "name": "users",
@@ -124,19 +165,28 @@
           "typeInfo": {
             "kind": "array",
             "type": "array",
+            "format": "",
             "required": true,
+            "nullable": false,
             "itemsType": {
               "kind": "reference",
               "type": "User",
-              "required": false
+              "format": "",
+              "required": false,
+              "nullable": false,
+              "itemsType": null
             }
           },
-          "description": "Users in the team"
+          "description": "Users in the team",
+          "deprecated": null,
+          "goType": ""
         }
       ],
+      "enumValues": null,
       "references": [
         "User"
       ],
+      "referencedBy": null,
       "usedBy": [
         {
           "operationID": "getTeam",
@@ -152,6 +202,7 @@
       "name": "PingResponse",
       "kind": "object",
       "description": "PingResponse is the response to a ping request.",
+      "deprecated": null,
       "fields": [
         {
           "name": "message",
@@ -159,9 +210,14 @@
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
-            "required": true
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
-          "description": "Human-readable message"
+          "description": "Human-readable message",
+          "deprecated": null,
+          "goType": ""
         },
         {
           "name": "status",
@@ -169,9 +225,14 @@
           "typeInfo": {
             "kind": "reference",
             "type": "PingStatus",
-            "required": true
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
-          "description": "Status of the ping"
+          "description": "Status of the ping",
+          "deprecated": null,
+          "goType": ""
         },
         {
           "name": "metadata",
@@ -179,14 +240,21 @@
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
+            "format": "",
             "required": false,
-            "nullable": true
-          }
+            "nullable": true,
+            "itemsType": null
+          },
+          "description": "",
+          "deprecated": null,
+          "goType": ""
         }
       ],
+      "enumValues": null,
       "references": [
         "PingStatus"
       ],
+      "referencedBy": null,
       "usedBy": [
         {
           "operationID": "getTeam",
@@ -210,6 +278,8 @@
       "name": "PingStatus",
       "kind": "string_enum",
       "description": "PingStatus represents the status of a ping request.",
+      "deprecated": null,
+      "fields": null,
       "enumValues": [
         {
           "value": "ERROR",
@@ -220,17 +290,21 @@
         },
         {
           "value": "OK",
-          "description": "PingStatusOK means the ping was successful."
+          "description": "PingStatusOK means the ping was successful.",
+          "deprecated": null
         }
       ],
+      "references": null,
       "referencedBy": [
         "PingResponse"
-      ]
+      ],
+      "usedBy": null
     },
     "User": {
       "name": "User",
       "kind": "object",
       "description": "User represents a user in the system.",
+      "deprecated": null,
       "fields": [
         {
           "name": "userID",
@@ -238,9 +312,14 @@
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
-            "required": true
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
-          "description": "ID of the user"
+          "description": "ID of the user",
+          "deprecated": null,
+          "goType": ""
         },
         {
           "name": "name",
@@ -248,17 +327,24 @@
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
-            "required": true
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
           },
           "description": "Name of the user",
           "deprecated": {
             "message": "Use UserNameV2 instead."
-          }
+          },
+          "goType": ""
         }
       ],
+      "enumValues": null,
+      "references": [],
       "referencedBy": [
         "GetTeamResponse"
-      ]
+      ],
+      "usedBy": null
     }
   },
   "routes": {
@@ -271,6 +357,9 @@
           "tags": [
             "ping"
           ],
+          "deprecated": false,
+          "request": null,
+          "parameters": null,
           "responses": {
             "200": {
               "statusCode": 200,
@@ -313,7 +402,8 @@
             "500": {
               "statusCode": 500,
               "type": "PingResponse",
-              "description": "Internal server error"
+              "description": "Internal server error",
+              "examples": null
             }
           }
         }
@@ -331,6 +421,7 @@
           "deprecated": true,
           "request": {
             "type": "GetTeamRequest",
+            "description": "",
             "examples": {
               "example-1": {
                 "teamID": "abxc",
@@ -394,7 +485,8 @@
             "500": {
               "statusCode": 500,
               "type": "PingResponse",
-              "description": "Internal server error"
+              "description": "Internal server error",
+              "examples": null
             }
           }
         }
