@@ -41,7 +41,7 @@ func main() {
 	})
 	fatalIfErr(logger, err)
 
-	rb.Get("/ping", router.RouteSpec{
+	rb.Must(rb.Get("/ping", router.RouteSpec{
 		OperationID: "ping",
 		Summary:     "Ping the server",
 		Description: "Check if the server is alive",
@@ -77,11 +77,19 @@ func main() {
 		Handler: func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		},
-	})
+	}))
 
 	if config.Generate {
-		rb.FinalizeSpec()
-		rb.WriteSpecYAML("test.yaml")
+		if err := rb.FinalizeSpec(); err != nil {
+			logger.Error("failed to finalize spec", utils.ErrAttr(err))
+			os.Exit(1)
+		}
+		if err := rb.WriteSpecYAML("test.yaml"); err != nil {
+			logger.Error("failed to write spec", utils.ErrAttr(err))
+			os.Exit(1)
+		}
+		logger.Info("OpenAPI spec generated, exiting")
+		os.Exit(0)
 	}
 
 	addr := fmt.Sprintf(":%d", config.Port)
