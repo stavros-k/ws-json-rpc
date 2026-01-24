@@ -244,7 +244,6 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 		Name:        name,
 		Kind:        TypeKindAlias,
 		Description: desc,
-		UsedBy:      []UsageInfo{},
 	}
 
 	switch alias := alias.Type.(type) {
@@ -352,7 +351,6 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 		Description: desc,
 		Fields:      fields,
 		References:  g.collectReferencesFromMembers(iface.Fields),
-		UsedBy:      []UsageInfo{},
 	}
 
 	g.l.Debug("Extracted interface type", slog.String("name", name), slog.Int("fieldCount", len(fields)))
@@ -376,7 +374,6 @@ func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*T
 		Kind:        TypeKindStringEnum,
 		Description: desc,
 		EnumValues:  enumVals,
-		UsedBy:      []UsageInfo{},
 	}, nil
 }
 
@@ -412,64 +409,64 @@ func (g *OpenAPICollector) collectReferencesFromMembers(members []*bindings.Prop
 func (g *OpenAPICollector) computeTypeRelationships() {
 	g.l.Debug("Computing type relationships", slog.Int("typeCount", len(g.types)), slog.Int("routeCount", len(g.routes)))
 
-	// First pass: build ReferencedBy from References
+	// Build ReferencedBy from References
+	g.buildReferencedBy()
+	g.l.Debug("Built ReferencedBy relationships")
+
+	// Build UsedBy from routes
+	g.buildUsedBy()
+	g.l.Debug("Computed UsedBy relationships")
+}
+
+// buildReferencedBy builds the inverse of References for all types
+func (g *OpenAPICollector) buildReferencedBy() {
 	for typeName, typeInfo := range g.types {
 		for _, ref := range typeInfo.References {
 			if refType, exists := g.types[ref]; exists {
-				if refType.ReferencedBy == nil {
-					refType.ReferencedBy = []string{}
-				}
 				refType.ReferencedBy = append(refType.ReferencedBy, typeName)
 			}
 		}
 	}
 
-	// Sort ReferencedBy lists
+	// Sort for deterministic output
 	for _, typeInfo := range g.types {
 		sort.Strings(typeInfo.ReferencedBy)
 	}
-	g.l.Debug("Built ReferencedBy relationships")
+}
 
-	g.l.Debug("Computing UsedBy relationships")
-	// Second pass: compute UsedBy from routes
+// buildUsedBy tracks which operations use each type
+func (g *OpenAPICollector) buildUsedBy() {
 	for _, pathRoutes := range g.routes {
 		for _, route := range pathRoutes.Routes {
-			// Track request type usage
-			if route.Request != nil && route.Request.Type != "" {
-				if typeInfo, exists := g.types[route.Request.Type]; exists {
-					typeInfo.UsedBy = append(typeInfo.UsedBy, UsageInfo{
-						OperationID: route.OperationID,
-						Role:        "request",
-					})
-				}
+			// Track request type
+			if route.Request != nil {
+				g.addUsage(route.Request.Type, route.OperationID, "request")
 			}
 
-			// Track response type usage
+			// Track response types
 			for _, resp := range route.Responses {
-				if resp.Type != "" {
-					if typeInfo, exists := g.types[resp.Type]; exists {
-						typeInfo.UsedBy = append(typeInfo.UsedBy, UsageInfo{
-							OperationID: route.OperationID,
-							Role:        "response",
-						})
-					}
-				}
+				g.addUsage(resp.Type, route.OperationID, "response")
 			}
 
-			// Track parameter type usage
+			// Track parameter types
 			for _, param := range route.Parameters {
-				if param.Type != "" {
-					if typeInfo, exists := g.types[param.Type]; exists {
-						typeInfo.UsedBy = append(typeInfo.UsedBy, UsageInfo{
-							OperationID: route.OperationID,
-							Role:        "parameter",
-						})
-					}
-				}
+				g.addUsage(param.Type, route.OperationID, "parameter")
 			}
 		}
 	}
-	g.l.Debug("Computed UsedBy relationships")
+}
+
+// addUsage adds a UsageInfo entry to a type if it exists
+func (g *OpenAPICollector) addUsage(typeName, operationID, role string) {
+	if typeName == "" {
+		return
+	}
+	if typeInfo, exists := g.types[typeName]; exists {
+		typeInfo.UsedBy = append(typeInfo.UsedBy, UsageInfo{
+			OperationID: operationID,
+			Role:        role,
+		})
+	}
 }
 
 // collectExpressionTypeReferences collects direct type references from an expression
