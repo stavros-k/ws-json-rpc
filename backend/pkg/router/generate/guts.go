@@ -17,6 +17,8 @@ import (
 	"github.com/coder/guts/config"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/oasdiff/yaml"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // OpenAPICollector handles TypeScript AST parsing and metadata extraction from Go types.
@@ -703,7 +705,8 @@ func (g *OpenAPICollector) extractEnumMemberValues(enum *bindings.Enum) ([]EnumV
 func generateDisplayType(ft FieldType) string {
 	switch ft.Kind {
 	case FieldKindPrimitive, FieldKindReference, FieldKindEnum:
-		return ft.Type
+		caser := cases.Title(language.English)
+		return caser.String(ft.Type)
 
 	case FieldKindArray:
 		if ft.ItemsType != nil {
