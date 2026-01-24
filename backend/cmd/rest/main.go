@@ -154,11 +154,12 @@ func main() {
 
 	if config.Generate {
 		if err := collector.Generate(); err != nil {
-			logger.Error("failed to generate API documentation", utils.ErrAttr(err))
-			os.Exit(1)
+			fatalIfErr(logger, fmt.Errorf("failed to generate API documentation: %w", err))
 		}
+
 		logger.Info("API documentation generated, exiting")
-		os.Exit(0)
+
+		return
 	}
 
 	addr := fmt.Sprintf(":%d", config.Port)

@@ -2,14 +2,15 @@ package generate
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"sort"
 	"ws-json-rpc/backend/pkg/utils"
 )
 
 // GenerateAPIDocs generates a custom API documentation JSON file
-// Similar to api_docs.json for RPC, but for REST APIs
-func GenerateAPIDocs(doc *APIDocumentation, outputPath string) error {
+// Similar to api_docs.json for RPC, but for REST APIs.
+func GenerateAPIDocs(l *slog.Logger, doc *APIDocumentation, outputPath string) error {
 	// Sort types and routes for deterministic output
 	sortDocumentation(doc)
 
@@ -18,7 +19,12 @@ func GenerateAPIDocs(doc *APIDocumentation, outputPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create documentation file: %w", err)
 	}
-	defer f.Close()
+
+	defer func() {
+		if err := f.Close(); err != nil {
+			l.Error("failed to close documentation file", utils.ErrAttr(err))
+		}
+	}()
 
 	// Write JSON using utils
 	if err := utils.ToJSONStreamIndent(f, doc); err != nil {
@@ -28,7 +34,7 @@ func GenerateAPIDocs(doc *APIDocumentation, outputPath string) error {
 	return nil
 }
 
-// sortDocumentation creates a copy of the documentation with sorted fields
+// sortDocumentation creates a copy of the documentation with sorted fields.
 func sortDocumentation(doc *APIDocumentation) {
 	for name, typeInfo := range doc.Types {
 		// Sort references
@@ -44,12 +50,13 @@ func sortDocumentation(doc *APIDocumentation) {
 	}
 }
 
-// sortUsageInfo sorts usage information for deterministic output
+// sortUsageInfo sorts usage information for deterministic output.
 func sortUsageInfo(usages []UsageInfo) {
 	sort.Slice(usages, func(i, j int) bool {
 		if usages[i].OperationID != usages[j].OperationID {
 			return usages[i].OperationID < usages[j].OperationID
 		}
+
 		return usages[i].Role < usages[j].Role
 	})
 }

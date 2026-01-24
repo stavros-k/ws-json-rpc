@@ -1,7 +1,7 @@
 package router
 
 import (
-	"fmt"
+	"errors"
 	"reflect"
 	"strings"
 )
@@ -30,6 +30,7 @@ func extractParamName(path string) []string {
 	// - userID:[0-9]+ -> userID
 	for _, param := range dirtyParams {
 		parts := strings.Split(param, ":")
+
 		param = parts[0]
 		if param != "" {
 			cleanParams = append(cleanParams, param)
@@ -39,11 +40,11 @@ func extractParamName(path string) []string {
 	return cleanParams
 }
 
-// extractTypeFromValue extracts the type name from a Go value using reflection
+// extractTypeFromValue extracts the type name from a Go value using reflection.
 func extractTypeFromValue(value any) (string, error) {
 	rt := reflect.TypeOf(value)
 	if rt == nil {
-		return "", fmt.Errorf("cannot extract type from nil value")
+		return "", errors.New("cannot extract type from nil value")
 	}
 
 	// Handle pointers
@@ -53,38 +54,43 @@ func extractTypeFromValue(value any) (string, error) {
 
 	typeName := rt.Name()
 	if typeName == "" {
-		return "", fmt.Errorf("anonymous type not supported")
+		return "", errors.New("anonymous type not supported")
 	}
 
 	return typeName, nil
 }
 
-// sanitizePath removes double slashes and trailing slashes from a path
+// sanitizePath removes double slashes and trailing slashes from a path.
 func sanitizePath(path string) string {
 	cleanPath := path
 	for strings.Contains(cleanPath, "//") {
 		cleanPath = strings.ReplaceAll(cleanPath, "//", "/")
 	}
+
 	cleanPath = strings.TrimSuffix(cleanPath, "/")
 	if cleanPath == "" {
 		cleanPath = "/"
 	}
+
 	return cleanPath
 }
 
-// validateRouteSpec validates a RouteSpec
+// validateRouteSpec validates a RouteSpec.
 func validateRouteSpec(spec RouteSpec) error {
 	if spec.OperationID == "" {
-		return fmt.Errorf("field OperationID required")
+		return errors.New("field OperationID required")
 	}
+
 	if spec.Summary == "" {
-		return fmt.Errorf("field Summary required")
+		return errors.New("field Summary required")
 	}
+
 	if spec.Description == "" {
-		return fmt.Errorf("field Description required")
+		return errors.New("field Description required")
 	}
+
 	if len(spec.Tags) == 0 {
-		return fmt.Errorf("field Tags requires at least one tag")
+		return errors.New("field Tags requires at least one tag")
 	}
 
 	return nil

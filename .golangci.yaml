@@ -104,3 +104,7 @@ linters:
     gosec:
       excludes:
         - G304
+    tagliatelle:
+      case:
+        rules:
+          json: goCamel

@@ -1,13 +1,15 @@
 package generate
 
 import (
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-// toOpenAPISchema converts extracted type metadata to an OpenAPI schema
+// toOpenAPISchema converts extracted type metadata to an OpenAPI schema.
 func toOpenAPISchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	switch typeInfo.Kind {
 	case TypeKindObject:
@@ -19,7 +21,7 @@ func toOpenAPISchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	}
 }
 
-// buildObjectSchema creates an OpenAPI object schema
+// buildObjectSchema creates an OpenAPI object schema.
 func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	schema := &openapi3.Schema{
 		Type:        &openapi3.Types{"object"},
@@ -44,7 +46,7 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	return schema, nil
 }
 
-// buildFieldSchema creates an OpenAPI schema for a field
+// buildFieldSchema creates an OpenAPI schema for a field.
 func buildFieldSchema(field FieldInfo) (*openapi3.SchemaRef, error) {
 	// Check if field has inline enum values
 	if len(field.TypeInfo.EnumValues) > 0 {
@@ -55,7 +57,7 @@ func buildFieldSchema(field FieldInfo) (*openapi3.SchemaRef, error) {
 	return buildSchemaFromFieldType(field.TypeInfo, field.Description)
 }
 
-// buildSchemaFromFieldType converts a FieldType to an OpenAPI schema
+// buildSchemaFromFieldType converts a FieldType to an OpenAPI schema.
 func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.SchemaRef, error) {
 	switch ft.Kind {
 	case FieldKindPrimitive:
@@ -66,20 +68,25 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 		if ft.Format != "" {
 			schema.Format = ft.Format
 		}
+
 		if ft.Nullable {
 			schema.Nullable = true
 		}
+
 		return &openapi3.SchemaRef{Value: schema}, nil
 
 	case FieldKindArray:
 		var itemSchema *openapi3.SchemaRef
+
 		if ft.ItemsType != nil {
 			var err error
+
 			itemSchema, err = buildSchemaFromFieldType(*ft.ItemsType, "")
 			if err != nil {
 				return nil, err
 			}
 		}
+
 		schema := &openapi3.Schema{
 			Type:        &openapi3.Types{"array"},
 			Items:       itemSchema,
@@ -88,6 +95,7 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 		if ft.Nullable {
 			schema.Nullable = true
 		}
+
 		return &openapi3.SchemaRef{Value: schema}, nil
 
 	case FieldKindReference, FieldKindEnum:
@@ -107,11 +115,12 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 		if ft.Nullable {
 			schema.Nullable = true
 		}
+
 		return &openapi3.SchemaRef{Value: schema}, nil
 
 	case FieldKindUnknown:
 		// Unknown type - fail with error
-		return nil, fmt.Errorf("cannot generate OpenAPI schema for unknown field type")
+		return nil, errors.New("cannot generate OpenAPI schema for unknown field type")
 
 	default:
 		// Unhandled type kind - fail with error
@@ -119,9 +128,10 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 	}
 }
 
-// buildInlineEnumSchemaRef creates an inline enum schema
+// buildInlineEnumSchemaRef creates an inline enum schema.
 func buildInlineEnumSchemaRef(field FieldInfo) *openapi3.SchemaRef {
 	enumValues := make([]any, len(field.TypeInfo.EnumValues))
+
 	var enumDesc strings.Builder
 
 	if field.Description != "" {
@@ -130,6 +140,7 @@ func buildInlineEnumSchemaRef(field FieldInfo) *openapi3.SchemaRef {
 	}
 
 	enumDesc.WriteString("Possible values:\n")
+
 	for i, ev := range field.TypeInfo.EnumValues {
 		enumValues[i] = ev.Value
 		if ev.Description != "" {
@@ -148,9 +159,10 @@ func buildInlineEnumSchemaRef(field FieldInfo) *openapi3.SchemaRef {
 	}
 }
 
-// buildEnumSchema creates an OpenAPI enum schema
+// buildEnumSchema creates an OpenAPI enum schema.
 func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	values := make([]any, len(typeInfo.EnumValues))
+
 	var enumDesc strings.Builder
 
 	if typeInfo.Description != "" {
@@ -159,6 +171,7 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	}
 
 	enumDesc.WriteString("Possible values:\n")
+
 	for i, ev := range typeInfo.EnumValues {
 		values[i] = ev.Value
 		if ev.Description != "" {
@@ -175,7 +188,7 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	}, nil
 }
 
-// buildComponentSchemas builds OpenAPI component schemas from all extracted types
+// buildComponentSchemas builds OpenAPI component schemas from all extracted types.
 func buildComponentSchemas(doc *APIDocumentation) (openapi3.Schemas, error) {
 	schemas := make(openapi3.Schemas)
 
@@ -191,7 +204,7 @@ func buildComponentSchemas(doc *APIDocumentation) (openapi3.Schemas, error) {
 	return schemas, nil
 }
 
-// generateOpenAPISpec generates a complete OpenAPI specification from documentation
+// generateOpenAPISpec generates a complete OpenAPI specification from documentation.
 func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 	spec := &openapi3.T{
 		OpenAPI:    "3.0.3",
@@ -205,6 +218,7 @@ func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to build component schemas: %w", err)
 	}
+
 	spec.Components.Schemas = schemas
 
 	// Build paths from routes
@@ -238,7 +252,7 @@ func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 	return spec, nil
 }
 
-// buildOperation builds an OpenAPI operation from RouteInfo
+// buildOperation builds an OpenAPI operation from RouteInfo.
 func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Operation, error) {
 	op := &openapi3.Operation{
 		OperationID: route.OperationID,
@@ -264,6 +278,7 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 			if err != nil {
 				return nil, fmt.Errorf("failed to build schema for parameter %s: %w", param.Name, err)
 			}
+
 			p.Schema = &openapi3.SchemaRef{Value: schema}
 		} else {
 			// Primitive type - create inline schema
@@ -295,7 +310,7 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 
 	// Add responses
 	for statusCode, resp := range route.Responses {
-		statusStr := fmt.Sprintf("%d", statusCode)
+		statusStr := strconv.Itoa(statusCode)
 		response := &openapi3.Response{
 			Description: &resp.Description,
 		}
@@ -317,7 +332,7 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 	return op, nil
 }
 
-// convertExamplesToOpenAPI converts examples map to OpenAPI format
+// convertExamplesToOpenAPI converts examples map to OpenAPI format.
 func convertExamplesToOpenAPI(examples map[string]any) openapi3.Examples {
 	if len(examples) == 0 {
 		return nil
@@ -329,5 +344,6 @@ func convertExamplesToOpenAPI(examples map[string]any) openapi3.Examples {
 			Value: &openapi3.Example{Value: value},
 		}
 	}
+
 	return result
 }

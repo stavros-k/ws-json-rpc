@@ -84,6 +84,7 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database schema: %w", err)
 	}
+
 	gutsGenerator.dbSchema = dbSchema
 
 	gutsGenerator.vm, err = bindings.New()
@@ -106,7 +107,7 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 	return gutsGenerator, nil
 }
 
-// Generate generates both the OpenAPI spec YAML and the docs JSON file
+// Generate generates both the OpenAPI spec YAML and the docs JSON file.
 func (g *OpenAPICollector) Generate() error {
 	// Compute type relationships
 	g.computeTypeRelationships()
@@ -115,6 +116,7 @@ func (g *OpenAPICollector) Generate() error {
 	if err := g.writeSpecYAML(g.openAPISpecFilePath); err != nil {
 		return fmt.Errorf("failed to write OpenAPI spec: %w", err)
 	}
+
 	g.l.Info("OpenAPI spec written", slog.String("file", g.openAPISpecFilePath))
 
 	// Write docs JSON
@@ -137,7 +139,9 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) {
 	pathRoutes.Routes[route.Method] = route
 }
 
-// timeTypeOverride returns a TypeOverride for time.Time
+// timeTypeOverride returns a TypeOverride for time.Time.
+//
+//nolint:ireturn
 func timeTypeOverride() bindings.ExpressionType {
 	return &ExternalType{
 		GoType:         "time.Time",
@@ -170,6 +174,7 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	}
 
 	var errs []error
+
 	for _, pkg := range goParser.Pkgs {
 		for _, e := range pkg.Errors {
 			errs = append(errs, fmt.Errorf("failed to parse go types in %s: %w", pkg.PkgPath, e))
@@ -197,17 +202,20 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	return ts, nil
 }
 
-// extractAllTypes walks the TypeScript AST and extracts all type information in one pass
+// extractAllTypes walks the TypeScript AST and extracts all type information in one pass.
 func (g *OpenAPICollector) extractAllTypes() error {
 	g.l.Debug("Starting type extraction from TypeScript AST")
+
 	var errs []error
 
 	g.tsParser.ForEach(func(name string, node bindings.Node) {
 		typeInfo, err := g.extractTypeFromNode(name, node)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("failed to extract type %s: %w", name, err))
+
 			return
 		}
+
 		g.types[name] = typeInfo
 	})
 
@@ -216,10 +224,11 @@ func (g *OpenAPICollector) extractAllTypes() error {
 	}
 
 	g.l.Debug("Completed type extraction", slog.Int("typeCount", len(g.types)))
+
 	return nil
 }
 
-// extractTypeFromNode extracts TypeInfo from a TypeScript AST node
+// extractTypeFromNode extracts TypeInfo from a TypeScript AST node.
 func (g *OpenAPICollector) extractTypeFromNode(name string, node bindings.Node) (*TypeInfo, error) {
 	g.l.Debug("Extracting type", slog.String("name", name), slog.String("nodeType", fmt.Sprintf("%T", node)))
 
@@ -235,7 +244,7 @@ func (g *OpenAPICollector) extractTypeFromNode(name string, node bindings.Node) 
 	}
 }
 
-// extractAliasType extracts type information from an alias node
+// extractAliasType extracts type information from an alias node.
 func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) (*TypeInfo, error) {
 	desc := g.extractComments(alias.SupportComments)
 
@@ -277,11 +286,14 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 			if err != nil {
 				return nil, fmt.Errorf("failed to analyze field type for %s.%s: %w", name, member.Name, err)
 			}
+
 			fieldInfo.Required = !member.QuestionToken
+
 			enumVals, err := g.extractEnumValues(member.Type)
 			if err != nil {
 				return nil, fmt.Errorf("failed to extract enum values for %s.%s: %w", name, member.Name, err)
 			}
+
 			fieldInfo.EnumValues = enumVals
 
 			field := FieldInfo{
@@ -304,10 +316,11 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 	}
 
 	g.l.Debug("Extracted alias type", slog.String("name", name), slog.String("kind", typeInfo.Kind), slog.Int("fieldCount", len(typeInfo.Fields)))
+
 	return typeInfo, nil
 }
 
-// extractInterfaceType extracts type information from an interface node
+// extractInterfaceType extracts type information from an interface node.
 func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Interface) (*TypeInfo, error) {
 	desc := g.extractComments(iface.SupportComments)
 	fields := make([]FieldInfo, 0, len(iface.Fields))
@@ -323,11 +336,14 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 		if err != nil {
 			return nil, fmt.Errorf("failed to analyze field type for %s.%s: %w", name, field.Name, err)
 		}
+
 		typeInfo.Required = !field.QuestionToken
+
 		enumVals, err := g.extractEnumValues(field.Type)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract enum values for %s.%s: %w", name, field.Name, err)
 		}
+
 		typeInfo.EnumValues = enumVals
 
 		fieldInfo := FieldInfo{
@@ -354,12 +370,14 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 	}
 
 	g.l.Debug("Extracted interface type", slog.String("name", name), slog.Int("fieldCount", len(fields)))
+
 	return typeInfo, nil
 }
 
-// extractEnumType extracts type information from an enum node
+// extractEnumType extracts type information from an enum node.
 func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*TypeInfo, error) {
 	desc := g.extractComments(enum.SupportComments)
+
 	enumVals, err := g.extractEnumMemberValues(enum)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract enum values for %s: %w", name, err)
@@ -378,7 +396,6 @@ func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*T
 }
 
 func (g *OpenAPICollector) getDocumentation() *APIDocumentation {
-
 	return &APIDocumentation{
 		Types:          g.types,
 		Routes:         g.routes,
@@ -388,7 +405,7 @@ func (g *OpenAPICollector) getDocumentation() *APIDocumentation {
 }
 
 // collectReferencesFromMembers collects direct type references by walking the raw AST
-// Only collects named types - rejects generics, inline objects, tuples, and intersections
+// Only collects named types - rejects generics, inline objects, tuples, and intersections.
 func (g *OpenAPICollector) collectReferencesFromMembers(members []*bindings.PropertySignature) []string {
 	refs := make(map[string]struct{})
 	for _, member := range members {
@@ -400,12 +417,14 @@ func (g *OpenAPICollector) collectReferencesFromMembers(members []*bindings.Prop
 	for ref := range refs {
 		refList = append(refList, ref)
 	}
+
 	sort.Strings(refList)
+
 	return refList
 }
 
 // computeTypeRelationships computes ReferencedBy and UsedBy for all types
-// (References are already computed during type extraction)
+// (References are already computed during type extraction).
 func (g *OpenAPICollector) computeTypeRelationships() {
 	g.l.Debug("Computing type relationships", slog.Int("typeCount", len(g.types)), slog.Int("routeCount", len(g.routes)))
 
@@ -418,7 +437,7 @@ func (g *OpenAPICollector) computeTypeRelationships() {
 	g.l.Debug("Computed UsedBy relationships")
 }
 
-// buildReferencedBy builds the inverse of References for all types
+// buildReferencedBy builds the inverse of References for all types.
 func (g *OpenAPICollector) buildReferencedBy() {
 	for typeName, typeInfo := range g.types {
 		for _, ref := range typeInfo.References {
@@ -434,7 +453,7 @@ func (g *OpenAPICollector) buildReferencedBy() {
 	}
 }
 
-// buildUsedBy tracks which operations use each type
+// buildUsedBy tracks which operations use each type.
 func (g *OpenAPICollector) buildUsedBy() {
 	for _, pathRoutes := range g.routes {
 		for _, route := range pathRoutes.Routes {
@@ -456,11 +475,12 @@ func (g *OpenAPICollector) buildUsedBy() {
 	}
 }
 
-// addUsage adds a UsageInfo entry to a type if it exists
+// addUsage adds a UsageInfo entry to a type if it exists.
 func (g *OpenAPICollector) addUsage(typeName, operationID, role string) {
 	if typeName == "" {
 		return
 	}
+
 	if typeInfo, exists := g.types[typeName]; exists {
 		typeInfo.UsedBy = append(typeInfo.UsedBy, UsageInfo{
 			OperationID: operationID,
@@ -470,7 +490,7 @@ func (g *OpenAPICollector) addUsage(typeName, operationID, role string) {
 }
 
 // collectExpressionTypeReferences collects direct type references from an expression
-// Only collects named types - rejects generics and inline objects (which should error during analysis)
+// Only collects named types - rejects generics and inline objects (which should error during analysis).
 func (g *OpenAPICollector) collectExpressionTypeReferences(expr bindings.ExpressionType, refs map[string]struct{}) {
 	if expr == nil {
 		return
@@ -503,7 +523,7 @@ func (g *OpenAPICollector) collectExpressionTypeReferences(expr bindings.Express
 	}
 }
 
-// generateOpenAPISpec generates a complete OpenAPI specification from all collected metadata
+// generateOpenAPISpec generates a complete OpenAPI specification from all collected metadata.
 func (g *OpenAPICollector) generateOpenAPISpec() (*openapi3.T, error) {
 	doc := g.getDocumentation()
 
@@ -554,27 +574,34 @@ func (g *OpenAPICollector) serializeExpressionType(expr bindings.ExpressionType)
 
 // isNullableUnion checks if a union type represents a nullable pattern (T | null or T | undefined).
 // Returns true and the non-null type if it's nullable, false and nil otherwise.
+//
+//nolint:ireturn
 func (g *OpenAPICollector) isNullableUnion(union *bindings.UnionType) (bool, bindings.ExpressionType) {
 	if len(union.Types) != 2 {
 		return false, nil
 	}
 
 	var nonNullType bindings.ExpressionType
+
 	hasNull := false
 
 	for _, t := range union.Types {
 		serialized, err := g.serializeExpressionType(t)
 		if err == nil && (serialized == "null" || serialized == "undefined") {
 			hasNull = true
+
 			continue
 		}
+
 		nonNullType = t
 	}
 
 	if hasNull && nonNullType != nil {
 		g.l.Debug("Detected nullable union", slog.String("nonNullType", fmt.Sprintf("%T", nonNullType)))
+
 		return true, nonNullType
 	}
+
 	return false, nil
 }
 
@@ -586,6 +613,7 @@ func (g *OpenAPICollector) extractComments(sc bindings.SupportComments) string {
 	}
 
 	var builder strings.Builder
+
 	for i, comment := range comments {
 		if i > 0 {
 			builder.WriteString(" ")
@@ -615,7 +643,7 @@ func (g *OpenAPICollector) extractEnumValues(expr bindings.ExpressionType) ([]En
 			return nil, nil
 		}
 		// Non-nullable unions shouldn't exist - this is an error
-		return nil, fmt.Errorf("unexpected non-nullable union type - Go->TS serialization should only have nullable unions")
+		return nil, errors.New("unexpected non-nullable union type - Go->TS serialization should only have nullable unions")
 	}
 
 	// Check if it's a reference to another type
@@ -674,26 +702,30 @@ func (g *OpenAPICollector) extractEnumMemberValues(enum *bindings.Enum) ([]EnumV
 	return values, nil
 }
 
-// generateDisplayType creates a human-readable type string from FieldType
+// generateDisplayType creates a human-readable type string from FieldType.
 func generateDisplayType(ft FieldType) string {
 	switch ft.Kind {
 	case FieldKindPrimitive:
 		if ft.Nullable {
 			return ft.Type + " | null"
 		}
+
 		return ft.Type
 
 	case FieldKindArray:
 		if ft.ItemsType != nil {
 			itemDisplay := generateDisplayType(*ft.ItemsType)
+
 			return itemDisplay + "[]"
 		}
+
 		return "array"
 
 	case FieldKindReference, FieldKindEnum:
 		if ft.Nullable {
 			return ft.Type + " | null"
 		}
+
 		return ft.Type
 
 	case FieldKindUnion:
@@ -702,8 +734,10 @@ func generateDisplayType(ft FieldType) string {
 			for i, t := range ft.UnionTypes {
 				types[i] = generateDisplayType(t)
 			}
+
 			return strings.Join(types, " | ")
 		}
+
 		return "union"
 
 	case FieldKindObject:
@@ -716,7 +750,7 @@ func generateDisplayType(ft FieldType) string {
 
 func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (FieldType, error) {
 	if expr == nil {
-		return FieldType{Kind: FieldKindUnknown, Type: "unknown"}, fmt.Errorf("cannot analyze nil expression type")
+		return FieldType{Kind: FieldKindUnknown, Type: "unknown"}, errors.New("cannot analyze nil expression type")
 	}
 
 	switch e := expr.(type) {
@@ -734,6 +768,7 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		if err != nil {
 			return FieldType{}, fmt.Errorf("failed to analyze array type: %w", err)
 		}
+
 		return FieldType{
 			Kind:      FieldKindArray,
 			Type:      "array",
@@ -757,6 +792,7 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 				}
 			}
 		}
+
 		return FieldType{Kind: FieldKindReference, Type: refName}, nil
 
 	case *bindings.UnionType:
@@ -767,14 +803,17 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		if !isNullable {
 			// Non-nullable unions shouldn't exist in Go->TS serialization
 			// (Go enums use bindings.Enum, not union literals)
-			return FieldType{}, fmt.Errorf("unexpected non-nullable union type - Go->TS serialization should only have nullable unions (T | null)")
+			return FieldType{}, errors.New("unexpected non-nullable union type - Go->TS serialization should only have nullable unions (T | null)")
 		}
+
 		result, err := g.analyzeFieldType(nonNullType)
 		if err != nil {
 			return FieldType{}, fmt.Errorf("failed to analyze nullable type: %w", err)
 		}
+
 		result.Nullable = true
 		g.l.Debug("Successfully analyzed nullable union", slog.String("baseType", result.Type))
+
 		return result, nil
 
 	case *bindings.LiteralKeyword:
@@ -791,35 +830,37 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		}
 	case *bindings.ArrayLiteralType:
 		// Tuple types are not supported in Go->TS serialization
-		return FieldType{}, fmt.Errorf("tuple types are not supported - Go does not have tuple types")
+		return FieldType{}, errors.New("tuple types are not supported - Go does not have tuple types")
 
 	case *bindings.TypeLiteralNode:
 		// Inline objects are not allowed - require named types
-		return FieldType{}, fmt.Errorf("inline object types are not supported - please create a named type instead")
+		return FieldType{}, errors.New("inline object types are not supported - please create a named type instead")
 
 	case *bindings.TypeIntersection:
 		// Type intersections are not supported in Go->TS serialization
-		return FieldType{}, fmt.Errorf("intersection types are not supported")
+		return FieldType{}, errors.New("intersection types are not supported")
 
 	default:
 		return FieldType{}, fmt.Errorf("unsupported expression type: %T", expr)
 	}
 }
 
-// writeSpecYAML writes the OpenAPI specification to a YAML file
+// writeSpecYAML writes the OpenAPI specification to a YAML file.
 func (g *OpenAPICollector) writeSpecYAML(filename string) error {
 	spec, err := g.generateOpenAPISpec()
 	if err != nil {
 		return fmt.Errorf("failed to generate spec: %w", err)
 	}
+
 	yamlData, err := yaml.Marshal(spec)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filename, yamlData, 0644)
+
+	return os.WriteFile(filename, yamlData, 0600)
 }
 
-// writeDocsJSON writes the complete API documentation to a JSON file
+// writeDocsJSON writes the complete API documentation to a JSON file.
 func (g *OpenAPICollector) writeDocsJSON() error {
 	if g.docsFilePath == "" {
 		return nil // Skip if no path configured
@@ -828,10 +869,11 @@ func (g *OpenAPICollector) writeDocsJSON() error {
 	doc := g.getDocumentation()
 
 	// Use GenerateAPIDocs for sorted, deterministic output
-	if err := GenerateAPIDocs(doc, g.docsFilePath); err != nil {
+	if err := GenerateAPIDocs(g.l, doc, g.docsFilePath); err != nil {
 		return fmt.Errorf("failed to write docs JSON: %w", err)
 	}
 
 	g.l.Info("API documentation written", slog.String("file", g.docsFilePath))
+
 	return nil
 }

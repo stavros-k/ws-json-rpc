@@ -6,6 +6,8 @@ import (
 )
 
 func TestExtractParamName(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		path     string
@@ -40,6 +42,8 @@ func TestExtractParamName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := extractParamName(tt.path)
 			if !reflect.DeepEqual(got, tt.expected) {
 				t.Errorf("extractParamName(%q) = %v, want %v", tt.path, got, tt.expected)

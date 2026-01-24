@@ -2,7 +2,7 @@ package httpapi
 
 import "time"
 
-// PingResponse is the response to a ping request
+// PingResponse is the response to a ping request.
 type PingResponse struct {
 	// Human-readable message
 	Message string `json:"message"`
@@ -11,17 +11,17 @@ type PingResponse struct {
 	Metadata *string    `json:"metadata,omitempty"`
 }
 
-// PingStatus represents the status of a ping request
+// PingStatus represents the status of a ping request.
 type PingStatus string
 
 const (
-	// PingStatusOK means the ping was successful
+	// PingStatusOK means the ping was successful.
 	PingStatusOK PingStatus = "OK"
-	// PingStatusError means there was an error with the ping
+	// PingStatusError means there was an error with the ping.
 	PingStatusError PingStatus = "ERROR"
 )
 
-// CreateUserRequest is the request to create a new user
+// CreateUserRequest is the request to create a new user.
 type CreateUserRequest struct {
 	// Username to create
 	Username string `json:"username"`
@@ -29,7 +29,7 @@ type CreateUserRequest struct {
 	Password string `json:"password"`
 }
 
-// CreateUserResponse is the response to a create user request
+// CreateUserResponse is the response to a create user request.
 type CreateUserResponse struct {
 	// ID of the created user
 	UserID string `json:"userID"`
@@ -37,13 +37,13 @@ type CreateUserResponse struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
-// GetTeamRequest is the request to get a team
+// GetTeamRequest is the request to get a team.
 type GetTeamRequest struct {
 	// ID of the team to get
 	TeamID string `json:"teamID"`
 }
 
-// User represents a user in the system
+// User represents a user in the system.
 type User struct {
 	// ID of the user
 	UserID string `json:"userID"`
@@ -51,7 +51,7 @@ type User struct {
 	Name string `json:"name"`
 }
 
-// GetTeamResponse is the response to a get team request
+// GetTeamResponse is the response to a get team request.
 type GetTeamResponse struct {
 	// ID of the team
 	TeamID string `json:"teamID"`
