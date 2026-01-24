@@ -5,7 +5,6 @@ package generate
 // TypeScript type definitions with full metadata.
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -1101,15 +1100,8 @@ func (g *OpenAPICollector) WriteDocsJSON() error {
 
 	doc := g.GetDocumentation()
 
-	f, err := os.Create(g.docsFilePath)
-	if err != nil {
-		return fmt.Errorf("failed to create docs file: %w", err)
-	}
-	defer f.Close()
-
-	encoder := json.NewEncoder(f)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(doc); err != nil {
+	// Use GenerateAPIDocs for sorted, deterministic output
+	if err := GenerateAPIDocs(doc, g.docsFilePath); err != nil {
 		return fmt.Errorf("failed to write docs JSON: %w", err)
 	}
 

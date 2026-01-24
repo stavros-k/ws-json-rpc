@@ -11,7 +11,7 @@ import (
 // Similar to api_docs.json for RPC, but for REST APIs
 func GenerateAPIDocs(doc *APIDocumentation, outputPath string) error {
 	// Sort types and routes for deterministic output
-	sortedDoc := sortDocumentation(doc)
+	sortDocumentation(doc)
 
 	// Create output file
 	f, err := os.Create(outputPath)
@@ -21,7 +21,7 @@ func GenerateAPIDocs(doc *APIDocumentation, outputPath string) error {
 	defer f.Close()
 
 	// Write JSON using utils
-	if err := utils.ToJSONStreamIndent(f, sortedDoc); err != nil {
+	if err := utils.ToJSONStreamIndent(f, doc); err != nil {
 		return fmt.Errorf("failed to write documentation: %w", err)
 	}
 
@@ -29,13 +29,7 @@ func GenerateAPIDocs(doc *APIDocumentation, outputPath string) error {
 }
 
 // sortDocumentation creates a copy of the documentation with sorted fields
-func sortDocumentation(doc *APIDocumentation) *APIDocumentation {
-	sorted := &APIDocumentation{
-		Types:  make(map[string]*TypeInfo),
-		Routes: make(map[string]*PathRoutes),
-	}
-
-	// Copy and sort types
+func sortDocumentation(doc *APIDocumentation) {
 	for name, typeInfo := range doc.Types {
 		sortedType := *typeInfo
 
@@ -45,15 +39,8 @@ func sortDocumentation(doc *APIDocumentation) *APIDocumentation {
 		// Sort used by
 		sortUsageInfo(sortedType.UsedBy)
 
-		sorted.Types[name] = &sortedType
+		doc.Types[name] = &sortedType
 	}
-
-	// Copy routes (keyed by path)
-	for path, pathRoutes := range doc.Routes {
-		sorted.Routes[path] = pathRoutes
-	}
-
-	return sorted
 }
 
 // sortUsageInfo sorts usage information for deterministic output
@@ -67,36 +54,4 @@ func sortUsageInfo(usages []UsageInfo) {
 		}
 		return usages[i].Role < usages[j].Role
 	})
-}
-
-// GetTypesSortedByName returns type names sorted alphabetically
-func GetTypesSortedByName(doc *APIDocumentation) []string {
-	names := make([]string, 0, len(doc.Types))
-	for name := range doc.Types {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
-}
-
-// GetRoutesSortedByPath returns routes sorted by path then method
-func GetRoutesSortedByPath(doc *APIDocumentation) []*RouteInfo {
-	routes := make([]*RouteInfo, 0)
-
-	// Flatten PathRoutes into a list of RouteInfo
-	for _, pathRoutes := range doc.Routes {
-		for _, route := range pathRoutes.Routes {
-			routes = append(routes, route)
-		}
-	}
-
-	// Sort by path then method
-	sort.Slice(routes, func(i, j int) bool {
-		if routes[i].Path != routes[j].Path {
-			return routes[i].Path < routes[j].Path
-		}
-		return routes[i].Method < routes[j].Method
-	})
-
-	return routes
 }
