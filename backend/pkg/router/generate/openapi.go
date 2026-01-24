@@ -95,9 +95,7 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 
 	case FieldKindReference, FieldKindEnum:
 		// Return a $ref to the type in components/schemas
-		ref := &openapi3.SchemaRef{
-			Ref: "#/components/schemas/" + ft.Type,
-		}
+		ref := createSchemaRef(ft.Type)
 		// Note: nullable on $ref requires wrapping in allOf or oneOf in OpenAPI 3.0
 		// For now, we'll handle this at a higher level if needed
 		return ref, nil
@@ -124,6 +122,7 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 }
 
 // buildEnumSchema creates an OpenAPI enum schema.
+// FIXME: Once upstream supports OpenAPI 3.1, switch to using oneOf with const.
 func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	values := make([]any, len(typeInfo.EnumValues))
 
@@ -260,14 +259,7 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 			Value: &openapi3.RequestBody{
 				Required:    true,
 				Description: route.Request.Description,
-				Content: openapi3.Content{
-					"application/json": &openapi3.MediaType{
-						Schema: &openapi3.SchemaRef{
-							Ref: "#/components/schemas/" + route.Request.Type,
-						},
-						Examples: convertExamplesToOpenAPI(route.Request.Examples),
-					},
-				},
+				Content:     createJSONContent(route.Request.Type, route.Request.Examples),
 			},
 		}
 	}
@@ -275,25 +267,33 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 	// Add responses
 	for statusCode, resp := range route.Responses {
 		statusStr := strconv.Itoa(statusCode)
-		response := &openapi3.Response{
-			Description: &resp.Description,
-		}
+		response := &openapi3.Response{Description: &resp.Description}
 
 		if resp.Type != "" {
-			response.Content = openapi3.Content{
-				"application/json": &openapi3.MediaType{
-					Schema: &openapi3.SchemaRef{
-						Ref: "#/components/schemas/" + resp.Type,
-					},
-					Examples: convertExamplesToOpenAPI(resp.Examples),
-				},
-			}
+			response.Content = createJSONContent(resp.Type, resp.Examples)
 		}
 
 		op.Responses.Set(statusStr, &openapi3.ResponseRef{Value: response})
 	}
 
 	return op, nil
+}
+
+// createJSONContent creates OpenAPI content for application/json with given type and examples.
+func createJSONContent(typeName string, examples map[string]any) openapi3.Content {
+	return openapi3.Content{
+		"application/json": &openapi3.MediaType{
+			Schema:   createSchemaRef(typeName),
+			Examples: convertExamplesToOpenAPI(examples),
+		},
+	}
+}
+
+// createSchemaRef creates a schema reference for the given type name.
+func createSchemaRef(typeName string) *openapi3.SchemaRef {
+	return &openapi3.SchemaRef{
+		Ref: "#/components/schemas/" + typeName,
+	}
 }
 
 // convertExamplesToOpenAPI converts examples map to OpenAPI format.
@@ -304,9 +304,7 @@ func convertExamplesToOpenAPI(examples map[string]any) openapi3.Examples {
 
 	result := make(openapi3.Examples)
 	for name, value := range examples {
-		result[name] = &openapi3.ExampleRef{
-			Value: &openapi3.Example{Value: value},
-		}
+		result[name] = &openapi3.ExampleRef{Value: &openapi3.Example{Value: value}}
 	}
 
 	return result
