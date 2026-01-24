@@ -19,14 +19,6 @@ import (
 	"github.com/oasdiff/yaml"
 )
 
-// ExternalType represents an external Go type with metadata for OpenAPI generation
-type ExternalType struct {
-	bindings.LiteralKeyword
-	GoType         string // Original Go type (e.g., "time.Time")
-	TypeScriptType string // TypeScript representation (e.g., "string")
-	OpenAPIFormat  string // OpenAPI format (e.g., "date-time")
-}
-
 // OpenAPICollector handles TypeScript AST parsing and metadata extraction from Go types.
 // It walks the TypeScript AST to extract comprehensive type information in a single pass.
 type OpenAPICollector struct {

@@ -31,15 +31,13 @@ func GenerateAPIDocs(doc *APIDocumentation, outputPath string) error {
 // sortDocumentation creates a copy of the documentation with sorted fields
 func sortDocumentation(doc *APIDocumentation) {
 	for name, typeInfo := range doc.Types {
-		sortedType := *typeInfo
-
 		// Sort references
-		sort.Strings(sortedType.References)
+		sort.Strings(typeInfo.References)
 
 		// Sort used by
-		sortUsageInfo(sortedType.UsedBy)
+		sortUsageInfo(typeInfo.UsedBy)
 
-		doc.Types[name] = &sortedType
+		doc.Types[name] = typeInfo
 	}
 }
 

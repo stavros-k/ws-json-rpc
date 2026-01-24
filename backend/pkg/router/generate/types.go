@@ -1,26 +1,16 @@
 package generate
 
 import (
-	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/coder/guts/bindings"
 )
 
-// RouteMetadataCollector is the interface that RouteBuilder uses to collect route metadata
-type RouteMetadataCollector interface {
-	RegisterRoute(route *RouteInfo)
-	GenerateOpenAPISpec() (*openapi3.T, error)
-	Spec() (*openapi3.T, error)
-	WriteSpecYAML(filename string) error
-	Generate() error
+// ExternalType represents an external Go type with metadata for OpenAPI generation
+type ExternalType struct {
+	bindings.LiteralKeyword
+	GoType         string // Original Go type (e.g., "time.Time")
+	TypeScriptType string // TypeScript representation (e.g., "string")
+	OpenAPIFormat  string // OpenAPI format (e.g., "date-time")
 }
-
-// NoopCollector is a no-op implementation of RouteMetadataCollector
-type NoopCollector struct{}
-
-func (n *NoopCollector) RegisterRoute(route *RouteInfo)            {}
-func (n *NoopCollector) GenerateOpenAPISpec() (*openapi3.T, error) { return nil, nil }
-func (n *NoopCollector) Spec() (*openapi3.T, error)                { return nil, nil }
-func (n *NoopCollector) WriteSpecYAML(filename string) error       { return nil }
-func (n *NoopCollector) Generate() error                           { return nil }
 
 // Type kind constants for TypeInfo
 const (
@@ -69,8 +59,8 @@ type FieldType struct {
 // FieldInfo describes a field in a struct (used in high-level API documentation)
 type FieldInfo struct {
 	Name        string    `json:"name"`
-	DisplayType string    `json:"displayType"`          // Human-readable type string (e.g., "User[]", "string | null")
-	TypeInfo    FieldType `json:"typeInfo"`             // Structured type information
+	DisplayType string    `json:"displayType"` // Human-readable type string (e.g., "User[]", "string | null")
+	TypeInfo    FieldType `json:"typeInfo"`    // Structured type information
 	Description string    `json:"description,omitempty"`
 	GoType      string    `json:"goType,omitempty"` // Original Go type (for external types like time.Time)
 }
@@ -92,10 +82,9 @@ type EnumValue struct {
 
 // UsageInfo tracks where a type is used
 type UsageInfo struct {
-	Location string `json:"location"`          // "route", "type"
-	Target   string `json:"target"`            // Route operationID or type name
-	Role     string `json:"role"`              // "request", "response", "field", "parameter"
-	Context  string `json:"context,omitempty"` // Additional context (field name, status code, etc.)
+	Location string `json:"location"` // "route", "type"
+	Target   string `json:"target"`   // Route operationID or type name
+	Role     string `json:"role"`     // "request", "response", "field", "parameter"
 }
 
 // RouteInfo contains metadata about a REST route
