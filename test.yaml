@@ -68,6 +68,8 @@ components:
             type: object
         PingStatus:
             description: |
+                PingStatus represents the status of a ping request
+
                 Possible values:
                 - `ERROR`: PingStatusError means there was an error with the ping
                 - `OK`: PingStatusOK means the ping was successful

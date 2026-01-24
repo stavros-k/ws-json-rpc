@@ -84,7 +84,6 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database schema: %w", err)
 	}
-	l.Info("Database schema generated", slog.String("file", opts.DatabaseSchemaFileOutputPath))
 	gutsGenerator.dbSchema = dbSchema
 
 	gutsGenerator.vm, err = bindings.New()
@@ -189,9 +188,6 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	}
 
 	ts.ApplyMutations(
-		// config.EnumAsTypes,
-		config.EnumLists,
-		config.ExportTypes,
 		config.InterfaceToType,
 		config.SimplifyOptional,
 	)
@@ -248,14 +244,18 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 
 	switch alias := alias.Type.(type) {
 	case *bindings.UnionType:
-		// Check if it's a union type (enum)
+		// Union types in Go->TS should only be nullable types (T | null)
+		// Enums use bindings.Enum, not union literals
 		g.l.Debug("Analyzing alias type kind", slog.String("type", name), slog.String("kind", "union"))
-		// Check if it's a string enum
-		enumVals := g.extractLiteralsFromUnion(alias)
-		if len(enumVals) > 0 {
-			typeInfo.Kind = TypeKindStringEnum
-			typeInfo.EnumValues = enumVals
+
+		// Check if it's nullable
+		isNullable, _ := g.isNullableUnion(alias)
+		if !isNullable {
+			// Non-nullable unions shouldn't exist
+			return nil, fmt.Errorf("unexpected non-nullable union type for alias %s - use Go enums instead", name)
 		}
+		// This is just a nullable alias - treat as object and field analysis will handle it
+		typeInfo.Kind = TypeKindAlias
 	case *bindings.TypeLiteralNode:
 		g.l.Debug("Analyzing alias type kind", slog.String("type", name), slog.String("kind", "object"))
 		// Check if it's an alias to a type literal (object)
@@ -274,7 +274,11 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 				return nil, fmt.Errorf("failed to analyze field type for %s.%s: %w", name, member.Name, err)
 			}
 			fieldInfo.Required = !member.QuestionToken
-			fieldInfo.EnumValues = g.extractEnumValues(member.Type)
+			enumVals, err := g.extractEnumValues(member.Type)
+			if err != nil {
+				return nil, fmt.Errorf("failed to extract enum values for %s.%s: %w", name, member.Name, err)
+			}
+			fieldInfo.EnumValues = enumVals
 
 			field := FieldInfo{
 				Name:        member.Name,
@@ -315,7 +319,11 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 			return nil, fmt.Errorf("failed to analyze field type for %s.%s: %w", name, field.Name, err)
 		}
 		typeInfo.Required = !field.QuestionToken
-		typeInfo.EnumValues = g.extractEnumValues(field.Type)
+		enumVals, err := g.extractEnumValues(field.Type)
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract enum values for %s.%s: %w", name, field.Name, err)
+		}
+		typeInfo.EnumValues = enumVals
 
 		fieldInfo := FieldInfo{
 			Name:        field.Name,
@@ -344,13 +352,16 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 
 // extractEnumType extracts type information from an enum node
 func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*TypeInfo, error) {
-	// Note: bindings.Enum doesn't have SupportComments, so description will be empty
-	enumVals := g.extractEnumMemberValues(enum)
+	desc := g.extractComments(enum.SupportComments)
+	enumVals, err := g.extractEnumMemberValues(enum)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract enum values for %s: %w", name, err)
+	}
 
 	return &TypeInfo{
 		Name:        name,
 		Kind:        TypeKindStringEnum,
-		Description: "",
+		Description: desc,
 		EnumValues:  enumVals,
 		UsedBy:      []UsageInfo{},
 	}, nil
@@ -526,6 +537,31 @@ func (g *OpenAPICollector) serializeExpressionType(expr bindings.ExpressionType)
 	return serialized, nil
 }
 
+// isNullableUnion checks if a union type represents a nullable pattern (T | null or T | undefined).
+// Returns true and the non-null type if it's nullable, false and nil otherwise.
+func (g *OpenAPICollector) isNullableUnion(union *bindings.UnionType) (bool, bindings.ExpressionType) {
+	if len(union.Types) != 2 {
+		return false, nil
+	}
+
+	var nonNullType bindings.ExpressionType
+	hasNull := false
+
+	for _, t := range union.Types {
+		serialized, err := g.serializeExpressionType(t)
+		if err == nil && (serialized == "null" || serialized == "undefined") {
+			hasNull = true
+			continue
+		}
+		nonNullType = t
+	}
+
+	if hasNull && nonNullType != nil {
+		return true, nonNullType
+	}
+	return false, nil
+}
+
 // extractComments concatenates all comments into a single space-separated string.
 func (g *OpenAPICollector) extractComments(sc bindings.SupportComments) string {
 	comments := sc.Comments()
@@ -547,60 +583,67 @@ func (g *OpenAPICollector) extractComments(sc bindings.SupportComments) string {
 
 // extractEnumValues extracts string literal values from string enum types.
 // Handles both direct unions and references to union types.
-func (g *OpenAPICollector) extractEnumValues(expr bindings.ExpressionType) []EnumValue {
+func (g *OpenAPICollector) extractEnumValues(expr bindings.ExpressionType) ([]EnumValue, error) {
 	if expr == nil {
-		return nil
+		return nil, nil
 	}
 
 	switch e := expr.(type) {
 	case *ExternalType:
 		// Skip external types
-		return nil
+		return nil, nil
 	case *bindings.UnionType:
-		// Check if it's a direct union type
-		return g.extractLiteralsFromUnion(e)
+		// Only nullable unions (T | null) should exist in Go->TS serialization
+		// Union literals like "a" | "b" don't exist (Go enums use bindings.Enum instead)
+		if isNullable, _ := g.isNullableUnion(e); isNullable {
+			return nil, nil
+		}
+		// Non-nullable unions shouldn't exist - this is an error
+		return nil, fmt.Errorf("unexpected non-nullable union type - Go->TS serialization should only have nullable unions")
 	}
 
 	// Check if it's a reference to another type
 	ref, ok := expr.(*bindings.ReferenceType)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	node, exists := g.tsParser.Node(ref.Name.String())
 	if !exists {
-		return nil
+		return nil, nil
 	}
 
 	// Check if the referenced type is an alias to a union
+	// Since we don't use guts enum-to-union mutation, union literals don't exist
+	// All unions should be nullable types only
 	alias, ok := node.(*bindings.Alias)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
 	union, ok := alias.Type.(*bindings.UnionType)
 	if !ok {
-		return nil
+		return nil, nil
 	}
 
-	return g.extractLiteralsFromUnion(union)
+	// Nullable unions don't have enum values
+	if isNullable, _ := g.isNullableUnion(union); isNullable {
+		return nil, nil
+	}
+
+	// Non-nullable union reference is unexpected
+	return nil, fmt.Errorf("unexpected non-nullable union type reference: %s", ref.Name.String())
 }
 
 // extractEnumMemberValues extracts string literal values with comments from enum members.
-func (g *OpenAPICollector) extractEnumMemberValues(enum *bindings.Enum) []EnumValue {
+func (g *OpenAPICollector) extractEnumMemberValues(enum *bindings.Enum) ([]EnumValue, error) {
 	var values []EnumValue
 
 	for _, member := range enum.Members {
 		// Serialize the enum member value to get its string representation
 		valueStr, err := g.serializeExpressionType(member.Value)
 		if err != nil {
-			// Is this expected? Or should we error?
-			g.l.Warn("Failed to serialize enum member value",
-				slog.String("enum", enum.Name.String()),
-				slog.String("member", member.Name),
-				slog.String("error", err.Error()))
-
-			continue
+			return nil, fmt.Errorf("failed to serialize enum member value for %s.%s: %w", enum.Name.String(), member.Name, err)
 		}
 
 		// Remove quotes from string literals
@@ -612,34 +655,7 @@ func (g *OpenAPICollector) extractEnumMemberValues(enum *bindings.Enum) []EnumVa
 		})
 	}
 
-	return values
-}
-
-// extractLiteralsFromUnion extracts string literal values from a union, ignoring other types.
-// Note: Union literals don't have comments, so Description will be empty. // FIXME: Check if we can improve this upstream.
-// For enums with comments, use extractEnumMemberValues instead.
-func (g *OpenAPICollector) extractLiteralsFromUnion(union *bindings.UnionType) []EnumValue {
-	var values []EnumValue
-
-	for _, member := range union.Types {
-		lit, ok := member.(*bindings.LiteralType)
-		if !ok {
-			// TODO: Is this expected? Or should we error?
-			g.l.Warn("Skipping non-literal union member", slog.String("memberType", fmt.Sprintf("%T", member)))
-			continue
-		}
-
-		// Check if the literal value is a string
-		strVal, ok := lit.Value.(string)
-		if !ok {
-			g.l.Warn("Skipping non-string union member", slog.String("memberType", fmt.Sprintf("%T", member)))
-			continue
-		}
-
-		values = append(values, EnumValue{Value: strVal})
-	}
-
-	return values
+	return values, nil
 }
 
 // generateDisplayType creates a human-readable type string from FieldType
@@ -728,53 +744,20 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		return FieldType{Kind: FieldKindReference, Type: refName}, nil
 
 	case *bindings.UnionType:
-		// Union types (could be enums or nullable types)
+		// Check for nullable pattern FIRST: T | null or null | T or T | undefined
+		isNullable, nonNullType := g.isNullableUnion(e)
+		if !isNullable {
 
-		// Check if it's a string enum
-		if len(g.extractLiteralsFromUnion(e)) > 0 {
-			return FieldType{Kind: FieldKindEnum, Type: "string"}, nil
+			// Non-nullable unions shouldn't exist in Go->TS serialization
+			// (Go enums use bindings.Enum, not union literals)
+			return FieldType{}, fmt.Errorf("unexpected non-nullable union type - Go->TS serialization should only have nullable unions (T | null)")
 		}
-
-		// Check for nullable pattern: T | null or null | T or T | undefined
-		if len(e.Types) == 2 {
-			var nonNullType bindings.ExpressionType
-			hasNull := false
-
-			for _, t := range e.Types {
-				// Serialize the type to check if it's null/undefined
-				serialized, err := g.serializeExpressionType(t)
-				if err == nil && (serialized == "null" || serialized == "undefined") {
-					hasNull = true
-					continue
-				}
-				nonNullType = t
-			}
-
-			// If we found exactly one null and one non-null type, it's nullable
-			if hasNull && nonNullType != nil {
-				result, err := g.analyzeFieldType(nonNullType)
-				if err != nil {
-					return FieldType{}, fmt.Errorf("failed to analyze nullable type: %w", err)
-				}
-				result.Nullable = true
-				return result, nil
-			}
+		result, err := g.analyzeFieldType(nonNullType)
+		if err != nil {
+			return FieldType{}, fmt.Errorf("failed to analyze nullable type: %w", err)
 		}
-
-		// For complex unions, analyze each member
-		var unionMembers []FieldType
-		for _, t := range e.Types {
-			memberType, err := g.analyzeFieldType(t)
-			if err != nil {
-				return FieldType{}, fmt.Errorf("failed to analyze union member: %w", err)
-			}
-			unionMembers = append(unionMembers, memberType)
-		}
-		return FieldType{
-			Kind:       FieldKindUnion,
-			Type:       "union",
-			UnionTypes: unionMembers,
-		}, nil
+		result.Nullable = true
+		return result, nil
 
 	case *bindings.LiteralKeyword:
 		// Literal keywords (primitives)

@@ -206,7 +206,7 @@
     "PingStatus": {
       "name": "PingStatus",
       "kind": "string_enum",
-      "description": "",
+      "description": "PingStatus represents the status of a ping request",
       "enumValues": [
         {
           "value": "ERROR",
