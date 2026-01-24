@@ -1,5 +1,34 @@
 components:
     schemas:
+        CreateUserResponse:
+            description: CreateUserResponse is the response to a create user request
+            properties:
+                createdAt:
+                    description: external type "time.Time", to include this type the package must be explicitly included in the parsing Creation timestamp
+                    format: date-time
+                    type: string
+                userID:
+                    description: ID of the created user
+                    type: string
+            required:
+                - userID
+                - createdAt
+            type: object
+        GetTeamResponse:
+            description: GetTeamResponse is the response to a get team request
+            properties:
+                teamID:
+                    description: ID of the team
+                    type: string
+                users:
+                    description: Users in the team
+                    items:
+                        $ref: '#/components/schemas/User'
+                    type: array
+            required:
+                - teamID
+                - users
+            type: object
         PingResponse:
             description: PingResponse is the response to a ping request
             properties:
@@ -7,14 +36,32 @@ components:
                     description: Human-readable message
                     type: string
                 status:
-                    description: Status of the ping
-                    enum:
-                        - ERROR
-                        - OK
-                    type: string
+                    $ref: '#/components/schemas/PingStatus'
             required:
                 - message
                 - status
+            type: object
+        PingStatus:
+            description: |
+                Possible values:
+                - `ERROR`: PingStatusError means there was an error with the ping
+                - `OK`: PingStatusOK means the ping was successful
+            enum:
+                - ERROR
+                - OK
+            type: string
+        User:
+            description: User represents a user in the system
+            properties:
+                name:
+                    description: Name of the user
+                    type: string
+                userID:
+                    description: ID of the user
+                    type: string
+            required:
+                - userID
+                - name
             type: object
 info:
     title: ""
@@ -37,6 +84,30 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/PingResponse'
                     description: Successful ping response
+                "201":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        teamID: "123"
+                                        users:
+                                            - name: John
+                                              userID: "123"
+                            schema:
+                                $ref: '#/components/schemas/GetTeamResponse'
+                    description: Successful ping response
+                "400":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        createdAt: "2026-01-24T11:28:05.598851+02:00"
+                                        userID: "123"
+                            schema:
+                                $ref: '#/components/schemas/CreateUserResponse'
+                    description: Invalid request
                 "500":
                     content:
                         application/json:

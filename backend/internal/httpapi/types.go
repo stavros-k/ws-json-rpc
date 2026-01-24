@@ -1,5 +1,7 @@
 package httpapi
 
+import "time"
+
 // PingResponse is the response to a ping request
 type PingResponse struct {
 	// Human-readable message
@@ -30,6 +32,8 @@ type CreateUserRequest struct {
 type CreateUserResponse struct {
 	// ID of the created user
 	UserID string `json:"userID"`
+	// Creation timestamp
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 // GetTeamRequest is the request to get a team

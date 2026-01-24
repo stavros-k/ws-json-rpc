@@ -55,6 +55,20 @@ func main() {
 					"example-1": httpapi.PingResponse{Message: "Pong", Status: httpapi.PingStatusOK},
 				},
 			},
+			201: {
+				Description: "Successful ping response",
+				Type:        httpapi.GetTeamResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.GetTeamResponse{TeamID: "123", Users: []httpapi.User{{UserID: "123", Name: "John"}}},
+				},
+			},
+			400: {
+				Description: "Invalid request",
+				Type:        httpapi.CreateUserResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.CreateUserResponse{UserID: "123", CreatedAt: time.Now()},
+				},
+			},
 			500: {
 				Description: "Internal server error",
 				Type:        httpapi.PingResponse{},
