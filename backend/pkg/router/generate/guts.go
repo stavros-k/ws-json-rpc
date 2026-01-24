@@ -11,6 +11,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"ws-json-rpc/backend/pkg/utils"
 
 	"github.com/coder/guts"
 	"github.com/coder/guts/bindings"
@@ -129,16 +130,42 @@ func (g *OpenAPICollector) Generate() error {
 	return nil
 }
 
+// stringifyResponseExamples converts response examples to stringified JSON.
+func stringifyResponseExamples(r ResponseInfo) ResponseInfo {
+	r.ExamplesStringified = make(map[string]string)
+	for name, example := range r.Examples {
+		r.ExamplesStringified[name] = string(utils.MustToJSONIndent(example))
+	}
+	return r
+}
+
+// stringifyRequestExamples converts request examples to stringified JSON.
+func stringifyRequestExamples(r *RequestInfo) *RequestInfo {
+	r.ExamplesStringified = make(map[string]string)
+	for name, example := range r.Examples {
+		r.ExamplesStringified[name] = string(utils.MustToJSONIndent(example))
+	}
+	return r
+}
+
 func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) {
 	// Get or create PathRoutes for this path
 	pathRoutes, exists := g.routes[route.Path]
 	if !exists {
-		pathRoutes = &PathRoutes{Routes: make(map[string]*RouteInfo)}
+		pathRoutes = &PathRoutes{Verbs: make(map[string]*RouteInfo)}
 		g.routes[route.Path] = pathRoutes
 	}
 
+	if route.Request != nil {
+		route.Request = stringifyRequestExamples(route.Request)
+	}
+
+	for statusCode, response := range route.Responses {
+		route.Responses[statusCode] = stringifyResponseExamples(response)
+	}
+
 	// Add route under its HTTP method
-	pathRoutes.Routes[route.Method] = route
+	pathRoutes.Verbs[route.Method] = route
 }
 
 // timeTypeOverride returns a TypeOverride for time.Time.
@@ -471,7 +498,7 @@ func (g *OpenAPICollector) buildReferencedBy() {
 // buildUsedBy tracks which operations use each type.
 func (g *OpenAPICollector) buildUsedBy() {
 	for _, pathRoutes := range g.routes {
-		for _, route := range pathRoutes.Routes {
+		for _, route := range pathRoutes.Verbs {
 			// Track request type
 			if route.Request != nil {
 				g.addUsage(route.Request.Type, route.OperationID, "request")

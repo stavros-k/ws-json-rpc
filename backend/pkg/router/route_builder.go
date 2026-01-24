@@ -165,6 +165,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 			return fmt.Errorf("parameter In must be one of %v for %s %s", validInValues, spec.method, spec.fullPath)
 		}
 
+		// FIXME: we should not do the reflection here, generator should handle it.
 		typeName, err := extractTypeFromValue(paramSpec.Type)
 		if err != nil {
 			return fmt.Errorf("failed to get type name for parameter %s: %w", name, err)
@@ -206,6 +207,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 			return errors.New("request type is nil")
 		}
 
+		// FIXME: we should not do the reflection here, generator should handle it.
 		typeName, err := extractTypeFromValue(spec.RequestType.Type)
 		if err != nil {
 			return fmt.Errorf("failed to get type name for request: %w", err)
@@ -228,6 +230,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 		}
 
 		if respSpec.Type != nil {
+			// FIXME: we should not do the reflection here, generator should handle it.
 			typeName, err := extractTypeFromValue(respSpec.Type)
 			if err != nil {
 				return fmt.Errorf("failed to get type name for response %d: %w", statusCode, err)

@@ -349,7 +349,7 @@
   },
   "routes": {
     "/ping": {
-      "routes": {
+      "verbs": {
         "GET": {
           "operationID": "ping",
           "summary": "Ping the server",
@@ -366,10 +366,7 @@
               "type": "PingResponse",
               "description": "Successful ping response",
               "examples": {
-                "example-1": {
-                  "message": "Pong",
-                  "status": "OK"
-                }
+                "example-1": "{\n  \"message\": \"Pong\",\n  \"status\": \"OK\"\n}"
               }
             },
             "201": {
@@ -377,15 +374,7 @@
               "type": "GetTeamResponse",
               "description": "Successful ping response",
               "examples": {
-                "example-1": {
-                  "teamID": "123",
-                  "users": [
-                    {
-                      "userID": "123",
-                      "name": "John"
-                    }
-                  ]
-                }
+                "example-1": "{\n  \"teamID\": \"123\",\n  \"users\": [\n    {\n      \"userID\": \"123\",\n      \"name\": \"John\"\n    }\n  ]\n}"
               }
             },
             "400": {
@@ -393,24 +382,21 @@
               "type": "CreateUserResponse",
               "description": "Invalid request",
               "examples": {
-                "example-1": {
-                  "userID": "123",
-                  "createdAt": "2000-01-01T00:00:00Z"
-                }
+                "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\"\n}"
               }
             },
             "500": {
               "statusCode": 500,
               "type": "PingResponse",
               "description": "Internal server error",
-              "examples": null
+              "examples": {}
             }
           }
         }
       }
     },
     "/team/{teamID}": {
-      "routes": {
+      "verbs": {
         "GET": {
           "operationID": "getTeam",
           "summary": "Get a team",
@@ -423,15 +409,7 @@
             "type": "GetTeamRequest",
             "description": "",
             "examples": {
-              "example-1": {
-                "teamID": "abxc",
-                "users": [
-                  {
-                    "userID": "Asdf",
-                    "name": ""
-                  }
-                ]
-              }
+              "example-1": "{\n  \"teamID\": \"abxc\",\n  \"users\": [\n    {\n      \"userID\": \"Asdf\",\n      \"name\": \"\"\n    }\n  ]\n}"
             }
           },
           "parameters": [
@@ -449,10 +427,7 @@
               "type": "PingResponse",
               "description": "Successful ping response",
               "examples": {
-                "example-1": {
-                  "message": "Pong",
-                  "status": "OK"
-                }
+                "example-1": "{\n  \"message\": \"Pong\",\n  \"status\": \"OK\"\n}"
               }
             },
             "201": {
@@ -460,15 +435,7 @@
               "type": "GetTeamResponse",
               "description": "Successful ping response",
               "examples": {
-                "example-1": {
-                  "teamID": "123",
-                  "users": [
-                    {
-                      "userID": "123",
-                      "name": "John"
-                    }
-                  ]
-                }
+                "example-1": "{\n  \"teamID\": \"123\",\n  \"users\": [\n    {\n      \"userID\": \"123\",\n      \"name\": \"John\"\n    }\n  ]\n}"
               }
             },
             "400": {
@@ -476,17 +443,14 @@
               "type": "CreateUserResponse",
               "description": "Invalid request",
               "examples": {
-                "example-1": {
-                  "userID": "123",
-                  "createdAt": "2000-01-01T00:00:00Z"
-                }
+                "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\"\n}"
               }
             },
             "500": {
               "statusCode": 500,
               "type": "PingResponse",
               "description": "Internal server error",
-              "examples": null
+              "examples": {}
             }
           }
         }

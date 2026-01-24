@@ -2,16 +2,17 @@ package generate
 
 // TypeInfo contains comprehensive metadata about a Go type extracted from guts.
 type TypeInfo struct {
-	Name         string           `json:"name"`         // Type name (e.g., "PingResponse")
-	Kind         string           `json:"kind"`         // "Object", "String Enum", "Array", etc.
-	Description  string           `json:"description"`  // Type-level documentation
-	Deprecated   *DeprecationInfo `json:"deprecated"`   // Deprecation information
-	Fields       []FieldInfo      `json:"fields"`       // For object types: fields
-	EnumValues   []EnumValue      `json:"enumValues"`   // For enum types: enum constants
-	References   []string         `json:"references"`   // Types this type references
-	ReferencedBy []string         `json:"referencedBy"` // Types that reference this type
-	UsedBy       []UsageInfo      `json:"usedBy"`       // Operations/routes that use this type
-	GoType       string           `json:"-"`            // Original Go type (for external types)
+	Name               string           `json:"name"`               // Type name (e.g., "PingResponse")
+	Kind               string           `json:"kind"`               // "Object", "String Enum", "Array", etc.
+	Description        string           `json:"description"`        // Type-level documentation
+	Deprecated         *DeprecationInfo `json:"deprecated"`         // Deprecation information
+	Fields             []FieldInfo      `json:"fields"`             // For object types: fields
+	EnumValues         []EnumValue      `json:"enumValues"`         // For enum types: enum constants
+	References         []string         `json:"references"`         // Types this type references
+	ReferencedBy       []string         `json:"referencedBy"`       // Types that reference this type
+	UsedBy             []UsageInfo      `json:"usedBy"`             // Operations/routes that use this type
+	JSONRepresentation string           `json:"jsonRepresentation"` // JSON representation of the type FIXME: Implement this
+	GoType             string           `json:"-"`                  // Original Go type (for external types)
 }
 
 // FieldType represents the structured type information for a field.
@@ -68,9 +69,10 @@ type RouteInfo struct {
 
 // RequestInfo describes a request body.
 type RequestInfo struct {
-	Type        string         `json:"type"`
-	Description string         `json:"description"`
-	Examples    map[string]any `json:"examples"`
+	Type                string            `json:"type"`
+	Description         string            `json:"description"`
+	ExamplesStringified map[string]string `json:"examples"`
+	Examples            map[string]any    `json:"-"`
 }
 
 // ParameterInfo describes a route parameter.
@@ -84,15 +86,16 @@ type ParameterInfo struct {
 
 // ResponseInfo describes a response.
 type ResponseInfo struct {
-	StatusCode  int            `json:"statusCode"`
-	Type        string         `json:"type"` // Empty for responses without body
-	Description string         `json:"description"`
-	Examples    map[string]any `json:"examples"`
+	StatusCode          int               `json:"statusCode"`
+	Type                string            `json:"type"` // Empty for responses without body
+	Description         string            `json:"description"`
+	ExamplesStringified map[string]string `json:"examples"`
+	Examples            map[string]any    `json:"-"`
 }
 
 // PathRoutes groups routes by HTTP method for a given path.
 type PathRoutes struct {
-	Routes map[string]*RouteInfo `json:"routes"` // Keyed by HTTP method (GET, POST, etc.)
+	Verbs map[string]*RouteInfo `json:"verbs"` // Keyed by HTTP method (GET, POST, etc.)
 }
 
 // APIDocumentation is the complete API documentation structure.

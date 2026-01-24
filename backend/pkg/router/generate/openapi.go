@@ -206,7 +206,7 @@ func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 	for path, pathRoutes := range doc.Routes {
 		pathItem := &openapi3.PathItem{}
 
-		for method, route := range pathRoutes.Routes {
+		for method, route := range pathRoutes.Verbs {
 			op, err := buildOperation(route, doc.Types)
 			if err != nil {
 				return nil, fmt.Errorf("failed to build operation %s %s: %w", method, route.Path, err)
