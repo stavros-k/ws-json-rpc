@@ -58,6 +58,7 @@ components:
                     description: Human-readable message
                     type: string
                 metadata:
+                    nullable: true
                     type: string
                 status:
                     $ref: '#/components/schemas/PingStatus'
@@ -88,8 +89,9 @@ components:
                 - name
             type: object
 info:
-    title: ""
-    version: ""
+    description: Local API Documentation
+    title: Local API
+    version: vdev (unknown)
 openapi: 3.0.3
 paths:
     /ping:
@@ -210,3 +212,6 @@ paths:
             summary: Get a team
             tags:
                 - team
+servers:
+    - description: Local server
+      url: http://localhost:8080

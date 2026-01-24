@@ -43,6 +43,18 @@ func main() {
 			GoTypesDirPath:               "backend/internal/httpapi",
 			DatabaseSchemaFileOutputPath: "schema.sql",
 			DocsFileOutputPath:           "test.json",
+			OpenAPISpecOutputPath:        "test.yaml",
+			APIMetadata: generate.APIMetadata{
+				Title:       "Local API",
+				Version:     utils.GetVersionShort(),
+				Description: "Local API Documentation",
+				Servers: []generate.ServerInfo{
+					{
+						URL:         "http://localhost:8080",
+						Description: "Local server",
+					},
+				},
+			},
 		})
 		fatalIfErr(logger, err)
 	} else {
@@ -141,20 +153,11 @@ func main() {
 	}))
 
 	if config.Generate {
-		spec, err := collector.Spec()
-		if err != nil {
-			logger.Error("failed to generate spec", utils.ErrAttr(err))
+		if err := collector.Generate(); err != nil {
+			logger.Error("failed to generate API documentation", utils.ErrAttr(err))
 			os.Exit(1)
 		}
-		spec.Info.Title = "Local API"
-		spec.Info.Description = "Local API Documentation"
-		spec.Info.Version = utils.GetVersionShort()
-
-		if err := collector.WriteSpecYAML("test.yaml"); err != nil {
-			logger.Error("failed to write spec", utils.ErrAttr(err))
-			os.Exit(1)
-		}
-		logger.Info("OpenAPI spec generated, exiting")
+		logger.Info("API documentation generated, exiting")
 		os.Exit(0)
 	}
 

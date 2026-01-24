@@ -1,0 +1,333 @@
+{
+  "info": {
+    "title": "",
+    "version": "",
+    "description": ""
+  },
+  "types": {
+    "CreateUserRequest": {
+      "name": "CreateUserRequest",
+      "kind": "object",
+      "description": "CreateUserRequest is the request to create a new user",
+      "fields": [
+        {
+          "name": "username",
+          "displayType": "string",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "required": true
+          },
+          "description": "Username to create"
+        },
+        {
+          "name": "password",
+          "displayType": "string",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "required": true
+          },
+          "description": "Password to create"
+        }
+      ]
+    },
+    "CreateUserResponse": {
+      "name": "CreateUserResponse",
+      "kind": "object",
+      "description": "CreateUserResponse is the response to a create user request",
+      "fields": [
+        {
+          "name": "userID",
+          "displayType": "string",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "required": true
+          },
+          "description": "ID of the created user"
+        },
+        {
+          "name": "createdAt",
+          "displayType": "string",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "format": "date-time",
+            "required": true
+          },
+          "description": "Creation timestamp",
+          "goType": "time.Time"
+        }
+      ]
+    },
+    "GetTeamRequest": {
+      "name": "GetTeamRequest",
+      "kind": "object",
+      "description": "GetTeamRequest is the request to get a team",
+      "fields": [
+        {
+          "name": "teamID",
+          "displayType": "string",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "required": true
+          },
+          "description": "ID of the team to get"
+        }
+      ]
+    },
+    "GetTeamResponse": {
+      "name": "GetTeamResponse",
+      "kind": "object",
+      "description": "GetTeamResponse is the response to a get team request",
+      "fields": [
+        {
+          "name": "teamID",
+          "displayType": "string",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "required": true
+          },
+          "description": "ID of the team"
+        },
+        {
+          "name": "users",
+          "displayType": "User[]",
+          "typeInfo": {
+            "kind": "array",
+            "type": "array",
+            "required": true,
+            "itemsType": {
+              "kind": "reference",
+              "type": "User",
+              "required": false
+            }
+          },
+          "description": "Users in the team"
+        }
+      ]
+    },
+    "PingResponse": {
+      "name": "PingResponse",
+      "kind": "object",
+      "description": "PingResponse is the response to a ping request",
+      "fields": [
+        {
+          "name": "message",
+          "displayType": "string",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "required": true
+          },
+          "description": "Human-readable message"
+        },
+        {
+          "name": "status",
+          "displayType": "PingStatus",
+          "typeInfo": {
+            "kind": "reference",
+            "type": "PingStatus",
+            "required": true
+          },
+          "description": "Status of the ping"
+        },
+        {
+          "name": "metadata",
+          "displayType": "string | null",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "required": false,
+            "nullable": true
+          }
+        }
+      ]
+    },
+    "PingStatus": {
+      "name": "PingStatus",
+      "kind": "string_enum",
+      "description": "",
+      "enumValues": [
+        {
+          "value": "ERROR",
+          "description": "PingStatusError means there was an error with the ping"
+        },
+        {
+          "value": "OK",
+          "description": "PingStatusOK means the ping was successful"
+        }
+      ]
+    },
+    "User": {
+      "name": "User",
+      "kind": "object",
+      "description": "User represents a user in the system",
+      "fields": [
+        {
+          "name": "userID",
+          "displayType": "string",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "required": true
+          },
+          "description": "ID of the user"
+        },
+        {
+          "name": "name",
+          "displayType": "string",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "required": true
+          },
+          "description": "Name of the user"
+        }
+      ]
+    }
+  },
+  "routes": {
+    "/ping": {
+      "routes": {
+        "GET": {
+          "operationId": "ping",
+          "summary": "Ping the server",
+          "description": "Check if the server is alive",
+          "tags": [
+            "ping"
+          ],
+          "responses": {
+            "200": {
+              "statusCode": 200,
+              "type": "PingResponse",
+              "description": "Successful ping response",
+              "examples": {
+                "example-1": {
+                  "message": "Pong",
+                  "status": "OK"
+                }
+              }
+            },
+            "201": {
+              "statusCode": 201,
+              "type": "GetTeamResponse",
+              "description": "Successful ping response",
+              "examples": {
+                "example-1": {
+                  "teamID": "123",
+                  "users": [
+                    {
+                      "userID": "123",
+                      "name": "John"
+                    }
+                  ]
+                }
+              }
+            },
+            "400": {
+              "statusCode": 400,
+              "type": "CreateUserResponse",
+              "description": "Invalid request",
+              "examples": {
+                "example-1": {
+                  "userID": "123",
+                  "createdAt": "2000-01-01T00:00:00Z"
+                }
+              }
+            },
+            "500": {
+              "statusCode": 500,
+              "type": "PingResponse",
+              "description": "Internal server error"
+            }
+          }
+        }
+      }
+    },
+    "/team/{teamID}": {
+      "routes": {
+        "GET": {
+          "operationId": "getTeam",
+          "summary": "Get a team",
+          "description": "Get a team by its ID",
+          "tags": [
+            "team"
+          ],
+          "request": {
+            "type": "GetTeamRequest",
+            "examples": {
+              "example-1": {
+                "teamID": "abxc",
+                "users": [
+                  {
+                    "userID": "Asdf",
+                    "name": ""
+                  }
+                ]
+              }
+            }
+          },
+          "parameters": [
+            {
+              "name": "teamID",
+              "in": "path",
+              "type": "string",
+              "description": "ID of the team to get",
+              "required": true
+            }
+          ],
+          "responses": {
+            "200": {
+              "statusCode": 200,
+              "type": "PingResponse",
+              "description": "Successful ping response",
+              "examples": {
+                "example-1": {
+                  "message": "Pong",
+                  "status": "OK"
+                }
+              }
+            },
+            "201": {
+              "statusCode": 201,
+              "type": "GetTeamResponse",
+              "description": "Successful ping response",
+              "examples": {
+                "example-1": {
+                  "teamID": "123",
+                  "users": [
+                    {
+                      "userID": "123",
+                      "name": "John"
+                    }
+                  ]
+                }
+              }
+            },
+            "400": {
+              "statusCode": 400,
+              "type": "CreateUserResponse",
+              "description": "Invalid request",
+              "examples": {
+                "example-1": {
+                  "userID": "123",
+                  "createdAt": "2000-01-01T00:00:00Z"
+                }
+              }
+            },
+            "500": {
+              "statusCode": 500,
+              "type": "PingResponse",
+              "description": "Internal server error"
+            }
+          }
+        }
+      }
+    }
+  },
+  "databaseSchema": "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (version varchar(128) primary key);\nCREATE TABLE IF NOT EXISTS \"user\" (\n  \"id\" INTEGER PRIMARY KEY,\n  \"name\" TEXT NOT NULL,\n  \"email\" TEXT NOT NULL,\n  \"password\" TEXT NOT NULL,\n  \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, \"last_login\" TIMESTAMP);\n-- Dbmate schema migrations\nINSERT INTO \"schema_migrations\" (version) VALUES\n  ('20251009092116'),\n  ('20251009104248');"
+}

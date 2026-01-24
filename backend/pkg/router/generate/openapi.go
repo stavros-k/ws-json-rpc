@@ -36,7 +36,7 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 
 		schema.Properties[field.Name] = fieldSchema
 
-		if field.Required {
+		if field.TypeInfo.Required {
 			schema.Required = append(schema.Required, field.Name)
 		}
 	}
@@ -47,7 +47,7 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 // buildFieldSchema creates an OpenAPI schema for a field
 func buildFieldSchema(field FieldInfo) (*openapi3.SchemaRef, error) {
 	// Check if field has inline enum values
-	if len(field.EnumValues) > 0 {
+	if len(field.TypeInfo.EnumValues) > 0 {
 		return buildInlineEnumSchemaRef(field), nil
 	}
 
@@ -66,6 +66,9 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 		if ft.Format != "" {
 			schema.Format = ft.Format
 		}
+		if ft.Nullable {
+			schema.Nullable = true
+		}
 		return &openapi3.SchemaRef{Value: schema}, nil
 
 	case FieldKindArray:
@@ -77,42 +80,48 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 				return nil, err
 			}
 		}
-		return &openapi3.SchemaRef{
-			Value: &openapi3.Schema{
-				Type:        &openapi3.Types{"array"},
-				Items:       itemSchema,
-				Description: description,
-			},
-		}, nil
+		schema := &openapi3.Schema{
+			Type:        &openapi3.Types{"array"},
+			Items:       itemSchema,
+			Description: description,
+		}
+		if ft.Nullable {
+			schema.Nullable = true
+		}
+		return &openapi3.SchemaRef{Value: schema}, nil
 
 	case FieldKindReference, FieldKindEnum:
 		// Return a $ref to the type in components/schemas
-		return &openapi3.SchemaRef{
+		ref := &openapi3.SchemaRef{
 			Ref: "#/components/schemas/" + ft.Type,
-		}, nil
+		}
+		// Note: nullable on $ref requires wrapping in allOf or oneOf in OpenAPI 3.0
+		// For now, we'll handle this at a higher level if needed
+		return ref, nil
 
 	case FieldKindObject:
-		return &openapi3.SchemaRef{
-			Value: &openapi3.Schema{
-				Type:        &openapi3.Types{"object"},
-				Description: description,
-			},
-		}, nil
+		schema := &openapi3.Schema{
+			Type:        &openapi3.Types{"object"},
+			Description: description,
+		}
+		if ft.Nullable {
+			schema.Nullable = true
+		}
+		return &openapi3.SchemaRef{Value: schema}, nil
+
+	case FieldKindUnknown:
+		// Unknown type - fail with error
+		return nil, fmt.Errorf("cannot generate OpenAPI schema for unknown field type")
 
 	default:
-		// Fallback: treat as string
-		return &openapi3.SchemaRef{
-			Value: &openapi3.Schema{
-				Type:        &openapi3.Types{"string"},
-				Description: description,
-			},
-		}, nil
+		// Unhandled type kind - fail with error
+		return nil, fmt.Errorf("unhandled field kind: %s", ft.Kind)
 	}
 }
 
 // buildInlineEnumSchemaRef creates an inline enum schema
 func buildInlineEnumSchemaRef(field FieldInfo) *openapi3.SchemaRef {
-	enumValues := make([]any, len(field.EnumValues))
+	enumValues := make([]any, len(field.TypeInfo.EnumValues))
 	var enumDesc strings.Builder
 
 	if field.Description != "" {
@@ -121,7 +130,7 @@ func buildInlineEnumSchemaRef(field FieldInfo) *openapi3.SchemaRef {
 	}
 
 	enumDesc.WriteString("Possible values:\n")
-	for i, ev := range field.EnumValues {
+	for i, ev := range field.TypeInfo.EnumValues {
 		enumValues[i] = ev.Value
 		if ev.Description != "" {
 			enumDesc.WriteString(fmt.Sprintf("- `%s`: %s\n", ev.Value, ev.Description))
@@ -199,7 +208,7 @@ func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 	spec.Components.Schemas = schemas
 
 	// Build paths from routes
-	for _, pathRoutes := range doc.Routes {
+	for path, pathRoutes := range doc.Routes {
 		pathItem := &openapi3.PathItem{}
 
 		for method, route := range pathRoutes.Routes {
@@ -223,7 +232,7 @@ func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 			}
 		}
 
-		spec.Paths.Set(pathRoutes.Path, pathItem)
+		spec.Paths.Set(path, pathItem)
 	}
 
 	return spec, nil

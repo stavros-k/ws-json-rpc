@@ -10,7 +10,7 @@ type RouteMetadataCollector interface {
 	GenerateOpenAPISpec() (*openapi3.T, error)
 	Spec() (*openapi3.T, error)
 	WriteSpecYAML(filename string) error
-	WithServer(url, description string)
+	Generate() error
 }
 
 // NoopCollector is a no-op implementation of RouteMetadataCollector
@@ -20,7 +20,7 @@ func (n *NoopCollector) RegisterRoute(route *RouteInfo)            {}
 func (n *NoopCollector) GenerateOpenAPISpec() (*openapi3.T, error) { return nil, nil }
 func (n *NoopCollector) Spec() (*openapi3.T, error)                { return nil, nil }
 func (n *NoopCollector) WriteSpecYAML(filename string) error       { return nil }
-func (n *NoopCollector) WithServer(url, description string)        {}
+func (n *NoopCollector) Generate() error                           { return nil }
 
 // Type kind constants for TypeInfo
 const (
@@ -56,21 +56,23 @@ type TypeInfo struct {
 
 // FieldType represents the structured type information for a field
 type FieldType struct {
-	Kind      string     `json:"kind"`                // "primitive", "array", "reference", "enum"
-	Type      string     `json:"type"`                // Base type: "string", "User", etc.
-	Format    string     `json:"format,omitempty"`    // OpenAPI format (e.g., "date-time")
-	ItemsType *FieldType `json:"itemsType,omitempty"` // For arrays: type of array elements
+	Kind       string      `json:"kind"`                 // "primitive", "array", "reference", "enum", "union"
+	Type       string      `json:"type"`                 // Base type: "string", "User", etc.
+	Format     string      `json:"format,omitempty"`     // OpenAPI format (e.g., "date-time")
+	Required   bool        `json:"required"`             // Whether the field is required
+	Nullable   bool        `json:"nullable,omitempty"`   // For nullable types (T | null)
+	ItemsType  *FieldType  `json:"itemsType,omitempty"`  // For arrays: type of array elements
+	UnionTypes []FieldType `json:"unionTypes,omitempty"` // For complex unions (not just null)
+	EnumValues []EnumValue `json:"enumValues,omitempty"` // For inline enums
 }
 
 // FieldInfo describes a field in a struct (used in high-level API documentation)
 type FieldInfo struct {
-	Name        string      `json:"name"`
-	Type        string      `json:"type"`     // TypeScript type string (for backwards compat/display)
-	TypeInfo    FieldType   `json:"typeInfo"` // Structured type information
-	Description string      `json:"description,omitempty"`
-	Required    bool        `json:"required"`
-	EnumValues  []EnumValue `json:"enumValues,omitempty"` // If field itself is an inline enum
-	GoType      string      `json:"goType,omitempty"`     // Original Go type (for external types like time.Time)
+	Name        string    `json:"name"`
+	DisplayType string    `json:"displayType"`          // Human-readable type string (e.g., "User[]", "string | null")
+	TypeInfo    FieldType `json:"typeInfo"`             // Structured type information
+	Description string    `json:"description,omitempty"`
+	GoType      string    `json:"goType,omitempty"` // Original Go type (for external types like time.Time)
 }
 
 // FieldMetadata is the raw field metadata from guts (used internally)
@@ -99,8 +101,8 @@ type UsageInfo struct {
 // RouteInfo contains metadata about a REST route
 type RouteInfo struct {
 	OperationID string               `json:"operationId"`
-	Method      string               `json:"method"`
-	Path        string               `json:"path"`
+	Method      string               `json:"-"` // Not serialized - used as map key
+	Path        string               `json:"-"` // Not serialized - used as map key
 	Summary     string               `json:"summary"`
 	Description string               `json:"description"`
 	Tags        []string             `json:"tags"`
@@ -142,7 +144,6 @@ type APIInfo struct {
 
 // PathRoutes groups routes by HTTP method for a given path
 type PathRoutes struct {
-	Path   string                `json:"path"`
 	Routes map[string]*RouteInfo `json:"routes"` // Keyed by HTTP method (GET, POST, etc.)
 }
 
