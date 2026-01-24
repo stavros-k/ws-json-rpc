@@ -126,9 +126,10 @@ type ResponseInfo struct {
 }
 
 type APIInfo struct {
-	Title       string `json:"title"`
-	Version     string `json:"version"`
-	Description string `json:"description"`
+	Title       string       `json:"title"`
+	Version     string       `json:"version"`
+	Description string       `json:"description"`
+	Servers     []ServerInfo `json:"servers"`
 }
 
 // PathRoutes groups routes by HTTP method for a given path
@@ -142,4 +143,9 @@ type APIDocumentation struct {
 	Types          map[string]*TypeInfo   `json:"types"`
 	Routes         map[string]*PathRoutes `json:"routes"` // Keyed by path
 	DatabaseSchema string                 `json:"databaseSchema"`
+}
+
+type ServerInfo struct {
+	URL         string
+	Description string
 }

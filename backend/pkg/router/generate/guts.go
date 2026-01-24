@@ -33,19 +33,7 @@ type OpenAPICollector struct {
 	docsFilePath string // Path to write documentation JSON file
 	yamlFilePath string // Path to write OpenAPI YAML file
 
-	APIMetadata APIMetadata
-}
-
-type ServerInfo struct {
-	URL         string
-	Description string
-}
-
-type APIMetadata struct {
-	Title       string
-	Version     string
-	Description string
-	Servers     []ServerInfo
+	apiInfo APIInfo
 }
 
 type OpenAPICollectorOptions struct {
@@ -53,7 +41,7 @@ type OpenAPICollectorOptions struct {
 	DocsFileOutputPath           string // Path for generated API docs JSON file
 	DatabaseSchemaFileOutputPath string // Path for generated DB schema SQL file
 	OpenAPISpecOutputPath        string // Path for generated OpenAPI YAML file
-	APIMetadata                  APIMetadata
+	apiInfo                      APIInfo
 }
 
 // NewOpenAPICollector parses the Go types directory and generates a TypeScript AST for metadata extraction.
@@ -87,7 +75,7 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 		routes:       make(map[string]*PathRoutes),
 		docsFilePath: opts.DocsFileOutputPath,
 		yamlFilePath: opts.OpenAPISpecOutputPath,
-		APIMetadata:  opts.APIMetadata,
+		apiInfo:      opts.apiInfo,
 	}
 
 	dbSchema, err := gutsGenerator.GenerateDatabaseSchema(l, opts.DatabaseSchemaFileOutputPath)
@@ -485,11 +473,11 @@ func (g *OpenAPICollector) GenerateOpenAPISpec() (*openapi3.T, error) {
 	}
 
 	// Set API metadata
-	spec.Info.Title = g.APIMetadata.Title
-	spec.Info.Version = g.APIMetadata.Version
-	spec.Info.Description = g.APIMetadata.Description
+	spec.Info.Title = g.apiInfo.Title
+	spec.Info.Version = g.apiInfo.Version
+	spec.Info.Description = g.apiInfo.Description
 
-	for _, server := range g.APIMetadata.Servers {
+	for _, server := range g.apiInfo.Servers {
 		spec.Servers = append(spec.Servers, &openapi3.Server{
 			URL:         server.URL,
 			Description: server.Description,
