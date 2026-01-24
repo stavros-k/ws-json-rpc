@@ -199,6 +199,7 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 
 // extractAllTypes walks the TypeScript AST and extracts all type information in one pass
 func (g *OpenAPICollector) extractAllTypes() error {
+	g.l.Debug("Starting type extraction from TypeScript AST")
 	var errs []error
 
 	g.tsParser.ForEach(func(name string, node bindings.Node) {
@@ -213,11 +214,15 @@ func (g *OpenAPICollector) extractAllTypes() error {
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
+
+	g.l.Debug("Completed type extraction", slog.Int("typeCount", len(g.types)))
 	return nil
 }
 
 // extractTypeFromNode extracts TypeInfo from a TypeScript AST node
 func (g *OpenAPICollector) extractTypeFromNode(name string, node bindings.Node) (*TypeInfo, error) {
+	g.l.Debug("Extracting type", slog.String("name", name), slog.String("nodeType", fmt.Sprintf("%T", node)))
+
 	switch n := node.(type) {
 	case *bindings.Alias:
 		return g.extractAliasType(name, n)
@@ -299,6 +304,7 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 		typeInfo.References = g.collectReferencesFromMembers(alias.Members)
 	}
 
+	g.l.Debug("Extracted alias type", slog.String("name", name), slog.String("kind", typeInfo.Kind), slog.Int("fieldCount", len(typeInfo.Fields)))
 	return typeInfo, nil
 }
 
@@ -340,14 +346,17 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 		fields = append(fields, fieldInfo)
 	}
 
-	return &TypeInfo{
+	typeInfo := &TypeInfo{
 		Name:        name,
 		Kind:        TypeKindObject,
 		Description: desc,
 		Fields:      fields,
 		References:  g.collectReferencesFromMembers(iface.Fields),
 		UsedBy:      []UsageInfo{},
-	}, nil
+	}
+
+	g.l.Debug("Extracted interface type", slog.String("name", name), slog.Int("fieldCount", len(fields)))
+	return typeInfo, nil
 }
 
 // extractEnumType extracts type information from an enum node
@@ -357,6 +366,10 @@ func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*T
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract enum values for %s: %w", name, err)
 	}
+
+	g.l.Debug("Extracted enum type",
+		slog.String("name", name),
+		slog.Int("enumValueCount", len(enumVals)))
 
 	return &TypeInfo{
 		Name:        name,
@@ -397,6 +410,8 @@ func (g *OpenAPICollector) collectReferencesFromMembers(members []*bindings.Prop
 // computeTypeRelationships computes ReferencedBy and UsedBy for all types
 // (References are already computed during type extraction)
 func (g *OpenAPICollector) computeTypeRelationships() {
+	g.l.Debug("Computing type relationships", slog.Int("typeCount", len(g.types)), slog.Int("routeCount", len(g.routes)))
+
 	// First pass: build ReferencedBy from References
 	for typeName, typeInfo := range g.types {
 		for _, ref := range typeInfo.References {
@@ -413,7 +428,9 @@ func (g *OpenAPICollector) computeTypeRelationships() {
 	for _, typeInfo := range g.types {
 		sort.Strings(typeInfo.ReferencedBy)
 	}
+	g.l.Debug("Built ReferencedBy relationships")
 
+	g.l.Debug("Computing UsedBy relationships")
 	// Second pass: compute UsedBy from routes
 	for _, pathRoutes := range g.routes {
 		for _, route := range pathRoutes.Routes {
@@ -452,6 +469,7 @@ func (g *OpenAPICollector) computeTypeRelationships() {
 			}
 		}
 	}
+	g.l.Debug("Computed UsedBy relationships")
 }
 
 // collectExpressionTypeReferences collects direct type references from an expression
@@ -557,6 +575,7 @@ func (g *OpenAPICollector) isNullableUnion(union *bindings.UnionType) (bool, bin
 	}
 
 	if hasNull && nonNullType != nil {
+		g.l.Debug("Detected nullable union", slog.String("nonNullType", fmt.Sprintf("%T", nonNullType)))
 		return true, nonNullType
 	}
 	return false, nil
@@ -744,10 +763,11 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		return FieldType{Kind: FieldKindReference, Type: refName}, nil
 
 	case *bindings.UnionType:
+		g.l.Debug("Analyzing union type", slog.Int("numTypes", len(e.Types)))
+
 		// Check for nullable pattern FIRST: T | null or null | T or T | undefined
 		isNullable, nonNullType := g.isNullableUnion(e)
 		if !isNullable {
-
 			// Non-nullable unions shouldn't exist in Go->TS serialization
 			// (Go enums use bindings.Enum, not union literals)
 			return FieldType{}, fmt.Errorf("unexpected non-nullable union type - Go->TS serialization should only have nullable unions (T | null)")
@@ -757,6 +777,7 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 			return FieldType{}, fmt.Errorf("failed to analyze nullable type: %w", err)
 		}
 		result.Nullable = true
+		g.l.Debug("Successfully analyzed nullable union", slog.String("baseType", result.Type))
 		return result, nil
 
 	case *bindings.LiteralKeyword:
