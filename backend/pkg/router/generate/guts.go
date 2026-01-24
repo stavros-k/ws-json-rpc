@@ -357,8 +357,6 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) {
 
 	// Add route under its HTTP method
 	pathRoutes.Routes[route.Method] = route
-
-	// TODO: Track usage in types
 }
 
 func (g *OpenAPICollector) GetDocumentation() *APIDocumentation {
