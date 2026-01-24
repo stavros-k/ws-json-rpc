@@ -44,7 +44,7 @@ func main() {
 			DatabaseSchemaFileOutputPath: "schema.sql",
 			DocsFileOutputPath:           "test.json",
 			OpenAPISpecOutputPath:        "test.yaml",
-			APIMetadata: generate.APIMetadata{
+			APIInfo: generate.APIInfo{
 				Title:       "Local API",
 				Version:     utils.GetVersionShort(),
 				Description: "Local API Documentation",

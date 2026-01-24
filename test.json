@@ -1,8 +1,14 @@
 {
   "info": {
-    "title": "",
-    "version": "",
-    "description": ""
+    "title": "Local API",
+    "version": "vdev (unknown)",
+    "description": "Local API Documentation",
+    "servers": [
+      {
+        "URL": "http://localhost:8080",
+        "Description": "Local server"
+      }
+    ]
   },
   "types": {
     "CreateUserRequest": {
@@ -66,14 +72,6 @@
           "role": "response"
         },
         {
-          "operationId": "getTeam",
-          "role": "response"
-        },
-        {
-          "operationId": "ping",
-          "role": "response"
-        },
-        {
           "operationId": "ping",
           "role": "response"
         }
@@ -96,10 +94,6 @@
         }
       ],
       "usedBy": [
-        {
-          "operationId": "getTeam",
-          "role": "request"
-        },
         {
           "operationId": "getTeam",
           "role": "request"
@@ -137,17 +131,12 @@
           "description": "Users in the team"
         }
       ],
+      "references": [
+        "User"
+      ],
       "usedBy": [
         {
           "operationId": "getTeam",
-          "role": "response"
-        },
-        {
-          "operationId": "getTeam",
-          "role": "response"
-        },
-        {
-          "operationId": "ping",
           "role": "response"
         },
         {
@@ -192,6 +181,9 @@
           }
         }
       ],
+      "references": [
+        "PingStatus"
+      ],
       "usedBy": [
         {
           "operationId": "getTeam",
@@ -199,22 +191,6 @@
         },
         {
           "operationId": "getTeam",
-          "role": "response"
-        },
-        {
-          "operationId": "getTeam",
-          "role": "response"
-        },
-        {
-          "operationId": "getTeam",
-          "role": "response"
-        },
-        {
-          "operationId": "ping",
-          "role": "response"
-        },
-        {
-          "operationId": "ping",
           "role": "response"
         },
         {
@@ -240,6 +216,9 @@
           "value": "OK",
           "description": "PingStatusOK means the ping was successful"
         }
+      ],
+      "referencedBy": [
+        "PingResponse"
       ]
     },
     "User": {
@@ -267,6 +246,9 @@
           },
           "description": "Name of the user"
         }
+      ],
+      "referencedBy": [
+        "GetTeamResponse"
       ]
     }
   },

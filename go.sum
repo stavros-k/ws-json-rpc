@@ -4,8 +4,8 @@ github.com/Masterminds/semver/v3 v3.2.1 h1:RN9w6+7QoMeJVGyfmbcgs28Br8cvmnucEXnY0
 github.com/Masterminds/semver/v3 v3.2.1/go.mod h1:qvl/7zhW3nngYb5+80sSMF+FG2BjYrf8m9wsX0PNOMQ=
 github.com/amacneil/dbmate/v2 v2.29.3 h1:tjQzFPLhnwh34Y0022Np8uLM1RKtr3qBse4l/jAZZ/Y=
 github.com/amacneil/dbmate/v2 v2.29.3/go.mod h1:oCP18G5wDuMZo3HA8vEukxHPk2KFdnfG3DlhxqWGTUA=
-github.com/coder/guts v1.6.3 h1:lly9+77bwgJ4Omxfhtsel45Ia85Ut4QDqOB5iYKLjAg=
-github.com/coder/guts v1.6.3/go.mod h1:4lculh6lY6/yNn4wDPmD2VvNkOW74d0mLFGxj9rEuXw=
+github.com/coder/guts v1.6.4-0.20260124161544-87754f89923f h1:ue6K/CDDHHPVPkyL+W71V8D7g/IirquhpE3z8/aTWGE=
+github.com/coder/guts v1.6.4-0.20260124161544-87754f89923f/go.mod h1:4lculh6lY6/yNn4wDPmD2VvNkOW74d0mLFGxj9rEuXw=
 github.com/coder/websocket v1.8.14 h1:9L0p0iKiNOibykf283eHkKUHHrpG7f65OE3BhhO7v9g=
 github.com/coder/websocket v1.8.14/go.mod h1:NX3SzP+inril6yawo5CQXx8+fk145lPDC6pumgx0mVg=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
