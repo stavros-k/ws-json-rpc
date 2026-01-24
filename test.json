@@ -59,6 +59,24 @@
           "description": "Creation timestamp",
           "goType": "time.Time"
         }
+      ],
+      "usedBy": [
+        {
+          "operationId": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationId": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationId": "ping",
+          "role": "response"
+        },
+        {
+          "operationId": "ping",
+          "role": "response"
+        }
       ]
     },
     "GetTeamRequest": {
@@ -75,6 +93,16 @@
             "required": true
           },
           "description": "ID of the team to get"
+        }
+      ],
+      "usedBy": [
+        {
+          "operationId": "getTeam",
+          "role": "request"
+        },
+        {
+          "operationId": "getTeam",
+          "role": "request"
         }
       ]
     },
@@ -107,6 +135,24 @@
             }
           },
           "description": "Users in the team"
+        }
+      ],
+      "usedBy": [
+        {
+          "operationId": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationId": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationId": "ping",
+          "role": "response"
+        },
+        {
+          "operationId": "ping",
+          "role": "response"
         }
       ]
     },
@@ -144,6 +190,40 @@
             "required": false,
             "nullable": true
           }
+        }
+      ],
+      "usedBy": [
+        {
+          "operationId": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationId": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationId": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationId": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationId": "ping",
+          "role": "response"
+        },
+        {
+          "operationId": "ping",
+          "role": "response"
+        },
+        {
+          "operationId": "ping",
+          "role": "response"
+        },
+        {
+          "operationId": "ping",
+          "role": "response"
         }
       ]
     },

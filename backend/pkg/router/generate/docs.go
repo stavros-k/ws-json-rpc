@@ -34,6 +34,9 @@ func sortDocumentation(doc *APIDocumentation) {
 		// Sort references
 		sort.Strings(typeInfo.References)
 
+		// Sort referenced by
+		sort.Strings(typeInfo.ReferencedBy)
+
 		// Sort used by
 		sortUsageInfo(typeInfo.UsedBy)
 
@@ -44,11 +47,8 @@ func sortDocumentation(doc *APIDocumentation) {
 // sortUsageInfo sorts usage information for deterministic output
 func sortUsageInfo(usages []UsageInfo) {
 	sort.Slice(usages, func(i, j int) bool {
-		if usages[i].Location != usages[j].Location {
-			return usages[i].Location < usages[j].Location
-		}
-		if usages[i].Target != usages[j].Target {
-			return usages[i].Target < usages[j].Target
+		if usages[i].OperationID != usages[j].OperationID {
+			return usages[i].OperationID < usages[j].OperationID
 		}
 		return usages[i].Role < usages[j].Role
 	})

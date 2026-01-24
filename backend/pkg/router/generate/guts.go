@@ -320,11 +320,15 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 		fields = append(fields, fieldInfo)
 	}
 
+	// Collect references from fields
+	refs := g.collectReferencesFromFields(fields)
+
 	return &TypeInfo{
 		Name:        name,
 		Kind:        TypeKindObject,
 		Description: desc,
 		Fields:      fields,
+		References:  refs,
 		UsedBy:      []UsageInfo{},
 	}, nil
 }
@@ -370,10 +374,105 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) {
 }
 
 func (g *OpenAPICollector) GetDocumentation() *APIDocumentation {
+	// Compute type relationships before returning
+	g.computeTypeRelationships()
+
 	return &APIDocumentation{
 		Types:          g.types,
 		Routes:         g.routes,
 		DatabaseSchema: g.dbSchema,
+	}
+}
+
+// collectReferencesFromFields collects all type references from a list of fields
+func (g *OpenAPICollector) collectReferencesFromFields(fields []FieldInfo) []string {
+	refs := make(map[string]bool)
+	for _, field := range fields {
+		g.collectFieldReferences(field.TypeInfo, refs)
+	}
+
+	// Convert to sorted slice
+	refList := make([]string, 0, len(refs))
+	for ref := range refs {
+		refList = append(refList, ref)
+	}
+	sort.Strings(refList)
+	return refList
+}
+
+// computeTypeRelationships computes ReferencedBy and UsedBy for all types
+// (References are already computed during type extraction)
+func (g *OpenAPICollector) computeTypeRelationships() {
+	// First pass: build ReferencedBy from References
+	for typeName, typeInfo := range g.types {
+		for _, ref := range typeInfo.References {
+			if refType, exists := g.types[ref]; exists {
+				if refType.ReferencedBy == nil {
+					refType.ReferencedBy = []string{}
+				}
+				refType.ReferencedBy = append(refType.ReferencedBy, typeName)
+			}
+		}
+	}
+
+	// Sort ReferencedBy lists
+	for _, typeInfo := range g.types {
+		sort.Strings(typeInfo.ReferencedBy)
+	}
+
+	// Second pass: compute UsedBy from routes
+	for _, pathRoutes := range g.routes {
+		for _, route := range pathRoutes.Routes {
+			// Track request type usage
+			if route.Request != nil && route.Request.Type != "" {
+				if typeInfo, exists := g.types[route.Request.Type]; exists {
+					typeInfo.UsedBy = append(typeInfo.UsedBy, UsageInfo{
+						OperationID: route.OperationID,
+						Role:        "request",
+					})
+				}
+			}
+
+			// Track response type usage
+			for _, resp := range route.Responses {
+				if resp.Type != "" {
+					if typeInfo, exists := g.types[resp.Type]; exists {
+						typeInfo.UsedBy = append(typeInfo.UsedBy, UsageInfo{
+							OperationID: route.OperationID,
+							Role:        "response",
+						})
+					}
+				}
+			}
+
+			// Track parameter type usage
+			for _, param := range route.Parameters {
+				if param.Type != "" {
+					if typeInfo, exists := g.types[param.Type]; exists {
+						typeInfo.UsedBy = append(typeInfo.UsedBy, UsageInfo{
+							OperationID: route.OperationID,
+							Role:        "parameter",
+						})
+					}
+				}
+			}
+		}
+	}
+}
+
+// collectFieldReferences recursively collects type references from a FieldType
+func (g *OpenAPICollector) collectFieldReferences(ft FieldType, refs map[string]bool) {
+	switch ft.Kind {
+	case FieldKindReference, FieldKindEnum:
+		refs[ft.Type] = true
+	case FieldKindArray:
+		if ft.ItemsType != nil {
+			g.collectFieldReferences(*ft.ItemsType, refs)
+		}
+	case FieldKindUnion:
+		for _, unionType := range ft.UnionTypes {
+			g.collectFieldReferences(unionType, refs)
+		}
 	}
 }
 
@@ -452,29 +551,6 @@ func (g *OpenAPICollector) SerializeNode(name string) (string, error) {
 }
 
 // ExtractReferences returns all type names referenced by the given type, deduplicated and sorted.
-func (g *OpenAPICollector) ExtractReferences(name string) ([]string, error) {
-	node, exists := g.tsParser.Node(name)
-	if !exists {
-		return nil, fmt.Errorf("node %s not found in TypeScript AST", name)
-	}
-
-	refs := make(map[string]struct{})
-	g.collectTypeReferences(node, refs)
-
-	// Convert to sorted slice
-	refList := make([]string, 0, len(refs))
-	for ref := range refs {
-		refList = append(refList, ref)
-	}
-
-	// Sort for deterministic output
-	sort.Strings(refList)
-
-	g.l.Debug("Extracted type references", slog.String("type", name), slog.Int("count", len(refList)))
-
-	return refList, nil
-}
-
 // ExtractFields returns field metadata for a type, including types, descriptions, and optional flags.
 func (g *OpenAPICollector) ExtractFields(name string) ([]FieldMetadata, error) {
 	node, exists := g.tsParser.Node(name)
@@ -846,22 +922,6 @@ func (g *OpenAPICollector) extractLiteralsFromUnion(union *bindings.UnionType) [
 	return values
 }
 
-// collectTypeReferences recursively collects all type references from a node.
-func (g *OpenAPICollector) collectTypeReferences(node bindings.Node, refs map[string]struct{}) {
-	switch n := node.(type) {
-	case *bindings.Alias:
-		// Type alias: type Foo = Bar
-		g.collectExpressionTypeReferences(n.Type, refs)
-
-	case *bindings.Interface:
-		// Interface: interface Foo { bar: Bar }
-		for _, field := range n.Fields {
-			g.collectExpressionTypeReferences(field.Type, refs)
-		}
-	}
-}
-
-// analyzeFieldType analyzes an expression type and returns structured type information
 // generateDisplayType creates a human-readable type string from FieldType
 func generateDisplayType(ft FieldType) string {
 	switch ft.Kind {
@@ -1016,53 +1076,6 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) FieldT
 		g.l.Error("Encountered unknown expression type, falling back to 'any'",
 			slog.String("type", fmt.Sprintf("%T", expr)))
 		return FieldType{Kind: FieldKindUnknown, Type: "any"}
-	}
-}
-
-// collectExpressionTypeReferences recursively collects all type names referenced by an expression.
-// Handles unions, intersections, arrays, type literals, and generic arguments.
-func (g *OpenAPICollector) collectExpressionTypeReferences(expr bindings.ExpressionType, refs map[string]struct{}) {
-	if expr == nil {
-		return
-	}
-
-	switch e := expr.(type) {
-	case *bindings.ReferenceType:
-		// Direct reference to another type
-		refs[e.Name.String()] = struct{}{}
-
-		// Check generic arguments
-		for _, arg := range e.Arguments {
-			g.collectExpressionTypeReferences(arg, refs)
-		}
-
-	case *bindings.UnionType:
-		// Union: A | B
-		for _, member := range e.Types {
-			g.collectExpressionTypeReferences(member, refs)
-		}
-
-	case *bindings.TypeIntersection:
-		// Intersection: A & B
-		for _, member := range e.Types {
-			g.collectExpressionTypeReferences(member, refs)
-		}
-
-	case *bindings.ArrayLiteralType:
-		// Array: T[]
-		for _, elem := range e.Elements {
-			g.collectExpressionTypeReferences(elem, refs)
-		}
-
-	case *bindings.TypeLiteralNode:
-		// Inline object: { foo: Bar }
-		for _, member := range e.Members {
-			g.collectExpressionTypeReferences(member.Type, refs)
-		}
-
-	// Primitive types - no references to collect
-	case *bindings.LiteralKeyword:
-	case *bindings.LiteralType:
 	}
 }
 

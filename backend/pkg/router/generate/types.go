@@ -34,14 +34,15 @@ const (
 
 // TypeInfo contains comprehensive metadata about a Go type extracted from guts
 type TypeInfo struct {
-	Name        string      `json:"name"`        // Type name (e.g., "PingResponse")
-	Kind        string      `json:"kind"`        // "Object", "String Enum", "Array", etc.
-	Description string      `json:"description"` // Type-level documentation
-	Fields      []FieldInfo `json:"fields,omitempty"`
-	EnumValues  []EnumValue `json:"enumValues,omitempty"`
-	References  []string    `json:"references,omitempty"` // Types this type references
-	UsedBy      []UsageInfo `json:"usedBy,omitempty"`     // Where this type is used
-	GoType      string      `json:"goType,omitempty"`     // Original Go type (for external types)
+	Name         string      `json:"name"`        // Type name (e.g., "PingResponse")
+	Kind         string      `json:"kind"`        // "Object", "String Enum", "Array", etc.
+	Description  string      `json:"description"` // Type-level documentation
+	Fields       []FieldInfo `json:"fields,omitempty"`
+	EnumValues   []EnumValue `json:"enumValues,omitempty"`
+	References   []string    `json:"references,omitempty"`   // Types this type references
+	ReferencedBy []string    `json:"referencedBy,omitempty"` // Types that reference this type
+	UsedBy       []UsageInfo `json:"usedBy,omitempty"`       // Operations/routes that use this type
+	GoType       string      `json:"goType,omitempty"`       // Original Go type (for external types)
 }
 
 // FieldType represents the structured type information for a field
@@ -80,11 +81,10 @@ type EnumValue struct {
 	Description string `json:"description,omitempty"`
 }
 
-// UsageInfo tracks where a type is used
+// UsageInfo tracks where a type is used in operations/routes
 type UsageInfo struct {
-	Location string `json:"location"` // "route", "type"
-	Target   string `json:"target"`   // Route operationID or type name
-	Role     string `json:"role"`     // "request", "response", "field", "parameter"
+	OperationID string `json:"operationId"` // Route operationID
+	Role        string `json:"role"`        // "request", "response", "parameter"
 }
 
 // RouteInfo contains metadata about a REST route
