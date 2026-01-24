@@ -18,7 +18,7 @@
       "fields": [
         {
           "name": "username",
-          "displayType": "string",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
@@ -28,7 +28,7 @@
         },
         {
           "name": "password",
-          "displayType": "string",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
@@ -45,7 +45,7 @@
       "fields": [
         {
           "name": "userID",
-          "displayType": "string",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
@@ -55,7 +55,7 @@
         },
         {
           "name": "createdAt",
-          "displayType": "string",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
@@ -84,7 +84,7 @@
       "fields": [
         {
           "name": "teamID",
-          "displayType": "string",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
@@ -110,7 +110,7 @@
       "fields": [
         {
           "name": "teamID",
-          "displayType": "string",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
@@ -155,7 +155,7 @@
       "fields": [
         {
           "name": "message",
-          "displayType": "string",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
@@ -165,7 +165,7 @@
         },
         {
           "name": "status",
-          "displayType": "PingStatus",
+          "displayType": "Pingstatus",
           "typeInfo": {
             "kind": "reference",
             "type": "PingStatus",
@@ -175,7 +175,7 @@
         },
         {
           "name": "metadata",
-          "displayType": "string | null",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
@@ -234,7 +234,7 @@
       "fields": [
         {
           "name": "userID",
-          "displayType": "string",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
@@ -244,7 +244,7 @@
         },
         {
           "name": "name",
-          "displayType": "string",
+          "displayType": "String",
           "typeInfo": {
             "kind": "primitive",
             "type": "string",
