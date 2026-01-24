@@ -104,6 +104,7 @@ func main() {
 		Summary:     "Get a team",
 		Description: "Get a team by its ID",
 		Tags:        []string{"team"},
+		Deprecated:  true,
 		RequestType: &router.RequestBodySpec{
 			Type: httpapi.GetTeamRequest{},
 			Examples: map[string]any{

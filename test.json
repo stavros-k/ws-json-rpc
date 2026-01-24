@@ -328,6 +328,7 @@
           "tags": [
             "team"
           ],
+          "deprecated": true,
           "request": {
             "type": "GetTeamRequest",
             "examples": {

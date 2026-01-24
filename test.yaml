@@ -149,6 +149,7 @@ paths:
                 - ping
     /team/{teamID}:
         get:
+            deprecated: true
             description: Get a team by its ID
             operationId: getTeam
             parameters:
