@@ -26,6 +26,7 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	schema := &openapi3.Schema{
 		Type:        &openapi3.Types{"object"},
 		Description: typeInfo.Description,
+		Deprecated:  typeInfo.Deprecated != nil,
 		Properties:  make(openapi3.Schemas),
 		Required:    []string{},
 	}
@@ -34,6 +35,11 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 		fieldSchema, err := buildFieldSchema(field)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build schema for field %s: %w", field.Name, err)
+		}
+
+		// Mark field as deprecated
+		if field.Deprecated != nil {
+			fieldSchema.Value.Deprecated = true
 		}
 
 		schema.Properties[field.Name] = fieldSchema
@@ -137,7 +143,18 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 
 	for i, ev := range typeInfo.EnumValues {
 		values[i] = ev.Value
-		if ev.Description != "" {
+
+		// Build enum value description with deprecation info
+		if ev.Deprecated != nil {
+			enumDesc.WriteString(fmt.Sprintf("- `%s`: **[DEPRECATED]** ", ev.Value))
+			if ev.Deprecated.Message != "" {
+				enumDesc.WriteString(ev.Deprecated.Message)
+			}
+			if ev.Description != "" {
+				enumDesc.WriteString(" - " + ev.Description)
+			}
+			enumDesc.WriteString("\n")
+		} else if ev.Description != "" {
 			enumDesc.WriteString(fmt.Sprintf("- `%s`: %s\n", ev.Value, ev.Description))
 		} else {
 			enumDesc.WriteString(fmt.Sprintf("- `%s`\n", ev.Value))
@@ -148,6 +165,7 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 		Type:        &openapi3.Types{"string"},
 		Enum:        values,
 		Description: enumDesc.String(),
+		Deprecated:  typeInfo.Deprecated != nil,
 	}, nil
 }
 

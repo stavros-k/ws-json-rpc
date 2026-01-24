@@ -248,11 +248,17 @@ func (g *OpenAPICollector) extractTypeFromNode(name string, node bindings.Node) 
 func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) (*TypeInfo, error) {
 	desc := g.extractComments(alias.SupportComments)
 
+	deprecated, cleanedDesc, err := g.parseDeprecation(desc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse deprecation info for alias %s: %w", name, err)
+	}
+
 	// Assume it's a simple alias by default
 	typeInfo := &TypeInfo{
 		Name:        name,
 		Kind:        TypeKindAlias,
-		Description: desc,
+		Description: cleanedDesc,
+		Deprecated:  deprecated,
 	}
 
 	switch alias := alias.Type.(type) {
@@ -289,11 +295,17 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 
 			fieldInfo.Required = !member.QuestionToken
 
+			fieldDesc := g.extractComments(member.SupportComments)
+			fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse deprecation info for field %s.%s: %w", name, member.Name, err)
+			}
 			field := FieldInfo{
 				Name:        member.Name,
 				DisplayType: generateDisplayType(fieldInfo),
 				TypeInfo:    fieldInfo,
-				Description: g.extractComments(member.SupportComments),
+				Description: cleanedFieldDesc,
+				Deprecated:  fieldDeprecated,
 			}
 
 			// Check if it's an external type and capture metadata
@@ -316,7 +328,19 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 // extractInterfaceType extracts type information from an interface node.
 func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Interface) (*TypeInfo, error) {
 	desc := g.extractComments(iface.SupportComments)
-	fields := make([]FieldInfo, 0, len(iface.Fields))
+	deprecated, cleanedDesc, err := g.parseDeprecation(desc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse deprecation info for interface %s: %w", name, err)
+	}
+
+	typeInfo := &TypeInfo{
+		Name:        name,
+		Kind:        TypeKindObject,
+		Description: cleanedDesc,
+		Deprecated:  deprecated,
+		Fields:      []FieldInfo{},
+		References:  g.collectReferencesFromMembers(iface.Fields),
+	}
 
 	for _, field := range iface.Fields {
 		_, err := g.serializeExpressionType(field.Type)
@@ -325,18 +349,25 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 		}
 
 		// Extract structured type information
-		typeInfo, err := g.analyzeFieldType(field.Type)
+		analyzedType, err := g.analyzeFieldType(field.Type)
 		if err != nil {
 			return nil, fmt.Errorf("failed to analyze field type for %s.%s: %w", name, field.Name, err)
 		}
 
-		typeInfo.Required = !field.QuestionToken
+		analyzedType.Required = !field.QuestionToken
+
+		fieldDesc := g.extractComments(field.SupportComments)
+		fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse deprecation info for field %s.%s: %w", name, field.Name, err)
+		}
 
 		fieldInfo := FieldInfo{
 			Name:        field.Name,
-			DisplayType: generateDisplayType(typeInfo),
-			TypeInfo:    typeInfo,
-			Description: g.extractComments(field.SupportComments),
+			DisplayType: generateDisplayType(analyzedType),
+			TypeInfo:    analyzedType,
+			Description: cleanedFieldDesc,
+			Deprecated:  fieldDeprecated,
 		}
 
 		// Check if it's an external type and capture metadata
@@ -344,18 +375,10 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 			fieldInfo.GoType = ext.GoType
 		}
 
-		fields = append(fields, fieldInfo)
+		typeInfo.Fields = append(typeInfo.Fields, fieldInfo)
 	}
 
-	typeInfo := &TypeInfo{
-		Name:        name,
-		Kind:        TypeKindObject,
-		Description: desc,
-		Fields:      fields,
-		References:  g.collectReferencesFromMembers(iface.Fields),
-	}
-
-	g.l.Debug("Extracted interface type", slog.String("name", name), slog.Int("fieldCount", len(fields)))
+	g.l.Debug("Extracted interface type", slog.String("name", name), slog.Int("fieldCount", len(typeInfo.Fields)), slog.Bool("deprecated", deprecated != nil))
 
 	return typeInfo, nil
 }
@@ -372,11 +395,15 @@ func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*T
 	g.l.Debug("Extracted enum type",
 		slog.String("name", name),
 		slog.Int("enumValueCount", len(enumVals)))
-
+	deprecated, cleanedDesc, err := g.parseDeprecation(desc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse deprecation info for enum %s: %w", name, err)
+	}
 	return &TypeInfo{
 		Name:        name,
 		Kind:        TypeKindStringEnum,
-		Description: desc,
+		Description: cleanedDesc,
+		Deprecated:  deprecated,
 		EnumValues:  enumVals,
 	}, nil
 }
@@ -558,6 +585,38 @@ func (g *OpenAPICollector) serializeExpressionType(expr bindings.ExpressionType)
 	return serialized, nil
 }
 
+const DEPRECATED_PREFIX = "deprecated:"
+
+// parseDeprecation extracts deprecation info from comments and returns cleaned description.
+// It looks for "Deprecated:" anywhere in the text (case-insensitive) and captures the message.
+// Returns (deprecationInfo, cleanedDescription, error).
+func (g *OpenAPICollector) parseDeprecation(comments string) (*DeprecationInfo, string, error) {
+	if comments == "" {
+		return nil, "", nil
+	}
+
+	// Look for "Deprecated:" anywhere in the text (case-insensitive)
+	lowerComments := strings.ToLower(comments)
+	idx := strings.Index(lowerComments, DEPRECATED_PREFIX)
+
+	if idx == -1 {
+		return nil, comments, nil
+	}
+
+	// Extract the message after "Deprecated:"
+	// Start from the original string to preserve casing
+	message := strings.TrimSpace(comments[idx+len(DEPRECATED_PREFIX):])
+
+	// Clean the description by removing the deprecation text
+	cleanedDesc := strings.TrimSpace(comments[:idx])
+
+	if message == "" {
+		return nil, cleanedDesc, errors.New("deprecation message is empty")
+	}
+
+	return &DeprecationInfo{Message: message}, cleanedDesc, nil
+}
+
 // isNullableUnion checks if a union type represents a nullable pattern (T | null or T | undefined).
 // Returns true and the non-null type if it's nullable, false and nil otherwise.
 //
@@ -625,9 +684,15 @@ func (g *OpenAPICollector) extractEnumMemberValues(enum *bindings.Enum) ([]EnumV
 		// Remove quotes from string literals
 		valueStr = strings.Trim(valueStr, "\"'")
 
+		memberDesc := g.extractComments(member.SupportComments)
+		deprecated, cleanedMemberDesc, err := g.parseDeprecation(memberDesc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse deprecation info for enum member %s.%s: %w", enum.Name.String(), member.Name, err)
+		}
 		values = append(values, EnumValue{
 			Value:       valueStr,
-			Description: g.extractComments(member.SupportComments),
+			Description: cleanedMemberDesc,
+			Deprecated:  deprecated,
 		})
 	}
 

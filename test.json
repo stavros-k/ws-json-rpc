@@ -104,6 +104,9 @@
       "name": "GetTeamResponse",
       "kind": "object",
       "description": "GetTeamResponse is the response to a get team request.",
+      "deprecated": {
+        "message": "Use GetTeamResponseV2 instead."
+      },
       "fields": [
         {
           "name": "teamID",
@@ -210,7 +213,10 @@
       "enumValues": [
         {
           "value": "ERROR",
-          "description": "PingStatusError means there was an error with the ping."
+          "description": "PingStatusError means there was an error with the ping.",
+          "deprecated": {
+            "message": "Use PingStatusErrorV2 instead."
+          }
         },
         {
           "value": "OK",
@@ -244,7 +250,10 @@
             "type": "string",
             "required": true
           },
-          "description": "Name of the user"
+          "description": "Name of the user",
+          "deprecated": {
+            "message": "Use UserNameV2 instead."
+          }
         }
       ],
       "referencedBy": [

@@ -18,6 +18,7 @@ const (
 	// PingStatusOK means the ping was successful.
 	PingStatusOK PingStatus = "OK"
 	// PingStatusError means there was an error with the ping.
+	// Deprecated: Use PingStatusErrorV2 instead.
 	PingStatusError PingStatus = "ERROR"
 )
 
@@ -48,10 +49,12 @@ type User struct {
 	// ID of the user
 	UserID string `json:"userID"`
 	// Name of the user
+	// Deprecated: Use UserNameV2 instead.
 	Name string `json:"name"`
 }
 
 // GetTeamResponse is the response to a get team request.
+// Deprecated: Use GetTeamResponseV2 instead.
 type GetTeamResponse struct {
 	// ID of the team
 	TeamID string `json:"teamID"`

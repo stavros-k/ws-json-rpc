@@ -2,15 +2,16 @@ package generate
 
 // TypeInfo contains comprehensive metadata about a Go type extracted from guts.
 type TypeInfo struct {
-	Name         string      `json:"name"`        // Type name (e.g., "PingResponse")
-	Kind         string      `json:"kind"`        // "Object", "String Enum", "Array", etc.
-	Description  string      `json:"description"` // Type-level documentation
-	Fields       []FieldInfo `json:"fields,omitempty"`
-	EnumValues   []EnumValue `json:"enumValues,omitempty"`
-	References   []string    `json:"references,omitempty"`   // Types this type references
-	ReferencedBy []string    `json:"referencedBy,omitempty"` // Types that reference this type
-	UsedBy       []UsageInfo `json:"usedBy,omitempty"`       // Operations/routes that use this type
-	GoType       string      `json:"goType,omitempty"`       // Original Go type (for external types)
+	Name         string           `json:"name"`                   // Type name (e.g., "PingResponse")
+	Kind         string           `json:"kind"`                   // "Object", "String Enum", "Array", etc.
+	Description  string           `json:"description"`            // Type-level documentation
+	Deprecated   *DeprecationInfo `json:"deprecated,omitempty"`   // Deprecation information
+	Fields       []FieldInfo      `json:"fields,omitempty"`       // For object types: fields
+	EnumValues   []EnumValue      `json:"enumValues,omitempty"`   // For enum types: enum constants
+	References   []string         `json:"references,omitempty"`   // Types this type references
+	ReferencedBy []string         `json:"referencedBy,omitempty"` // Types that reference this type
+	UsedBy       []UsageInfo      `json:"usedBy,omitempty"`       // Operations/routes that use this type
+	GoType       string           `json:"goType,omitempty"`       // Original Go type (for external types)
 }
 
 // FieldType represents the structured type information for a field.
@@ -25,26 +26,24 @@ type FieldType struct {
 
 // FieldInfo describes a field in a struct (used in high-level API documentation).
 type FieldInfo struct {
-	Name        string    `json:"name"`
-	DisplayType string    `json:"displayType"` // Human-readable type string (e.g., "User[]", "string | null")
-	TypeInfo    FieldType `json:"typeInfo"`    // Structured type information
-	Description string    `json:"description,omitempty"`
-	GoType      string    `json:"goType,omitempty"` // Original Go type (for external types like time.Time)
-}
-
-// FieldMetadata is the raw field metadata from guts (used internally).
-type FieldMetadata struct {
-	Name        string
-	Type        string
-	Description string
-	Optional    bool // Note: This is the inverse of Required in FieldInfo
-	EnumValues  []EnumValue
+	Name        string           `json:"name"`                  // Field name
+	DisplayType string           `json:"displayType"`           // Human-readable type string (e.g., "User[]", "string | null")
+	TypeInfo    FieldType        `json:"typeInfo"`              // Structured type information
+	Description string           `json:"description,omitempty"` // Field documentation
+	Deprecated  *DeprecationInfo `json:"deprecated,omitempty"`  // Deprecation information
+	GoType      string           `json:"goType,omitempty"`      // Original Go type (for external types like time.Time)
 }
 
 // EnumValue represents an enum constant with its documentation.
 type EnumValue struct {
-	Value       string `json:"value"`
-	Description string `json:"description,omitempty"`
+	Value       string           `json:"value"`
+	Description string           `json:"description,omitempty"`
+	Deprecated  *DeprecationInfo `json:"deprecated,omitempty"`
+}
+
+// DeprecationInfo contains deprecation details.
+type DeprecationInfo struct {
+	Message string `json:"message,omitempty"` // Deprecation message
 }
 
 // UsageInfo tracks where a type is used in operations/routes.
@@ -91,13 +90,6 @@ type ResponseInfo struct {
 	Examples    map[string]any `json:"examples,omitempty"`
 }
 
-type APIInfo struct {
-	Title       string       `json:"title"`
-	Version     string       `json:"version"`
-	Description string       `json:"description"`
-	Servers     []ServerInfo `json:"servers"`
-}
-
 // PathRoutes groups routes by HTTP method for a given path.
 type PathRoutes struct {
 	Routes map[string]*RouteInfo `json:"routes"` // Keyed by HTTP method (GET, POST, etc.)
@@ -111,6 +103,15 @@ type APIDocumentation struct {
 	DatabaseSchema string                 `json:"databaseSchema"`
 }
 
+// APIInfo contains API metadata.
+type APIInfo struct {
+	Title       string       `json:"title"`
+	Version     string       `json:"version"`
+	Description string       `json:"description"`
+	Servers     []ServerInfo `json:"servers"`
+}
+
+// ServerInfo contains server information.
 type ServerInfo struct {
 	URL         string
 	Description string

@@ -37,6 +37,7 @@ components:
                 - teamID
             type: object
         GetTeamResponse:
+            deprecated: true
             description: GetTeamResponse is the response to a get team request.
             properties:
                 teamID:
@@ -71,7 +72,7 @@ components:
                 PingStatus represents the status of a ping request.
 
                 Possible values:
-                - `ERROR`: PingStatusError means there was an error with the ping.
+                - `ERROR`: **[DEPRECATED]** Use PingStatusErrorV2 instead. - PingStatusError means there was an error with the ping.
                 - `OK`: PingStatusOK means the ping was successful.
             enum:
                 - ERROR
@@ -81,6 +82,7 @@ components:
             description: User represents a user in the system.
             properties:
                 name:
+                    deprecated: true
                     description: Name of the user
                     type: string
                 userID:
