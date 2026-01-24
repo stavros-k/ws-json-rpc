@@ -1,37 +1,5 @@
 package generate
 
-import (
-	"github.com/coder/guts/bindings"
-)
-
-// ExternalType represents an external Go type with metadata for OpenAPI generation.
-type ExternalType struct {
-	bindings.LiteralKeyword
-
-	GoType         string // Original Go type (e.g., "time.Time")
-	TypeScriptType string // TypeScript representation (e.g., "string")
-	OpenAPIFormat  string // OpenAPI format (e.g., "date-time")
-}
-
-// Type kind constants for TypeInfo.
-const (
-	TypeKindObject     = "object"
-	TypeKindStringEnum = "string_enum"
-	TypeKindNumberEnum = "number_enum"
-	TypeKindUnion      = "union"
-	TypeKindAlias      = "alias"
-)
-
-// Field type kind constants for FieldType.
-const (
-	FieldKindPrimitive = "primitive"
-	FieldKindArray     = "array"
-	FieldKindReference = "reference"
-	FieldKindEnum      = "enum"
-	FieldKindObject    = "object"
-	FieldKindUnknown   = "unknown"
-)
-
 // TypeInfo contains comprehensive metadata about a Go type extracted from guts.
 type TypeInfo struct {
 	Name         string      `json:"name"`        // Type name (e.g., "PingResponse")
