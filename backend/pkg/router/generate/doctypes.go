@@ -11,7 +11,7 @@ type TypeInfo struct {
 	References         []string         `json:"references"`         // Types this type references
 	ReferencedBy       []string         `json:"referencedBy"`       // Types that reference this type
 	UsedBy             []UsageInfo      `json:"usedBy"`             // Operations/routes that use this type
-	JSONRepresentation string           `json:"jsonRepresentation"` // JSON representation of the type FIXME: Implement this
+	JSONRepresentation string           `json:"jsonRepresentation"` // JSON representation of the type (zero value example)
 	GoType             string           `json:"-"`                  // Original Go type (for external types)
 }
 
@@ -69,7 +69,8 @@ type RouteInfo struct {
 
 // RequestInfo describes a request body.
 type RequestInfo struct {
-	Type                string            `json:"type"`
+	TypeName            string            `json:"type"` // Extracted type name (set by generator)
+	TypeValue           any               `json:"-"`    // Zero value of the type (set by route builder)
 	Description         string            `json:"description"`
 	ExamplesStringified map[string]string `json:"examples"`
 	Examples            map[string]any    `json:"-"`
@@ -78,8 +79,9 @@ type RequestInfo struct {
 // ParameterInfo describes a route parameter.
 type ParameterInfo struct {
 	Name        string `json:"name"`
-	In          string `json:"in"` // "path", "query", "header"
-	Type        string `json:"type"`
+	In          string `json:"in"`   // "path", "query", "header"
+	TypeName    string `json:"type"` // Extracted type name (set by generator)
+	TypeValue   any    `json:"-"`    // Zero value of the type (set by route builder)
 	Description string `json:"description"`
 	Required    bool   `json:"required"`
 }
@@ -87,7 +89,8 @@ type ParameterInfo struct {
 // ResponseInfo describes a response.
 type ResponseInfo struct {
 	StatusCode          int               `json:"statusCode"`
-	Type                string            `json:"type"` // Empty for responses without body
+	TypeName            string            `json:"type"` // Extracted type name (set by generator), empty for responses without body
+	TypeValue           any               `json:"-"`    // Zero value of the type (set by route builder)
 	Description         string            `json:"description"`
 	ExamplesStringified map[string]string `json:"examples"`
 	Examples            map[string]any    `json:"-"`

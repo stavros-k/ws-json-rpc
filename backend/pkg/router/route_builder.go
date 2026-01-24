@@ -165,16 +165,10 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 			return fmt.Errorf("parameter In must be one of %v for %s %s", validInValues, spec.method, spec.fullPath)
 		}
 
-		// FIXME: we should not do the reflection here, generator should handle it.
-		typeName, err := extractTypeFromValue(paramSpec.Type)
-		if err != nil {
-			return fmt.Errorf("failed to get type name for parameter %s: %w", name, err)
-		}
-
 		parameters = append(parameters, generate.ParameterInfo{
 			Name:        name,
 			In:          string(paramSpec.In),
-			Type:        typeName,
+			TypeValue:   paramSpec.Type,
 			Description: paramSpec.Description,
 			Required:    paramSpec.Required,
 		})
@@ -207,15 +201,9 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 			return errors.New("request type is nil")
 		}
 
-		// FIXME: we should not do the reflection here, generator should handle it.
-		typeName, err := extractTypeFromValue(spec.RequestType.Type)
-		if err != nil {
-			return fmt.Errorf("failed to get type name for request: %w", err)
-		}
-
 		requestInfo = &generate.RequestInfo{
-			Type:     typeName,
-			Examples: spec.RequestType.Examples,
+			TypeValue: spec.RequestType.Type,
+			Examples:  spec.RequestType.Examples,
 		}
 	}
 
@@ -225,25 +213,16 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 	for statusCode, respSpec := range spec.Responses {
 		responseInfo := generate.ResponseInfo{
 			StatusCode:  statusCode,
+			TypeValue:   respSpec.Type,
 			Description: respSpec.Description,
 			Examples:    respSpec.Examples,
-		}
-
-		if respSpec.Type != nil {
-			// FIXME: we should not do the reflection here, generator should handle it.
-			typeName, err := extractTypeFromValue(respSpec.Type)
-			if err != nil {
-				return fmt.Errorf("failed to get type name for response %d: %w", statusCode, err)
-			}
-
-			responseInfo.Type = typeName
 		}
 
 		responses[statusCode] = responseInfo
 	}
 
 	// 7. Register route with collector
-	rb.collector.RegisterRoute(&generate.RouteInfo{
+	if err := rb.collector.RegisterRoute(&generate.RouteInfo{
 		OperationID: spec.OperationID,
 		Method:      spec.method,
 		Path:        spec.fullPath,
@@ -254,7 +233,9 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 		Request:     requestInfo,
 		Parameters:  parameters,
 		Responses:   responses,
-	})
+	}); err != nil {
+		return fmt.Errorf("failed to register route: %w", err)
+	}
 
 	rb.l.Info("Registered route", slog.String("method", spec.method), slog.String("path", spec.fullPath), slog.String("operationID", spec.OperationID))
 

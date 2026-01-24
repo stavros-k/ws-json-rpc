@@ -2,7 +2,6 @@ package router
 
 import (
 	"errors"
-	"reflect"
 	"strings"
 )
 
@@ -38,26 +37,6 @@ func extractParamName(path string) []string {
 	}
 
 	return cleanParams
-}
-
-// extractTypeFromValue extracts the type name from a Go value using reflection.
-func extractTypeFromValue(value any) (string, error) {
-	rt := reflect.TypeOf(value)
-	if rt == nil {
-		return "", errors.New("cannot extract type from nil value")
-	}
-
-	// Handle pointers
-	for rt.Kind() == reflect.Pointer {
-		rt = rt.Elem()
-	}
-
-	typeName := rt.Name()
-	if typeName == "" {
-		return "", errors.New("anonymous type not supported")
-	}
-
-	return typeName, nil
 }
 
 // sanitizePath removes double slashes and trailing slashes from a path.

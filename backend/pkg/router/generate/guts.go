@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 	"ws-json-rpc/backend/pkg/utils"
@@ -21,6 +22,31 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
+
+// extractTypeNameFromValue extracts the type name from a Go value using reflection.
+// If the value is nil, typeName is set to empty string and no error is returned.
+func extractTypeNameFromValue(value any) (string, error) {
+	if value == nil {
+		return "", nil
+	}
+
+	rt := reflect.TypeOf(value)
+	if rt == nil {
+		return "", nil
+	}
+
+	// Handle pointers
+	for rt.Kind() == reflect.Pointer {
+		rt = rt.Elem()
+	}
+
+	name := rt.Name()
+	if name == "" {
+		return "", errors.New("anonymous type not supported")
+	}
+
+	return name, nil
+}
 
 // OpenAPICollector handles TypeScript AST parsing and metadata extraction from Go types.
 // It walks the TypeScript AST to extract comprehensive type information in a single pass.
@@ -148,7 +174,7 @@ func stringifyRequestExamples(r *RequestInfo) *RequestInfo {
 	return r
 }
 
-func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) {
+func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	// Get or create PathRoutes for this path
 	pathRoutes, exists := g.routes[route.Path]
 	if !exists {
@@ -156,16 +182,51 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) {
 		g.routes[route.Path] = pathRoutes
 	}
 
+	// Extract type names from zero values using reflection, and stringify examples
 	if route.Request != nil {
+		typeName, err := extractTypeNameFromValue(route.Request.TypeValue)
+		if err != nil {
+			return fmt.Errorf("failed to extract request type name: %w", err)
+		}
+		route.Request.TypeName = typeName
+
+		if typeInfo, ok := g.types[typeName]; ok {
+			if typeInfo.JSONRepresentation == "" {
+				typeInfo.JSONRepresentation = string(utils.MustToJSONIndent(route.Request.TypeValue))
+			}
+		}
+
 		route.Request = stringifyRequestExamples(route.Request)
 	}
 
 	for statusCode, response := range route.Responses {
-		route.Responses[statusCode] = stringifyResponseExamples(response)
+		resp := response
+		typeName, err := extractTypeNameFromValue(resp.TypeValue)
+		if err != nil {
+			return fmt.Errorf("failed to extract response type name: %w", err)
+		}
+		resp.TypeName = typeName
+
+		if typeInfo, ok := g.types[typeName]; ok {
+			if typeInfo.JSONRepresentation == "" {
+				typeInfo.JSONRepresentation = string(utils.MustToJSONIndent(resp.TypeValue))
+			}
+		}
+
+		route.Responses[statusCode] = stringifyResponseExamples(resp)
+	}
+
+	for i := range route.Parameters {
+		typeName, err := extractTypeNameFromValue(route.Parameters[i].TypeValue)
+		if err != nil {
+			return fmt.Errorf("failed to extract parameter type name: %w", err)
+		}
+		route.Parameters[i].TypeName = typeName
 	}
 
 	// Add route under its HTTP method
 	pathRoutes.Verbs[route.Method] = route
+	return nil
 }
 
 // timeTypeOverride returns a TypeOverride for time.Time.
@@ -501,17 +562,17 @@ func (g *OpenAPICollector) buildUsedBy() {
 		for _, route := range pathRoutes.Verbs {
 			// Track request type
 			if route.Request != nil {
-				g.addUsage(route.Request.Type, route.OperationID, "request")
+				g.addUsage(route.Request.TypeName, route.OperationID, "request")
 			}
 
 			// Track response types
 			for _, resp := range route.Responses {
-				g.addUsage(resp.Type, route.OperationID, "response")
+				g.addUsage(resp.TypeName, route.OperationID, "response")
 			}
 
 			// Track parameter types
 			for _, param := range route.Parameters {
-				g.addUsage(param.Type, route.OperationID, "parameter")
+				g.addUsage(param.TypeName, route.OperationID, "parameter")
 			}
 		}
 	}

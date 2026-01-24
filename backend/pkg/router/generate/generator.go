@@ -4,15 +4,15 @@ import "github.com/coder/guts/bindings"
 
 // RouteMetadataCollector is the interface that RouteBuilder uses to collect route metadata.
 type RouteMetadataCollector interface {
-	RegisterRoute(route *RouteInfo)
+	RegisterRoute(route *RouteInfo) error
 	Generate() error
 }
 
 // NoopCollector is a no-op implementation of RouteMetadataCollector.
 type NoopCollector struct{}
 
-func (n *NoopCollector) RegisterRoute(route *RouteInfo) {}
-func (n *NoopCollector) Generate() error                { return nil }
+func (n *NoopCollector) RegisterRoute(route *RouteInfo) error { return nil }
+func (n *NoopCollector) Generate() error                      { return nil }
 
 // ExternalType represents an external Go type with metadata for OpenAPI generation.
 type ExternalType struct {

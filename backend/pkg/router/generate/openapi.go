@@ -254,7 +254,7 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 		}
 
 		// Build schema for parameter type
-		if typeInfo, ok := types[param.Type]; ok {
+		if typeInfo, ok := types[param.TypeName]; ok {
 			schema, err := toOpenAPISchema(typeInfo)
 			if err != nil {
 				return nil, fmt.Errorf("failed to build schema for parameter %s: %w", param.Name, err)
@@ -264,7 +264,7 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 		} else {
 			// Primitive type - create inline schema
 			p.Schema = &openapi3.SchemaRef{
-				Value: &openapi3.Schema{Type: &openapi3.Types{param.Type}},
+				Value: &openapi3.Schema{Type: &openapi3.Types{param.TypeName}},
 			}
 		}
 
@@ -277,7 +277,7 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 			Value: &openapi3.RequestBody{
 				Required:    true,
 				Description: route.Request.Description,
-				Content:     createJSONContent(route.Request.Type, route.Request.Examples),
+				Content:     createJSONContent(route.Request.TypeName, route.Request.Examples),
 			},
 		}
 	}
@@ -287,8 +287,8 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 		statusStr := strconv.Itoa(statusCode)
 		response := &openapi3.Response{Description: &resp.Description}
 
-		if resp.Type != "" {
-			response.Content = createJSONContent(resp.Type, resp.Examples)
+		if resp.TypeName != "" {
+			response.Content = createJSONContent(resp.TypeName, resp.Examples)
 		}
 
 		op.Responses.Set(statusStr, &openapi3.ResponseRef{Value: response})

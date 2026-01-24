@@ -51,7 +51,8 @@
       "enumValues": null,
       "references": [],
       "referencedBy": null,
-      "usedBy": null
+      "usedBy": null,
+      "jsonRepresentation": ""
     },
     "CreateUserResponse": {
       "name": "CreateUserResponse",
@@ -102,7 +103,8 @@
           "operationID": "ping",
           "role": "response"
         }
-      ]
+      ],
+      "jsonRepresentation": "{\n  \"userID\": \"\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\"\n}"
     },
     "GetTeamRequest": {
       "name": "GetTeamRequest",
@@ -134,7 +136,8 @@
           "operationID": "getTeam",
           "role": "request"
         }
-      ]
+      ],
+      "jsonRepresentation": "{\n  \"teamID\": \"\"\n}"
     },
     "GetTeamResponse": {
       "name": "GetTeamResponse",
@@ -196,7 +199,8 @@
           "operationID": "ping",
           "role": "response"
         }
-      ]
+      ],
+      "jsonRepresentation": "{\n  \"teamID\": \"\",\n  \"users\": null\n}"
     },
     "PingResponse": {
       "name": "PingResponse",
@@ -272,7 +276,8 @@
           "operationID": "ping",
           "role": "response"
         }
-      ]
+      ],
+      "jsonRepresentation": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}"
     },
     "PingStatus": {
       "name": "PingStatus",
@@ -298,7 +303,8 @@
       "referencedBy": [
         "PingResponse"
       ],
-      "usedBy": null
+      "usedBy": null,
+      "jsonRepresentation": ""
     },
     "User": {
       "name": "User",
@@ -344,7 +350,8 @@
       "referencedBy": [
         "GetTeamResponse"
       ],
-      "usedBy": null
+      "usedBy": null,
+      "jsonRepresentation": ""
     }
   },
   "routes": {
