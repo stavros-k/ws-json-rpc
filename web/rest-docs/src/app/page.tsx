@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TbWorld, TbApi, TbDatabase, TbCode, TbBook, TbSchema } from "react-icons/tb";
-import { docs } from "@/data/api";
+import { VerbBadge } from "@/components/verb-badge";
+import { docs, getAllOperations } from "@/data/api";
 
 // Calculate total number of operations across all routes
 const routeCount = Object.keys(docs.routes).length;
@@ -93,15 +94,18 @@ export default function Home() {
                             <TbWorld className='w-7 h-7 text-purple-500' />
                         </div>
                         <div className='text-lg font-bold text-text-primary mb-2'>HTTP Methods</div>
-                        <div className='flex flex-wrap gap-2'>
+                        <div className='flex flex-col gap-2'>
                             {Object.entries(httpMethods)
                                 .sort(([, a], [, b]) => b - a)
                                 .map(([method, count]) => (
                                     <div
                                         key={method}
-                                        className='bg-bg-tertiary px-2 py-1 rounded-md border border-border-primary'>
-                                        <span className='text-xs font-bold text-accent-blue'>{method}</span>
-                                        <span className='text-xs text-text-tertiary ml-1'>({count})</span>
+                                        className='flex items-center justify-between'>
+                                        <VerbBadge
+                                            verb={method}
+                                            size='sm'
+                                        />
+                                        <span className='text-sm font-bold text-text-secondary'>{count}</span>
                                     </div>
                                 ))}
                         </div>

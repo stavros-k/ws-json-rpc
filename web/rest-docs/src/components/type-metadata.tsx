@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
 import type { FieldMetadata, TypeData } from "@/data/api";
 import { docs } from "@/data/api";
+import { TypeKindBadge } from "./type-kind-badge";
 
 interface TypeMetadataProps {
     data: TypeData;
@@ -13,16 +14,6 @@ interface TypeMetadataProps {
 const isTypeLink = (type: string) => {
     return type in docs.types;
 };
-
-function TypeKindBadge({ kind }: { kind: string }) {
-    return (
-        <div>
-            <span className='inline-block px-3 py-1.5 rounded-md bg-info-bg text-info-text border border-info-border font-semibold text-sm'>
-                {kind}
-            </span>
-        </div>
-    );
-}
 
 function TypeDescription({ description }: { description?: string }) {
     if (!description) return null;

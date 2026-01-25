@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { getItemData } from "./sidebar";
 import type { ItemType } from "@/data/api";
+import { VerbBadge } from "./verb-badge";
 
 type Props = {
     type: ItemType;
@@ -15,7 +16,8 @@ export const SidebarItem = ({ type, item }: Props) => {
     const { urlPath, data, title } = item;
     const isDeprecated = !!data?.deprecated;
     const isActive = currentName === item.name;
-    const subtitle = "subtitle" in item ? item.subtitle : "";
+    const verb = "verb" in item ? item.verb : undefined;
+    const route = "route" in item ? item.route : undefined;
 
     return (
         <Link
@@ -26,9 +28,17 @@ export const SidebarItem = ({ type, item }: Props) => {
             } py-2 px-2.5 rounded-lg mb-1.5 text-sm no-underline transition-all duration-200 hover:bg-bg-tertiary hover:shadow-sm border-2 ${
                 isActive ? "border-accent-blue-border" : "border-border-primary"
             } ${isDeprecated ? "opacity-40" : ""}`}>
-            <div className='flex flex-col'>
-                <span className='font-medium'>{title || item.name}</span>
-                {subtitle && <span className='text-xs text-text-muted mt-0.5 font-mono'>{subtitle}</span>}
+            <div className='flex flex-col gap-1'>
+                <span className='font-semibold text-base'>{title || item.name}</span>
+                {verb && route && (
+                    <div className='flex items-center gap-1'>
+                        <VerbBadge
+                            verb={verb}
+                            size='xs'
+                        />
+                        <span className='text-[10px] text-text-muted font-mono truncate'>{route}</span>
+                    </div>
+                )}
             </div>
         </Link>
     );

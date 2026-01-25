@@ -5,6 +5,7 @@ import { CollapsibleCard } from "@/components/collapsible-group";
 import { CollapsibleResponse } from "@/components/collapsible-response";
 import { Deprecation } from "@/components/deprecation";
 import { Group } from "@/components/group";
+import { VerbBadge } from "@/components/verb-badge";
 import { getAllOperations, getTypeJson, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -38,10 +39,20 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
             <div>
-                <h1 className='text-4xl font-bold mb-3 text-text-primary'>{operation.operationID}</h1>
-                <h2 className='text-xl text-accent-blue mb-4 font-mono font-semibold'>
-                    {operation.verb.toUpperCase()} {operation.route}
-                </h2>
+                <div className='flex items-center gap-3 mb-3'>
+                    <h1 className='text-4xl font-bold text-text-primary'>{operation.operationID}</h1>
+                    <Group
+                        group={operation.group || ""}
+                        size='md'
+                    />
+                </div>
+                <div className='flex items-center gap-3 mb-4'>
+                    <VerbBadge
+                        verb={operation.verb}
+                        size='lg'
+                    />
+                    <h2 className='text-xl text-accent-blue font-mono font-semibold'>{operation.route}</h2>
+                </div>
 
                 <Deprecation
                     deprecated={operation.deprecated}
@@ -53,7 +64,6 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                     {operation.description && operation.description !== operation.summary && (
                         <p className='text-sm'>{operation.description}</p>
                     )}
-                    <Group group={operation.group || ""} />
                 </div>
             </div>
 

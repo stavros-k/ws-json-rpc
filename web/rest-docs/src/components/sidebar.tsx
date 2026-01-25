@@ -93,7 +93,8 @@ export function getItemData({ type, itemName }: getItemProps) {
             urlPath: `/api/operation/${itemName}`,
             data: operation,
             title: operation.operationID,
-            subtitle: `${operation.verb.toUpperCase()}: ${operation.route}`,
+            verb: operation.verb,
+            route: operation.route,
             group: operation.group || "",
         } as const;
     }
