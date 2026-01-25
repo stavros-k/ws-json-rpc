@@ -17,7 +17,13 @@ export type TypeData = ApiDataTypes[TypeKeys];
 type TypeDataWithFields = Extract<TypeData, { fields: unknown[] }>;
 export type FieldMetadata = NonNullable<TypeDataWithFields["fields"]>[number];
 
-export type ItemType = "type";
+export type ItemType = "type" | "operation";
+
+// Operation types
+export type OperationData = VerbData & {
+    route: Routes;
+    verb: string;
+};
 
 export function getTypeJson(typeName: TypeKeys | "null") {
     if (typeName === "null") return null;
@@ -35,6 +41,23 @@ export function getTypeJson(typeName: TypeKeys | "null") {
         }
     }
     return null;
+}
+
+// Get all operations from routes
+export function getAllOperations(): OperationData[] {
+    const operations: OperationData[] = [];
+
+    for (const [route, routeData] of Object.entries(docs.routes)) {
+        for (const [verb, verbData] of Object.entries(routeData.verbs)) {
+            operations.push({
+                ...verbData,
+                route: route as Routes,
+                verb: verb,
+            });
+        }
+    }
+
+    return operations;
 }
 
 export const docs: Docs = docsData;

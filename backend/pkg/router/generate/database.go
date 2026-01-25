@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"ws-json-rpc/backend/internal/database/sqlite"
 	"ws-json-rpc/backend/pkg/database"
 	"ws-json-rpc/backend/pkg/utils"
@@ -12,8 +13,8 @@ import (
 
 // GenerateDatabaseSchema runs migrations on a temporary database and returns the resulting schema.
 // This generates a SQL schema dump from the application's migrations.
-func (g *OpenAPICollector) GenerateDatabaseSchema(l *slog.Logger, schemaOutputPath string) (string, error) {
-	l.Debug("Generating database schema from migrations")
+func (g *OpenAPICollector) GenerateDatabaseSchema(schemaOutputPath string) (string, error) {
+	g.l.Debug("Generating database schema from migrations")
 
 	// Create a temporary database file
 	tempDBFile, err := os.CreateTemp(os.TempDir(), "temp-db-*.sqlite")
@@ -23,12 +24,12 @@ func (g *OpenAPICollector) GenerateDatabaseSchema(l *slog.Logger, schemaOutputPa
 
 	defer func() {
 		if err := os.Remove(tempDBFile.Name()); err != nil {
-			l.Error("failed to remove temporary database file", utils.ErrAttr(err))
+			g.l.Error("failed to remove temporary database file", utils.ErrAttr(err))
 		}
 	}()
 
 	// Create a migrator for the temporary database
-	mig, err := database.NewMigrator(l, sqlite.GetMigrationsFS(), tempDBFile.Name())
+	mig, err := database.NewMigrator(g.l, sqlite.GetMigrationsFS(), tempDBFile.Name())
 	if err != nil {
 		return "", fmt.Errorf("failed to create migrator: %w", err)
 	}
@@ -49,7 +50,19 @@ func (g *OpenAPICollector) GenerateDatabaseSchema(l *slog.Logger, schemaOutputPa
 		return "", fmt.Errorf("failed to read schema file: %w", err)
 	}
 
-	l.Info("Database schema generated", slog.String("file", schemaOutputPath))
+	g.l.Info("Database schema generated", slog.String("file", schemaOutputPath))
 
 	return string(bytes.TrimSpace(schemaBytes)), nil
+}
+
+type DatabaseStats struct {
+	TableCount int `json:"tableCount"`
+}
+
+func (g *OpenAPICollector) GetDatabaseStats(schema string) (*DatabaseStats, error) {
+	g.l.Debug("Getting database stats")
+
+	tableCount := strings.Count(schema, "CREATE TABLE")
+
+	return &DatabaseStats{tableCount}, nil
 }

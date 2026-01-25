@@ -23,49 +23,6 @@ import (
 	"golang.org/x/text/language"
 )
 
-// extractTypeNameFromValue extracts the type name from a Go value using reflection.
-// If the value is nil, typeName is set to empty string and no error is returned.
-func extractTypeNameFromValue(value any) (string, error) {
-	if value == nil {
-		return "", nil
-	}
-
-	rt := reflect.TypeOf(value)
-	if rt == nil {
-		return "", nil
-	}
-
-	// Handle pointers
-	for rt.Kind() == reflect.Pointer {
-		rt = rt.Elem()
-	}
-
-	name := rt.Name()
-	if name == "" {
-		return "", errors.New("anonymous type not supported")
-	}
-
-	return name, nil
-}
-
-// getExternalTypeInfo returns the external type metadata for a given expression.
-// Returns nil if the expression is not an external type.
-// Unwraps nullable unions (T | null) to check the underlying type.
-func (g *OpenAPICollector) getExternalTypeInfo(expr bindings.ExpressionType) (*ExternalTypeInfo, bool) {
-	switch e := expr.(type) {
-	case *bindings.LiteralKeyword:
-		info, exists := g.externalTypes[e]
-		return info, exists
-	case *bindings.UnionType:
-		if isNullable, nonNullType := g.isNullableUnion(e); isNullable {
-			// Recursively check the non-null type
-			return g.getExternalTypeInfo(nonNullType)
-		}
-	}
-
-	return nil, false
-}
-
 // OpenAPICollector handles TypeScript AST parsing and metadata extraction from Go types.
 // It walks the TypeScript AST to extract comprehensive type information in a single pass.
 type OpenAPICollector struct {
@@ -75,7 +32,7 @@ type OpenAPICollector struct {
 
 	types         map[string]*TypeInfo                           // Extracted type information
 	routes        map[string]*PathRoutes                         // Registered routes, keyed by path
-	dbSchema      string                                         // Database schema SQL
+	database      Database                                       // Database schema and stats
 	externalTypes map[*bindings.LiteralKeyword]*ExternalTypeInfo // External type metadata, keyed by keyword pointer
 
 	docsFilePath        string // Path to write documentation JSON file
@@ -129,12 +86,16 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 		apiInfo:             opts.APIInfo,
 	}
 
-	dbSchema, err := gutsGenerator.GenerateDatabaseSchema(l, opts.DatabaseSchemaFileOutputPath)
+	dbSchema, err := gutsGenerator.GenerateDatabaseSchema(opts.DatabaseSchemaFileOutputPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database schema: %w", err)
 	}
-
-	gutsGenerator.dbSchema = dbSchema
+	gutsGenerator.database.Schema = dbSchema
+	dbStats, err := gutsGenerator.GetDatabaseStats(dbSchema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database stats: %w", err)
+	}
+	gutsGenerator.database.TableCount = dbStats.TableCount
 
 	gutsGenerator.vm, err = bindings.New()
 	if err != nil {
@@ -524,7 +485,7 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 		typeInfo.Fields = append(typeInfo.Fields, fieldInfo)
 	}
 
-	g.l.Debug("Extracted interface type", slog.String("name", name), slog.Int("fieldCount", len(typeInfo.Fields)), slog.Bool("deprecated", deprecated != nil))
+	g.l.Debug("Extracted interface type", slog.String("name", name), slog.Int("fieldCount", len(typeInfo.Fields)), slog.Bool("deprecated", deprecated != ""))
 
 	return typeInfo, nil
 }
@@ -555,10 +516,10 @@ func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*T
 
 func (g *OpenAPICollector) getDocumentation() *APIDocumentation {
 	return &APIDocumentation{
-		Types:          g.types,
-		Routes:         g.routes,
-		DatabaseSchema: g.dbSchema,
-		Info:           g.apiInfo,
+		Types:    g.types,
+		Routes:   g.routes,
+		Database: g.database,
+		Info:     g.apiInfo,
 	}
 }
 
@@ -796,9 +757,9 @@ const DEPRECATED_PREFIX = "deprecated:"
 // parseDeprecation extracts deprecation info from comments and returns cleaned description.
 // It looks for "Deprecated:" anywhere in the text (case-insensitive) and captures the message.
 // Returns (deprecationInfo, cleanedDescription, error).
-func (g *OpenAPICollector) parseDeprecation(comments string) (*DeprecationInfo, string, error) {
+func (g *OpenAPICollector) parseDeprecation(comments string) (string, string, error) {
 	if comments == "" {
-		return nil, "", nil
+		return "", "", nil
 	}
 
 	// Look for "Deprecated:" anywhere in the text (case-insensitive)
@@ -806,7 +767,7 @@ func (g *OpenAPICollector) parseDeprecation(comments string) (*DeprecationInfo, 
 	idx := strings.Index(lowerComments, DEPRECATED_PREFIX)
 
 	if idx == -1 {
-		return nil, comments, nil
+		return "", comments, nil
 	}
 
 	// Extract the message after "Deprecated:"
@@ -817,10 +778,10 @@ func (g *OpenAPICollector) parseDeprecation(comments string) (*DeprecationInfo, 
 	cleanedDesc := strings.TrimSpace(comments[:idx])
 
 	if message == "" {
-		return nil, cleanedDesc, errors.New("deprecation message is empty")
+		return "", cleanedDesc, errors.New("deprecation message is empty")
 	}
 
-	return &DeprecationInfo{Message: message}, cleanedDesc, nil
+	return message, cleanedDesc, nil
 }
 
 // isNullableUnion checks if a union type represents a nullable pattern (T | null or T | undefined).
@@ -1058,4 +1019,47 @@ func (g *OpenAPICollector) writeDocsJSON() error {
 	g.l.Info("API documentation written", slog.String("file", g.docsFilePath))
 
 	return nil
+}
+
+// getExternalTypeInfo returns the external type metadata for a given expression.
+// Returns nil if the expression is not an external type.
+// Unwraps nullable unions (T | null) to check the underlying type.
+func (g *OpenAPICollector) getExternalTypeInfo(expr bindings.ExpressionType) (*ExternalTypeInfo, bool) {
+	switch e := expr.(type) {
+	case *bindings.LiteralKeyword:
+		info, exists := g.externalTypes[e]
+		return info, exists
+	case *bindings.UnionType:
+		if isNullable, nonNullType := g.isNullableUnion(e); isNullable {
+			// Recursively check the non-null type
+			return g.getExternalTypeInfo(nonNullType)
+		}
+	}
+
+	return nil, false
+}
+
+// extractTypeNameFromValue extracts the type name from a Go value using reflection.
+// If the value is nil, typeName is set to empty string and no error is returned.
+func extractTypeNameFromValue(value any) (string, error) {
+	if value == nil {
+		return "", nil
+	}
+
+	rt := reflect.TypeOf(value)
+	if rt == nil {
+		return "", nil
+	}
+
+	// Handle pointers
+	for rt.Kind() == reflect.Pointer {
+		rt = rt.Elem()
+	}
+
+	name := rt.Name()
+	if name == "" {
+		return "", errors.New("anonymous type not supported")
+	}
+
+	return name, nil
 }

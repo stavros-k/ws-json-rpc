@@ -2,17 +2,17 @@ package generate
 
 // TypeInfo contains comprehensive metadata about a Go type extracted from guts.
 type TypeInfo struct {
-	Name            string           `json:"name"`            // Type name (e.g., "PingResponse")
-	Kind            string           `json:"kind"`            // "Object", "String Enum", "Array", etc.
-	Description     string           `json:"description"`     // Type-level documentation
-	Deprecated      *DeprecationInfo `json:"deprecated"`      // Deprecation information
-	Fields          []FieldInfo      `json:"fields"`          // For object types: fields
-	EnumValues      []EnumValue      `json:"enumValues"`      // For enum types: enum constants
-	References      []string         `json:"references"`      // Types this type references
-	ReferencedBy    []string         `json:"referencedBy"`    // Types that reference this type
-	UsedBy          []UsageInfo      `json:"usedBy"`          // Operations/routes that use this type
-	Representations Representations  `json:"representations"` // JSON, JSON Schema, and TypeScript representations of the type
-	GoType          string           `json:"-"`               // Original Go type (for external types)
+	Name            string          `json:"name"`            // Type name (e.g., "PingResponse")
+	Kind            string          `json:"kind"`            // "Object", "String Enum", "Array", etc.
+	Description     string          `json:"description"`     // Type-level documentation
+	Deprecated      string          `json:"deprecated"`      // Deprecation information
+	Fields          []FieldInfo     `json:"fields"`          // For object types: fields
+	EnumValues      []EnumValue     `json:"enumValues"`      // For enum types: enum constants
+	References      []string        `json:"references"`      // Types this type references
+	ReferencedBy    []string        `json:"referencedBy"`    // Types that reference this type
+	UsedBy          []UsageInfo     `json:"usedBy"`          // Operations/routes that use this type
+	Representations Representations `json:"representations"` // JSON, JSON Schema, and TypeScript representations of the type
+	GoType          string          `json:"-"`               // Original Go type (for external types)
 }
 
 type Representations struct {
@@ -33,24 +33,19 @@ type FieldType struct {
 
 // FieldInfo describes a field in a struct (used in high-level API documentation).
 type FieldInfo struct {
-	Name        string           `json:"name"`        // Field name
-	DisplayType string           `json:"displayType"` // Human-readable type string (e.g., "User[]", "string | null")
-	TypeInfo    FieldType        `json:"typeInfo"`    // Structured type information
-	Description string           `json:"description"` // Field documentation
-	Deprecated  *DeprecationInfo `json:"deprecated"`  // Deprecation information
-	GoType      string           `json:"goType"`      // Original Go type (for external types like time.Time)
+	Name        string    `json:"name"`        // Field name
+	DisplayType string    `json:"displayType"` // Human-readable type string (e.g., "User[]", "string | null")
+	TypeInfo    FieldType `json:"typeInfo"`    // Structured type information
+	Description string    `json:"description"` // Field documentation
+	Deprecated  string    `json:"deprecated"`  // Deprecation information
+	GoType      string    `json:"goType"`      // Original Go type (for external types like time.Time)
 }
 
 // EnumValue represents an enum constant with its documentation.
 type EnumValue struct {
-	Value       string           `json:"value"`
-	Description string           `json:"description"`
-	Deprecated  *DeprecationInfo `json:"deprecated"`
-}
-
-// DeprecationInfo contains deprecation details.
-type DeprecationInfo struct {
-	Message string `json:"message"` // Deprecation message
+	Value       string `json:"value"`
+	Description string `json:"description"`
+	Deprecated  string `json:"deprecated"`
 }
 
 // UsageInfo tracks where a type is used in operations/routes.
@@ -66,8 +61,8 @@ type RouteInfo struct {
 	Path        string               `json:"-"` // Not serialized - used as map key
 	Summary     string               `json:"summary"`
 	Description string               `json:"description"`
-	Tags        []string             `json:"tags"`
-	Deprecated  bool                 `json:"deprecated"`
+	Group       string               `json:"group"`
+	Deprecated  string               `json:"deprecated"`
 	Request     *RequestInfo         `json:"request"`
 	Parameters  []ParameterInfo      `json:"parameters"`
 	Responses   map[int]ResponseInfo `json:"responses"`
@@ -109,10 +104,10 @@ type PathRoutes struct {
 
 // APIDocumentation is the complete API documentation structure.
 type APIDocumentation struct {
-	Info           APIInfo                `json:"info"`
-	Types          map[string]*TypeInfo   `json:"types"`
-	Routes         map[string]*PathRoutes `json:"routes"` // Keyed by path
-	DatabaseSchema string                 `json:"databaseSchema"`
+	Info     APIInfo                `json:"info"`
+	Types    map[string]*TypeInfo   `json:"types"`
+	Routes   map[string]*PathRoutes `json:"routes"` // Keyed by path
+	Database Database               `json:"database"`
 }
 
 // APIInfo contains API metadata.
@@ -127,4 +122,9 @@ type APIInfo struct {
 type ServerInfo struct {
 	URL         string
 	Description string
+}
+
+type Database struct {
+	Schema     string `json:"schema"`
+	TableCount int    `json:"tableCount"`
 }

@@ -152,7 +152,7 @@ paths:
                     description: Internal server error
             summary: Ping the server
             tags:
-                - ping
+                - core
     /team/{teamID}:
         get:
             deprecated: true

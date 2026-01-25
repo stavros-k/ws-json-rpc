@@ -28,7 +28,7 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	schema := &openapi3.Schema{
 		Type:        &openapi3.Types{"object"},
 		Description: typeInfo.Description,
-		Deprecated:  typeInfo.Deprecated != nil,
+		Deprecated:  typeInfo.Deprecated != "",
 		Properties:  make(openapi3.Schemas),
 		Required:    []string{},
 	}
@@ -40,7 +40,7 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 		}
 
 		// Mark field as deprecated
-		if field.Deprecated != nil {
+		if field.Deprecated != "" {
 			fieldSchema.Value.Deprecated = true
 		}
 
@@ -147,10 +147,10 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 		values[i] = ev.Value
 
 		// Build enum value description with deprecation info
-		if ev.Deprecated != nil {
+		if ev.Deprecated != "" {
 			enumDesc.WriteString(fmt.Sprintf("- `%s`: **[DEPRECATED]** ", ev.Value))
-			if ev.Deprecated.Message != "" {
-				enumDesc.WriteString(ev.Deprecated.Message)
+			if ev.Deprecated != "" {
+				enumDesc.WriteString(ev.Deprecated)
 			}
 			if ev.Description != "" {
 				enumDesc.WriteString(" - " + ev.Description)
@@ -167,7 +167,7 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 		Type:        &openapi3.Types{"string"},
 		Enum:        values,
 		Description: enumDesc.String(),
-		Deprecated:  typeInfo.Deprecated != nil,
+		Deprecated:  typeInfo.Deprecated != "",
 	}, nil
 }
 
@@ -241,8 +241,8 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 		OperationID: route.OperationID,
 		Summary:     route.Summary,
 		Description: route.Description,
-		Tags:        route.Tags,
-		Deprecated:  route.Deprecated,
+		Tags:        []string{route.Group},
+		Deprecated:  route.Deprecated != "",
 		Responses:   &openapi3.Responses{},
 	}
 

@@ -72,8 +72,8 @@ type RouteSpec struct {
 	Handler     http.HandlerFunc // Handler is the function that will handle the route
 	Summary     string           // Summary is a short summary of the route
 	Description string           // Description is a longer description of the route
-	Tags        []string         // Tags are used to group routes in the OpenAPI spec
-	Deprecated  bool             // Deprecated indicates if the route is deprecated
+	Group       string           // Group is a group name for the route
+	Deprecated  string           // Deprecated is a deprecation message for the route
 
 	RequestType *RequestBodySpec     // RequestType is the type of the request body, or nil if no body
 	Responses   map[int]ResponseSpec // Responses is a map of status code to response spec
@@ -226,7 +226,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 		Path:        spec.fullPath,
 		Summary:     spec.Summary,
 		Description: spec.Description,
-		Tags:        spec.Tags,
+		Group:       spec.Group,
 		Deprecated:  spec.Deprecated,
 		Request:     requestInfo,
 		Parameters:  parameters,

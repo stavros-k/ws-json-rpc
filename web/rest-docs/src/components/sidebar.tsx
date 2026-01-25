@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { IoHome } from "react-icons/io5";
-import { docs, type ItemType, type TypeKeys } from "@/data/api";
+import { docs, getAllOperations, type ItemType, type TypeKeys } from "@/data/api";
 import { CodeThemeToggle } from "./code-theme-toggle";
 import { ConnectionIndicator } from "./connection-indicator";
 import { SidebarSection } from "./sidebar-section";
@@ -42,14 +42,14 @@ export const Sidebar = () => {
             </div>
 
             <SidebarSection
+                title='Operations'
+                type='operation'
+                overviewHref='/api/operations'
+            />
+            <SidebarSection
                 title='Types'
                 type='type'
                 overviewHref='/api/types'
-            />
-
-            <SidebarLink
-                title='JSON-RPC Protocol'
-                href='/api/protocol'
             />
 
             <SidebarLink
@@ -80,6 +80,22 @@ export function getItemData({ type, itemName }: getItemProps) {
             group: "",
         } as const;
     }
-    // Methods and events are not supported in REST API
-    throw new Error("Invalid type - only 'type' is supported");
+    if (type === "operation") {
+        // itemName is operationID for operations
+        const allOperations = getAllOperations();
+        const operation = allOperations.find((op) => op.operationID === itemName);
+        if (!operation) {
+            throw new Error(`Operation ${itemName} not found`);
+        }
+        return {
+            type: type,
+            name: itemName,
+            urlPath: `/api/operation/${itemName}`,
+            data: operation,
+            title: operation.operationID,
+            subtitle: `${operation.verb.toUpperCase()}: ${operation.route}`,
+            group: operation.group || "",
+        } as const;
+    }
+    throw new Error(`Invalid type: ${type}`);
 }

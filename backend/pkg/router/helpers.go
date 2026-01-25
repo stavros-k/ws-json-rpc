@@ -75,8 +75,12 @@ func validateRouteSpec(spec RouteSpec) error {
 		return errors.New("field Description required")
 	}
 
-	if len(spec.Tags) == 0 {
-		return errors.New("field Tags requires at least one tag")
+	if spec.Group == "" {
+		return errors.New("field Group required")
+	}
+
+	if spec.Handler == nil {
+		return errors.New("field Handler required")
 	}
 
 	return nil

@@ -67,7 +67,7 @@ func main() {
 		OperationID: "ping",
 		Summary:     "Ping the server",
 		Description: "Check if the server is alive",
-		Tags:        []string{"ping"},
+		Group:       "core",
 		RequestType: nil,
 		Responses: map[int]router.ResponseSpec{
 			200: {
@@ -104,8 +104,8 @@ func main() {
 		OperationID: "getTeam",
 		Summary:     "Get a team",
 		Description: "Get a team by its ID",
-		Tags:        []string{"team"},
-		Deprecated:  true,
+		Group:       "team",
+		Deprecated:  "Use GetTeamResponseV2 instead.",
 		RequestType: &router.RequestBodySpec{
 			Type: httpapi.GetTeamRequest{},
 			Examples: map[string]any{

@@ -18,10 +18,11 @@ export default function DatabaseSchema() {
                     <p>This page displays the database schema used by the application.</p>
                 </div>
             </div>
+            {/* FIXME: Add table count stat here */}
 
             <CardBoxWrapper title='Schema'>
                 <CodeWrapper
-                    code={docs.databaseSchema}
+                    code={docs.database.schema}
                     label={{ text: "schema.sql" }}
                     lang='sql'
                 />

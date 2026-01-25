@@ -15,7 +15,7 @@
       "name": "CreateUserRequest",
       "kind": "object",
       "description": "CreateUserRequest is the request to create a new user.",
-      "deprecated": null,
+      "deprecated": "",
       "fields": [
         {
           "name": "username",
@@ -29,7 +29,7 @@
             "itemsType": null
           },
           "description": "Username to create",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         },
         {
@@ -44,7 +44,7 @@
             "itemsType": null
           },
           "description": "Password to create",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         }
       ],
@@ -62,7 +62,7 @@
       "name": "CreateUserResponse",
       "kind": "object",
       "description": "CreateUserResponse is the response to a create user request.",
-      "deprecated": null,
+      "deprecated": "",
       "fields": [
         {
           "name": "userID",
@@ -76,7 +76,7 @@
             "itemsType": null
           },
           "description": "ID of the created user",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         },
         {
@@ -91,7 +91,7 @@
             "itemsType": null
           },
           "description": "Creation timestamp",
-          "deprecated": null,
+          "deprecated": "",
           "goType": "time.Time"
         },
         {
@@ -106,7 +106,7 @@
             "itemsType": null
           },
           "description": "URL to the user",
-          "deprecated": null,
+          "deprecated": "",
           "goType": "ws-json-rpc/backend/pkg/types.URL"
         }
       ],
@@ -133,7 +133,7 @@
       "name": "GetTeamRequest",
       "kind": "object",
       "description": "GetTeamRequest is the request to get a team.",
-      "deprecated": null,
+      "deprecated": "",
       "fields": [
         {
           "name": "teamID",
@@ -147,7 +147,7 @@
             "itemsType": null
           },
           "description": "ID of the team to get",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         }
       ],
@@ -170,9 +170,7 @@
       "name": "GetTeamResponse",
       "kind": "object",
       "description": "GetTeamResponse is the response to a get team request.",
-      "deprecated": {
-        "message": "Use GetTeamResponseV2 instead."
-      },
+      "deprecated": "Use GetTeamResponseV2 instead.",
       "fields": [
         {
           "name": "teamID",
@@ -186,7 +184,7 @@
             "itemsType": null
           },
           "description": "ID of the team",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         },
         {
@@ -208,7 +206,7 @@
             }
           },
           "description": "Users in the team",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         }
       ],
@@ -237,7 +235,7 @@
       "name": "PingResponse",
       "kind": "object",
       "description": "PingResponse is the response to a ping request.",
-      "deprecated": null,
+      "deprecated": "",
       "fields": [
         {
           "name": "message",
@@ -251,7 +249,7 @@
             "itemsType": null
           },
           "description": "Human-readable message",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         },
         {
@@ -266,7 +264,7 @@
             "itemsType": null
           },
           "description": "Status of the ping",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         },
         {
@@ -281,7 +279,7 @@
             "itemsType": null
           },
           "description": "",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         }
       ],
@@ -318,20 +316,18 @@
       "name": "PingStatus",
       "kind": "string_enum",
       "description": "PingStatus represents the status of a ping request.",
-      "deprecated": null,
+      "deprecated": "",
       "fields": null,
       "enumValues": [
         {
           "value": "ERROR",
           "description": "PingStatusError means there was an error with the ping.",
-          "deprecated": {
-            "message": "Use PingStatusErrorV2 instead."
-          }
+          "deprecated": "Use PingStatusErrorV2 instead."
         },
         {
           "value": "OK",
           "description": "PingStatusOK means the ping was successful.",
-          "deprecated": null
+          "deprecated": ""
         }
       ],
       "references": null,
@@ -349,7 +345,7 @@
       "name": "User",
       "kind": "object",
       "description": "User represents a user in the system.",
-      "deprecated": null,
+      "deprecated": "",
       "fields": [
         {
           "name": "userID",
@@ -363,7 +359,7 @@
             "itemsType": null
           },
           "description": "ID of the user",
-          "deprecated": null,
+          "deprecated": "",
           "goType": ""
         },
         {
@@ -378,9 +374,7 @@
             "itemsType": null
           },
           "description": "Name of the user",
-          "deprecated": {
-            "message": "Use UserNameV2 instead."
-          },
+          "deprecated": "Use UserNameV2 instead.",
           "goType": ""
         }
       ],
@@ -404,10 +398,8 @@
           "operationID": "ping",
           "summary": "Ping the server",
           "description": "Check if the server is alive",
-          "tags": [
-            "ping"
-          ],
-          "deprecated": false,
+          "group": "core",
+          "deprecated": "",
           "request": null,
           "parameters": null,
           "responses": {
@@ -451,10 +443,8 @@
           "operationID": "getTeam",
           "summary": "Get a team",
           "description": "Get a team by its ID",
-          "tags": [
-            "team"
-          ],
-          "deprecated": true,
+          "group": "team",
+          "deprecated": "Use GetTeamResponseV2 instead.",
           "request": {
             "type": "GetTeamRequest",
             "description": "",
@@ -507,5 +497,8 @@
       }
     }
   },
-  "databaseSchema": "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (version varchar(128) primary key);\nCREATE TABLE IF NOT EXISTS \"user\" (\n  \"id\" INTEGER PRIMARY KEY,\n  \"name\" TEXT NOT NULL,\n  \"email\" TEXT NOT NULL,\n  \"password\" TEXT NOT NULL,\n  \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, \"last_login\" TIMESTAMP);\n-- Dbmate schema migrations\nINSERT INTO \"schema_migrations\" (version) VALUES\n  ('20251009092116'),\n  ('20251009104248');"
+  "database": {
+    "schema": "CREATE TABLE IF NOT EXISTS \"schema_migrations\" (version varchar(128) primary key);\nCREATE TABLE IF NOT EXISTS \"user\" (\n  \"id\" INTEGER PRIMARY KEY,\n  \"name\" TEXT NOT NULL,\n  \"email\" TEXT NOT NULL,\n  \"password\" TEXT NOT NULL,\n  \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n, \"last_login\" TIMESTAMP);\n-- Dbmate schema migrations\nINSERT INTO \"schema_migrations\" (version) VALUES\n  ('20251009092116'),\n  ('20251009104248');",
+    "tableCount": 2
+  }
 }
