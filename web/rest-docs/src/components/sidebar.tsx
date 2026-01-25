@@ -43,7 +43,12 @@ export const Sidebar = () => {
             </div>
 
             {/* Scrollable Content */}
-            <div className='flex-1 overflow-y-auto p-6 pt-4'>
+            <div
+                className='flex-1 overflow-y-scroll p-6 pt-4'
+                style={{
+                    scrollbarWidth: "auto",
+                    scrollbarColor: "rgb(100 116 139) transparent",
+                }}>
                 <SidebarSection
                     title='Operations'
                     type='operation'
