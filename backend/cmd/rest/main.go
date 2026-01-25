@@ -100,7 +100,7 @@ func main() {
 			w.WriteHeader(http.StatusOK)
 		},
 	}))
-	rb.Must(rb.Get("/team/{teamID}", router.RouteSpec{
+	rb.MustGet("/team/{teamID}", router.RouteSpec{
 		OperationID: "getTeam",
 		Summary:     "Get a team",
 		Description: "Get a team by its ID",
@@ -150,7 +150,113 @@ func main() {
 		Handler: func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 		},
-	}))
+	})
+
+	rb.MustPost("/team", router.RouteSpec{
+		OperationID: "createTeam",
+		Summary:     "Create a team",
+		Description: "Create a team by its name",
+		Group:       "Team",
+		RequestType: &router.RequestBodySpec{
+			Type: httpapi.CreateTeamRequest{},
+			Examples: map[string]any{
+				"example-1": httpapi.CreateTeamRequest{Name: "My Team"},
+			},
+		},
+		Responses: map[int]router.ResponseSpec{
+			200: {
+				Description: "Successful ping response",
+				Type:        httpapi.PingResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.PingResponse{Message: "Pong", Status: httpapi.PingStatusOK},
+				},
+			},
+			400: {
+				Description: "Invalid request",
+				Type:        httpapi.CreateUserResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
+				},
+			},
+			500: {
+				Description: "Internal server error",
+				Type:        httpapi.PingResponse{},
+			},
+		},
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	})
+	rb.MustPut("/team", router.RouteSpec{
+		OperationID: "putTeam",
+		Summary:     "Create a team",
+		Description: "Create a team by its name",
+		Group:       "Team",
+		RequestType: &router.RequestBodySpec{
+			Type: httpapi.CreateTeamRequest{},
+			Examples: map[string]any{
+				"example-1": httpapi.CreateTeamRequest{Name: "My Team"},
+			},
+		},
+		Responses: map[int]router.ResponseSpec{
+			200: {
+				Description: "Successful ping response",
+				Type:        httpapi.PingResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.PingResponse{Message: "Pong", Status: httpapi.PingStatusOK},
+				},
+			},
+			400: {
+				Description: "Invalid request",
+				Type:        httpapi.CreateUserResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
+				},
+			},
+			500: {
+				Description: "Internal server error",
+				Type:        httpapi.PingResponse{},
+			},
+		},
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	})
+	rb.MustDelete("/team", router.RouteSpec{
+		OperationID: "deleteTeam",
+		Summary:     "Create a team",
+		Description: "Create a team by its name",
+		Group:       "Team",
+		RequestType: &router.RequestBodySpec{
+			Type: httpapi.CreateTeamRequest{},
+			Examples: map[string]any{
+				"example-1": httpapi.CreateTeamRequest{Name: "My Team"},
+			},
+		},
+		Responses: map[int]router.ResponseSpec{
+			200: {
+				Description: "Successful ping response",
+				Type:        httpapi.PingResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.PingResponse{Message: "Pong", Status: httpapi.PingStatusOK},
+				},
+			},
+			400: {
+				Description: "Invalid request",
+				Type:        httpapi.CreateUserResponse{},
+				Examples: map[string]any{
+					"example-1": httpapi.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
+				},
+			},
+			500: {
+				Description: "Internal server error",
+				Type:        httpapi.PingResponse{},
+			},
+		},
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		},
+	})
 
 	if config.Generate {
 		if err := collector.Generate(); err != nil {

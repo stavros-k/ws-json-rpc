@@ -19,6 +19,8 @@ type RouteBuilder struct {
 	collector generate.RouteMetadataCollector
 	l         *slog.Logger
 	prefix    string
+
+	operationIDs map[string]struct{}
 }
 
 // NewRouteBuilder creates a new RouteBuilder.
@@ -120,6 +122,10 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 	cleanPath = sanitizePath(cleanPath)
 	spec.fullPath = cleanPath
 
+	if _, exists := rb.operationIDs[spec.OperationID]; exists {
+		return fmt.Errorf("operation ID %s already exists", spec.OperationID)
+	}
+	rb.operationIDs[spec.OperationID] = struct{}{}
 	if err := validateRouteSpec(spec); err != nil {
 		return fmt.Errorf("invalid route spec: %w", err)
 	}
@@ -247,11 +253,31 @@ func (rb *RouteBuilder) Get(path string, spec RouteSpec) error {
 	return rb.add(path, spec)
 }
 
+// MustGet adds a GET route to the router and terminates the program if an error occurs.
+func (rb *RouteBuilder) MustGet(path string, spec RouteSpec) {
+	spec.method = http.MethodGet
+
+	if err := rb.add(path, spec); err != nil {
+		rb.l.Error("Fatal error", slog.Any("error", err))
+		os.Exit(1)
+	}
+}
+
 // Post adds a POST route to the router.
 func (rb *RouteBuilder) Post(path string, spec RouteSpec) error {
 	spec.method = http.MethodPost
 
 	return rb.add(path, spec)
+}
+
+// MustPost adds a POST route to the router and terminates the program if an error occurs.
+func (rb *RouteBuilder) MustPost(path string, spec RouteSpec) {
+	spec.method = http.MethodPost
+
+	if err := rb.add(path, spec); err != nil {
+		rb.l.Error("Fatal error", slog.Any("error", err))
+		os.Exit(1)
+	}
 }
 
 // Put adds a PUT route to the router.
@@ -261,6 +287,16 @@ func (rb *RouteBuilder) Put(path string, spec RouteSpec) error {
 	return rb.add(path, spec)
 }
 
+// MustPut adds a PUT route to the router and terminates the program if an error occurs.
+func (rb *RouteBuilder) MustPut(path string, spec RouteSpec) {
+	spec.method = http.MethodPut
+
+	if err := rb.add(path, spec); err != nil {
+		rb.l.Error("Fatal error", slog.Any("error", err))
+		os.Exit(1)
+	}
+}
+
 // Patch adds a PATCH route to the router.
 func (rb *RouteBuilder) Patch(path string, spec RouteSpec) error {
 	spec.method = http.MethodPatch
@@ -268,11 +304,31 @@ func (rb *RouteBuilder) Patch(path string, spec RouteSpec) error {
 	return rb.add(path, spec)
 }
 
+// MustPatch adds a PATCH route to the router and terminates the program if an error occurs.
+func (rb *RouteBuilder) MustPatch(path string, spec RouteSpec) {
+	spec.method = http.MethodPatch
+
+	if err := rb.add(path, spec); err != nil {
+		rb.l.Error("Fatal error", slog.Any("error", err))
+		os.Exit(1)
+	}
+}
+
 // Delete adds a DELETE route to the router.
 func (rb *RouteBuilder) Delete(path string, spec RouteSpec) error {
 	spec.method = http.MethodDelete
 
 	return rb.add(path, spec)
+}
+
+// MustDelete adds a DELETE route to the router and terminates the program if an error occurs.
+func (rb *RouteBuilder) MustDelete(path string, spec RouteSpec) {
+	spec.method = http.MethodDelete
+
+	if err := rb.add(path, spec); err != nil {
+		rb.l.Error("Fatal error", slog.Any("error", err))
+		os.Exit(1)
+	}
 }
 
 // Router returns the underlying chi.Router.

@@ -67,3 +67,9 @@ type GetTeamResponse struct {
 	// Users in the team
 	Users []User `json:"users"`
 }
+
+// CreateTeamRequest is the request to create a new team.
+type CreateTeamRequest struct {
+	// Name of the team to create
+	Name string `json:"name"`
+}

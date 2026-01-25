@@ -11,6 +11,51 @@
     ]
   },
   "types": {
+    "CreateTeamRequest": {
+      "name": "CreateTeamRequest",
+      "kind": "object",
+      "description": "CreateTeamRequest is the request to create a new team.",
+      "deprecated": "",
+      "fields": [
+        {
+          "name": "name",
+          "displayType": "String",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
+          },
+          "description": "Name of the team to create",
+          "deprecated": "",
+          "goType": ""
+        }
+      ],
+      "enumValues": null,
+      "references": [],
+      "referencedBy": null,
+      "usedBy": [
+        {
+          "operationID": "createTeam",
+          "role": "request"
+        },
+        {
+          "operationID": "deleteTeam",
+          "role": "request"
+        },
+        {
+          "operationID": "putTeam",
+          "role": "request"
+        }
+      ],
+      "representations": {
+        "json": "{\n  \"name\": \"\"\n}",
+        "jsonSchema": "{\n  \"description\": \"CreateTeamRequest is the request to create a new team.\",\n  \"properties\": {\n    \"name\": {\n      \"description\": \"Name of the team to create\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"name\"\n  ],\n  \"type\": \"object\"\n}",
+        "ts": "/**\n * CreateTeamRequest is the request to create a new team.\n */\ntype CreateTeamRequest = {\n    /**\n     * Name of the team to create\n     */\n    name: string;\n};\n"
+      }
+    },
     "CreateUserRequest": {
       "name": "CreateUserRequest",
       "kind": "object",
@@ -115,11 +160,23 @@
       "referencedBy": null,
       "usedBy": [
         {
+          "operationID": "createTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "deleteTeam",
+          "role": "response"
+        },
+        {
           "operationID": "getTeam",
           "role": "response"
         },
         {
           "operationID": "ping",
+          "role": "response"
+        },
+        {
+          "operationID": "putTeam",
           "role": "response"
         }
       ],
@@ -290,6 +347,22 @@
       "referencedBy": null,
       "usedBy": [
         {
+          "operationID": "createTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "createTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "deleteTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "deleteTeam",
+          "role": "response"
+        },
+        {
           "operationID": "getTeam",
           "role": "response"
         },
@@ -303,6 +376,14 @@
         },
         {
           "operationID": "ping",
+          "role": "response"
+        },
+        {
+          "operationID": "putTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "putTeam",
           "role": "response"
         }
       ],
@@ -417,6 +498,127 @@
               "description": "Successful ping response",
               "examples": {
                 "example-1": "{\n  \"teamID\": \"123\",\n  \"users\": [\n    {\n      \"userID\": \"123\",\n      \"name\": \"John\"\n    }\n  ]\n}"
+              }
+            },
+            "400": {
+              "statusCode": 400,
+              "type": "CreateUserResponse",
+              "description": "Invalid request",
+              "examples": {
+                "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
+              }
+            },
+            "500": {
+              "statusCode": 500,
+              "type": "PingResponse",
+              "description": "Internal server error",
+              "examples": {}
+            }
+          }
+        }
+      }
+    },
+    "/team": {
+      "verbs": {
+        "DELETE": {
+          "operationID": "deleteTeam",
+          "summary": "Create a team",
+          "description": "Create a team by its name",
+          "group": "Team",
+          "deprecated": "",
+          "request": {
+            "type": "CreateTeamRequest",
+            "description": "",
+            "examples": {
+              "example-1": "{\n  \"name\": \"My Team\"\n}"
+            }
+          },
+          "parameters": null,
+          "responses": {
+            "200": {
+              "statusCode": 200,
+              "type": "PingResponse",
+              "description": "Successful ping response",
+              "examples": {
+                "example-1": "{\n  \"message\": \"Pong\",\n  \"status\": \"OK\"\n}"
+              }
+            },
+            "400": {
+              "statusCode": 400,
+              "type": "CreateUserResponse",
+              "description": "Invalid request",
+              "examples": {
+                "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
+              }
+            },
+            "500": {
+              "statusCode": 500,
+              "type": "PingResponse",
+              "description": "Internal server error",
+              "examples": {}
+            }
+          }
+        },
+        "POST": {
+          "operationID": "createTeam",
+          "summary": "Create a team",
+          "description": "Create a team by its name",
+          "group": "Team",
+          "deprecated": "",
+          "request": {
+            "type": "CreateTeamRequest",
+            "description": "",
+            "examples": {
+              "example-1": "{\n  \"name\": \"My Team\"\n}"
+            }
+          },
+          "parameters": null,
+          "responses": {
+            "200": {
+              "statusCode": 200,
+              "type": "PingResponse",
+              "description": "Successful ping response",
+              "examples": {
+                "example-1": "{\n  \"message\": \"Pong\",\n  \"status\": \"OK\"\n}"
+              }
+            },
+            "400": {
+              "statusCode": 400,
+              "type": "CreateUserResponse",
+              "description": "Invalid request",
+              "examples": {
+                "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
+              }
+            },
+            "500": {
+              "statusCode": 500,
+              "type": "PingResponse",
+              "description": "Internal server error",
+              "examples": {}
+            }
+          }
+        },
+        "PUT": {
+          "operationID": "putTeam",
+          "summary": "Create a team",
+          "description": "Create a team by its name",
+          "group": "Team",
+          "deprecated": "",
+          "request": {
+            "type": "CreateTeamRequest",
+            "description": "",
+            "examples": {
+              "example-1": "{\n  \"name\": \"My Team\"\n}"
+            }
+          },
+          "parameters": null,
+          "responses": {
+            "200": {
+              "statusCode": 200,
+              "type": "PingResponse",
+              "description": "Successful ping response",
+              "examples": {
+                "example-1": "{\n  \"message\": \"Pong\",\n  \"status\": \"OK\"\n}"
               }
             },
             "400": {

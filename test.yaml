@@ -1,5 +1,14 @@
 components:
     schemas:
+        CreateTeamRequest:
+            description: CreateTeamRequest is the request to create a new team.
+            properties:
+                name:
+                    description: Name of the team to create
+                    type: string
+            required:
+                - name
+            type: object
         CreateUserRequest:
             description: CreateUserRequest is the request to create a new user.
             properties:
@@ -153,6 +162,145 @@ paths:
             summary: Ping the server
             tags:
                 - Core
+    /team:
+        delete:
+            description: Create a team by its name
+            operationId: deleteTeam
+            requestBody:
+                content:
+                    application/json:
+                        examples:
+                            example-1:
+                                value:
+                                    name: My Team
+                        schema:
+                            $ref: '#/components/schemas/CreateTeamRequest'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        message: Pong
+                                        status: OK
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Successful ping response
+                "400":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        createdAt: "2000-01-01T00:00:00Z"
+                                        url: https://localhost:8080/user
+                                        userID: "123"
+                            schema:
+                                $ref: '#/components/schemas/CreateUserResponse'
+                    description: Invalid request
+                "500":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Internal server error
+            summary: Create a team
+            tags:
+                - Team
+        post:
+            description: Create a team by its name
+            operationId: createTeam
+            requestBody:
+                content:
+                    application/json:
+                        examples:
+                            example-1:
+                                value:
+                                    name: My Team
+                        schema:
+                            $ref: '#/components/schemas/CreateTeamRequest'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        message: Pong
+                                        status: OK
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Successful ping response
+                "400":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        createdAt: "2000-01-01T00:00:00Z"
+                                        url: https://localhost:8080/user
+                                        userID: "123"
+                            schema:
+                                $ref: '#/components/schemas/CreateUserResponse'
+                    description: Invalid request
+                "500":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Internal server error
+            summary: Create a team
+            tags:
+                - Team
+        put:
+            description: Create a team by its name
+            operationId: putTeam
+            requestBody:
+                content:
+                    application/json:
+                        examples:
+                            example-1:
+                                value:
+                                    name: My Team
+                        schema:
+                            $ref: '#/components/schemas/CreateTeamRequest'
+                required: true
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        message: Pong
+                                        status: OK
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Successful ping response
+                "400":
+                    content:
+                        application/json:
+                            examples:
+                                example-1:
+                                    value:
+                                        createdAt: "2000-01-01T00:00:00Z"
+                                        url: https://localhost:8080/user
+                                        userID: "123"
+                            schema:
+                                $ref: '#/components/schemas/CreateUserResponse'
+                    description: Invalid request
+                "500":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Internal server error
+            summary: Create a team
+            tags:
+                - Team
     /team/{teamID}:
         get:
             deprecated: true
