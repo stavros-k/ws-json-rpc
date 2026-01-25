@@ -37,7 +37,7 @@ export const ItemCard = ({
                     {subtitle && <div className={`text-base font-semibold mb-2 ${subtitleColor}`}>{subtitle}</div>}
                     <p className='text-text-secondary text-sm leading-relaxed'>{description}</p>
                 </div>
-                <div className='flex flex-col gap-2 items-end flex-shrink-0'>
+                <div className='flex flex-col gap-2 items-end shrink-0'>
                     {tags && <div className='flex gap-2 flex-wrap justify-end'>{tags}</div>}
                     {badges && <div className='flex gap-2 flex-wrap justify-end'>{badges}</div>}
                 </div>

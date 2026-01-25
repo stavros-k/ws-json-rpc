@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TbApi, TbCode, TbDatabase, TbWorld } from "react-icons/tb";
+import { TbApi, TbCode, TbDatabase } from "react-icons/tb";
 import { VerbBadge } from "@/components/verb-badge";
 import { docs, getAllOperations } from "@/data/api";
 
@@ -50,18 +50,22 @@ export default function Home() {
                 <h2 className='text-3xl font-bold text-text-primary text-center mb-10'>API Overview</h2>
                 <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto'>
                     {/* Operations Card */}
-                    <div className='bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-accent-blue hover:scale-105'>
-                        <div className='flex items-center gap-3 mb-4'>
-                            <div className='w-12 h-12 bg-accent-blue/20 rounded-xl flex items-center justify-center shadow-md'>
-                                <TbApi className='w-7 h-7 text-accent-blue' />
+                    <Link
+                        href='/api/operations'
+                        className='block'>
+                        <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-accent-blue cursor-pointer hover:scale-105'>
+                            <div className='flex items-center gap-3 mb-4'>
+                                <div className='w-12 h-12 bg-accent-blue/20 rounded-xl flex items-center justify-center shadow-md'>
+                                    <TbApi className='w-7 h-7 text-accent-blue' />
+                                </div>
+                                <div className='text-lg font-bold text-text-primary'>Operations</div>
                             </div>
-                            <div className='text-lg font-bold text-text-primary'>Operations</div>
+                            <div className='text-4xl font-bold text-accent-blue mb-2'>{operationCount}</div>
+                            <p className='text-xs text-text-secondary'>
+                                Across {routeCount} route{routeCount !== 1 ? "s" : ""}
+                            </p>
                         </div>
-                        <div className='text-4xl font-bold text-accent-blue mb-2'>{operationCount}</div>
-                        <p className='text-xs text-text-secondary'>
-                            Across {routeCount} route{routeCount !== 1 ? "s" : ""}
-                        </p>
-                    </div>
+                    </Link>
 
                     {/* Types Card */}
                     <Link
@@ -121,28 +125,6 @@ export default function Home() {
                         ))}
                 </div>
             </div>
-
-            {/* Available Servers - Moved to bottom */}
-            {docs.info.servers && docs.info.servers.length > 0 && (
-                <div className='w-full px-6 py-12 lg:px-8 bg-bg-secondary/20 mb-8'>
-                    <h2 className='text-3xl font-bold text-text-primary text-center mb-10'>Available Servers</h2>
-                    <div className='grid md:grid-cols-2 gap-6 max-w-4xl mx-auto'>
-                        {docs.info.servers.map((server) => (
-                            <div
-                                key={server.URL}
-                                className='bg-bg-secondary p-6 rounded-2xl border-2 border-border-primary shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300'>
-                                <div className='w-12 h-12 bg-accent-blue/20 rounded-xl flex items-center justify-center mb-4 shadow-md'>
-                                    <TbWorld className='w-7 h-7 text-accent-blue' />
-                                </div>
-                                <h3 className='text-xl font-bold text-text-primary mb-2'>{server.Description}</h3>
-                                <code className='text-sm text-accent-blue bg-bg-tertiary px-3 py-1.5 rounded-lg border border-border-primary inline-block break-all'>
-                                    {server.URL}
-                                </code>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

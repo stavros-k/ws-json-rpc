@@ -91,15 +91,15 @@ export const CodeThemeToggle = () => {
     return (
         <div
             ref={dropdownRef}
-            className='px-3 py-2 rounded-lg border border-border-primary bg-bg-secondary relative'>
-            <div className='flex items-center justify-between gap-3'>
-                <span className='text-sm font-medium text-text-primary'>Code Theme</span>
+            className='px-3 py-2 rounded-lg border border-border-primary bg-bg-secondary relative w-full'>
+            <div className='flex flex-col gap-2'>
+                <span className='text-sm font-medium text-text-primary text-center'>Code Theme</span>
                 <button
                     type='button'
                     onClick={() => setIsOpen(!isOpen)}
-                    className='px-2 py-1 text-xs border border-border-primary rounded bg-bg-primary text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-blue flex items-center gap-1 min-w-[120px] justify-between hover:bg-bg-tertiary transition-colors'>
-                    <span>{THEMES[codeTheme].label}</span>
-                    <IoChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                    className='px-2 py-1 text-xs border border-border-primary rounded bg-bg-primary text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-blue flex items-center gap-1 w-full justify-between hover:bg-bg-tertiary transition-colors'>
+                    <span className='truncate'>{THEMES[codeTheme].label}</span>
+                    <IoChevronDown className={`w-3 h-3 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
                 </button>
             </div>
 
