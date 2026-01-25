@@ -17,6 +17,7 @@ func NewURL(s string) (URL, error) {
 	if err != nil {
 		return URL{}, err
 	}
+
 	return URL{URL: u}, nil
 }
 
@@ -26,6 +27,7 @@ func MustNewURL(s string) URL {
 	if err != nil {
 		panic(err)
 	}
+
 	return u
 }
 
@@ -34,6 +36,7 @@ func (u URL) MarshalJSON() ([]byte, error) {
 	if u.URL == nil {
 		return utils.ToJSON("")
 	}
+
 	return utils.ToJSON(u.String())
 }
 
@@ -46,6 +49,7 @@ func (u *URL) UnmarshalJSON(data []byte) error {
 
 	if s == "" {
 		u.URL = nil
+
 		return nil
 	}
 
@@ -55,6 +59,7 @@ func (u *URL) UnmarshalJSON(data []byte) error {
 	}
 
 	u.URL = parsed
+
 	return nil
 }
 
@@ -63,5 +68,6 @@ func (u URL) String() string {
 	if u.URL == nil {
 		return ""
 	}
+
 	return u.URL.String()
 }

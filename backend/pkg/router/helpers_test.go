@@ -65,6 +65,7 @@ func TestExtractParamName(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("extractParamName(%q) error = %v, wantErr %v", tt.path, err, tt.wantErr)
 			}
+
 			if !reflect.DeepEqual(got, tt.expected) {
 				t.Errorf("extractParamName(%q) = %v, want %v", tt.path, got, tt.expected)
 			}

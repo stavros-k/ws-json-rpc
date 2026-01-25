@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"slices"
-	"strings"
 	"ws-json-rpc/backend/pkg/router/generate"
 
 	"github.com/go-chi/chi/v5"
@@ -116,137 +114,6 @@ type ResponseSpec struct {
 	Examples    map[string]any
 }
 
-// add adds a new route to the router and collects metadata.
-func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
-	spec.localPath = path
-	cleanPath := rb.prefix + spec.localPath
-	cleanPath = sanitizePath(cleanPath)
-	spec.fullPath = cleanPath
-
-	if _, exists := rb.operationIDs[spec.OperationID]; exists {
-		return fmt.Errorf("operation ID %s already exists", spec.OperationID)
-	}
-	rb.operationIDs[spec.OperationID] = struct{}{}
-	if err := validateRouteSpec(spec); err != nil {
-		return fmt.Errorf("invalid route spec: %w", err)
-	}
-
-	// Register route with router
-	rb.router.Method(spec.method, spec.fullPath, spec.Handler)
-
-	// Validate path parameters and collect metadata
-	documentedPathParams := map[string]struct{}{}
-	paramsInPath := map[string]struct{}{}
-
-	// Extract param names from path
-	for section := range strings.SplitSeq(spec.fullPath, "/") {
-		paramsName, err := extractParamName(section)
-		if err != nil {
-			return fmt.Errorf("invalid path %s: %w", spec.fullPath, err)
-		}
-		for _, paramName := range paramsName {
-			paramsInPath[paramName] = struct{}{}
-		}
-	}
-
-	// Collect parameters metadata
-	var parameters []generate.ParameterInfo
-
-	for name, paramSpec := range spec.Parameters {
-		if name == "" {
-			return fmt.Errorf("parameter name required for %s %s", spec.method, spec.fullPath)
-		}
-
-		if paramSpec.Description == "" {
-			return fmt.Errorf("parameter Description required for %s %s", spec.method, spec.fullPath)
-		}
-
-		if paramSpec.Type == nil {
-			return fmt.Errorf("parameter Type required for %s %s", spec.method, spec.fullPath)
-		}
-
-		validInValues := []ParameterIn{ParameterInPath, ParameterInQuery, ParameterInHeader}
-		if !slices.Contains(validInValues, paramSpec.In) {
-			return fmt.Errorf("parameter In must be one of %v for %s %s", validInValues, spec.method, spec.fullPath)
-		}
-
-		parameters = append(parameters, generate.ParameterInfo{
-			Name:        name,
-			In:          string(paramSpec.In),
-			TypeValue:   paramSpec.Type,
-			Description: paramSpec.Description,
-			Required:    paramSpec.Required,
-		})
-
-		if paramSpec.In == ParameterInPath {
-			if _, exists := paramsInPath[name]; !exists {
-				return fmt.Errorf("documented path parameter %s not found in path", name)
-			}
-
-			if !paramSpec.Required {
-				return fmt.Errorf("path parameter %s must be required", name)
-			}
-
-			documentedPathParams[name] = struct{}{}
-		}
-	}
-
-	// Validate that all path params are documented
-	for name := range paramsInPath {
-		if _, exists := documentedPathParams[name]; !exists {
-			return fmt.Errorf("path parameter %s not documented", name)
-		}
-	}
-
-	// Collect request metadata
-	var requestInfo *generate.RequestInfo
-
-	if spec.RequestType != nil {
-		if spec.RequestType.Type == nil {
-			return errors.New("request type is nil")
-		}
-
-		requestInfo = &generate.RequestInfo{
-			TypeValue: spec.RequestType.Type,
-			Examples:  spec.RequestType.Examples,
-		}
-	}
-
-	// Collect responses metadata
-	responses := make(map[int]generate.ResponseInfo)
-
-	for statusCode, respSpec := range spec.Responses {
-		responseInfo := generate.ResponseInfo{
-			StatusCode:  statusCode,
-			TypeValue:   respSpec.Type,
-			Description: respSpec.Description,
-			Examples:    respSpec.Examples,
-		}
-
-		responses[statusCode] = responseInfo
-	}
-
-	// Register route with collector
-	if err := rb.collector.RegisterRoute(&generate.RouteInfo{
-		OperationID: spec.OperationID,
-		Method:      spec.method,
-		Path:        spec.fullPath,
-		Summary:     spec.Summary,
-		Description: spec.Description,
-		Group:       spec.Group,
-		Deprecated:  spec.Deprecated,
-		Request:     requestInfo,
-		Parameters:  parameters,
-		Responses:   responses,
-	}); err != nil {
-		return fmt.Errorf("failed to register route: %w", err)
-	}
-
-	rb.l.Info("Registered route", slog.String("method", spec.method), slog.String("path", spec.fullPath), slog.String("operationID", spec.OperationID))
-
-	return nil
-}
-
 // Get adds a GET route to the router.
 func (rb *RouteBuilder) Get(path string, spec RouteSpec) error {
 	spec.method = http.MethodGet
@@ -337,4 +204,78 @@ func (rb *RouteBuilder) MustDelete(path string, spec RouteSpec) {
 //nolint:ireturn
 func (rb *RouteBuilder) Router() chi.Router {
 	return rb.router
+}
+
+// add adds a new route to the router and collects metadata.
+func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
+	spec.localPath = path
+	cleanPath := rb.prefix + spec.localPath
+	cleanPath = sanitizePath(cleanPath)
+	spec.fullPath = cleanPath
+
+	if _, exists := rb.operationIDs[spec.OperationID]; exists {
+		return fmt.Errorf("operation ID %s already exists", spec.OperationID)
+	}
+
+	rb.operationIDs[spec.OperationID] = struct{}{}
+	if err := validateRouteSpec(spec); err != nil {
+		return fmt.Errorf("invalid route spec: %w", err)
+	}
+
+	// Register route with router
+	rb.router.Method(spec.method, spec.fullPath, spec.Handler)
+
+	// Collect parameters metadata
+	parameters, err := generateParameters(spec)
+	if err != nil {
+		return fmt.Errorf("failed to generate parameters: %w", err)
+	}
+
+	// Collect request metadata
+	var requestInfo *generate.RequestInfo
+
+	if spec.RequestType != nil {
+		if spec.RequestType.Type == nil {
+			return errors.New("request type is nil")
+		}
+
+		requestInfo = &generate.RequestInfo{
+			TypeValue: spec.RequestType.Type,
+			Examples:  spec.RequestType.Examples,
+		}
+	}
+
+	// Collect responses metadata
+	responses := make(map[int]generate.ResponseInfo)
+
+	for statusCode, respSpec := range spec.Responses {
+		responseInfo := generate.ResponseInfo{
+			StatusCode:  statusCode,
+			TypeValue:   respSpec.Type,
+			Description: respSpec.Description,
+			Examples:    respSpec.Examples,
+		}
+
+		responses[statusCode] = responseInfo
+	}
+
+	// Register route with collector
+	if err := rb.collector.RegisterRoute(&generate.RouteInfo{
+		OperationID: spec.OperationID,
+		Method:      spec.method,
+		Path:        spec.fullPath,
+		Summary:     spec.Summary,
+		Description: spec.Description,
+		Group:       spec.Group,
+		Deprecated:  spec.Deprecated,
+		Request:     requestInfo,
+		Parameters:  parameters,
+		Responses:   responses,
+	}); err != nil {
+		return fmt.Errorf("failed to register route: %w", err)
+	}
+
+	rb.l.Info("Registered route", slog.String("method", spec.method), slog.String("path", spec.fullPath), slog.String("operationID", spec.OperationID))
+
+	return nil
 }

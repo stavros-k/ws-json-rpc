@@ -7,9 +7,11 @@ import (
 
 func sendJSON(w http.ResponseWriter, statusCode int, data any) error {
 	w.WriteHeader(statusCode)
+
 	if err := utils.ToJSONStream(w, data); err != nil {
 		return err
 	}
+
 	return nil
 }
 

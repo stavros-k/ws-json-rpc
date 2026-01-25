@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -147,18 +148,22 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 		values[i] = ev.Value
 
 		// Build enum value description with deprecation info
-		if ev.Deprecated != "" {
+		switch {
+		case ev.Deprecated != "":
 			enumDesc.WriteString(fmt.Sprintf("- `%s`: **[DEPRECATED]** ", ev.Value))
+
 			if ev.Deprecated != "" {
 				enumDesc.WriteString(ev.Deprecated)
 			}
+
 			if ev.Description != "" {
 				enumDesc.WriteString(" - " + ev.Description)
 			}
+
 			enumDesc.WriteString("\n")
-		} else if ev.Description != "" {
+		case ev.Description != "":
 			enumDesc.WriteString(fmt.Sprintf("- `%s`: %s\n", ev.Value, ev.Description))
-		} else {
+		default:
 			enumDesc.WriteString(fmt.Sprintf("- `%s`\n", ev.Value))
 		}
 	}
@@ -222,15 +227,15 @@ func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 
 		// Add operation to path item
 		switch route.Method {
-		case "GET":
+		case http.MethodGet:
 			pathItem.Get = op
-		case "POST":
+		case http.MethodPost:
 			pathItem.Post = op
-		case "PUT":
+		case http.MethodPut:
 			pathItem.Put = op
-		case "PATCH":
+		case http.MethodPatch:
 			pathItem.Patch = op
-		case "DELETE":
+		case http.MethodDelete:
 			pathItem.Delete = op
 		}
 	}
@@ -294,7 +299,7 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 
 	// Add responses
 	for statusCode, resp := range route.Responses {
-		statusStr := strconv.Itoa(int(statusCode))
+		statusStr := strconv.Itoa(statusCode)
 		response := &openapi3.Response{Description: &resp.Description}
 
 		if resp.TypeName != "" {
@@ -332,7 +337,7 @@ func convertExamplesToOpenAPI(examples map[string]any) openapi3.Examples {
 
 	result := make(openapi3.Examples)
 	for name, value := range examples {
-		result[string(name)] = &openapi3.ExampleRef{Value: &openapi3.Example{Value: value}}
+		result[name] = &openapi3.ExampleRef{Value: &openapi3.Example{Value: value}}
 	}
 
 	return result
@@ -348,7 +353,11 @@ func schemaToJSONString(schema *openapi3.Schema) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal schema to JSON: %w", err)
 	}
+
 	var dest bytes.Buffer
-	json.Indent(&dest, jsonBytes, "", "  ")
+	if err := json.Indent(&dest, jsonBytes, "", "  "); err != nil {
+		return "", fmt.Errorf("failed to indent JSON: %w", err)
+	}
+
 	return dest.String(), nil
 }

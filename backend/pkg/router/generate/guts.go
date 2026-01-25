@@ -90,11 +90,14 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database schema: %w", err)
 	}
+
 	gutsGenerator.database.Schema = dbSchema
+
 	dbStats, err := gutsGenerator.GetDatabaseStats(dbSchema)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database stats: %w", err)
 	}
+
 	gutsGenerator.database.TableCount = dbStats.TableCount
 
 	gutsGenerator.vm, err = bindings.New()
@@ -152,6 +155,7 @@ func stringifyResponseExamples(r ResponseInfo) ResponseInfo {
 	for name, example := range r.Examples {
 		r.ExamplesStringified[name] = string(utils.MustToJSONIndent(example))
 	}
+
 	return r
 }
 
@@ -161,6 +165,7 @@ func stringifyRequestExamples(r *RequestInfo) *RequestInfo {
 	for name, example := range r.Examples {
 		r.ExamplesStringified[name] = string(utils.MustToJSONIndent(example))
 	}
+
 	return r
 }
 
@@ -176,6 +181,7 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 		if err != nil {
 			return fmt.Errorf("failed to extract request type name: %w", err)
 		}
+
 		route.Request.TypeName = typeName
 
 		if typeInfo, ok := g.types[typeName]; ok {
@@ -189,10 +195,12 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 	for statusCode, response := range route.Responses {
 		resp := response
+
 		typeName, err := extractTypeNameFromValue(resp.TypeValue)
 		if err != nil {
 			return fmt.Errorf("failed to extract response type name: %w", err)
 		}
+
 		resp.TypeName = typeName
 
 		if typeInfo, ok := g.types[typeName]; ok {
@@ -209,11 +217,13 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 		if err != nil {
 			return fmt.Errorf("failed to extract parameter type name: %w", err)
 		}
+
 		route.Parameters[i].TypeName = typeName
 	}
 
 	// Add operation keyed by operationID
 	g.httpOps[route.OperationID] = route
+
 	return nil
 }
 
@@ -399,10 +409,12 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 			fieldInfo.Required = !member.QuestionToken && !fieldInfo.Nullable
 
 			fieldDesc := g.extractComments(member.SupportComments)
+
 			fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse deprecation info for field %s.%s: %w", name, member.Name, err)
 			}
+
 			field := FieldInfo{
 				Name:        member.Name,
 				DisplayType: generateDisplayType(fieldInfo),
@@ -431,6 +443,7 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 // extractInterfaceType extracts type information from an interface node.
 func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Interface) (*TypeInfo, error) {
 	desc := g.extractComments(iface.SupportComments)
+
 	deprecated, cleanedDesc, err := g.parseDeprecation(desc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse deprecation info for interface %s: %w", name, err)
@@ -462,6 +475,7 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 		analyzedType.Required = !field.QuestionToken && !analyzedType.Nullable
 
 		fieldDesc := g.extractComments(field.SupportComments)
+
 		fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse deprecation info for field %s.%s: %w", name, field.Name, err)
@@ -498,6 +512,7 @@ func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*T
 	}
 
 	g.l.Debug("Extracted enum type", slog.String("name", name), slog.Int("enumValueCount", len(enumVals)))
+
 	deprecated, cleanedDesc, err := g.parseDeprecation(desc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse deprecation info for enum %s: %w", name, err)
@@ -582,7 +597,7 @@ func (g *OpenAPICollector) generateTSRepresentations() error {
 	g.l.Debug("Generating TypeScript representations for all types", slog.Int("typeCount", len(g.types)))
 
 	for name, typeInfo := range g.types {
-		node, exists := g.tsParser.Node(string(name))
+		node, exists := g.tsParser.Node(name)
 		if !exists {
 			return fmt.Errorf("type %s not found in TypeScript AST", name)
 		}
@@ -718,10 +733,12 @@ func (g *OpenAPICollector) serializeNode(node bindings.Node) (string, error) {
 	}
 
 	var str strings.Builder
+
 	for line := range strings.SplitSeq(serialized, "\n") {
 		if strings.HasPrefix(line, "// From") {
 			continue
 		}
+
 		str.WriteString(line + "\n")
 	}
 
@@ -848,10 +865,12 @@ func (g *OpenAPICollector) extractEnumMemberValues(enum *bindings.Enum) ([]EnumV
 		valueStr = strings.Trim(valueStr, "\"'")
 
 		memberDesc := g.extractComments(member.SupportComments)
+
 		deprecated, cleanedMemberDesc, err := g.parseDeprecation(memberDesc)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse deprecation info for enum member %s.%s: %w", enum.Name.String(), member.Name, err)
 		}
+
 		values = append(values, EnumValue{
 			Value:       valueStr,
 			Description: cleanedMemberDesc,
@@ -869,6 +888,7 @@ func generateDisplayType(ft FieldType) string {
 		return ft.Type
 	case FieldKindPrimitive:
 		caser := cases.Title(language.English)
+
 		return caser.String(ft.Type)
 
 	case FieldKindArray:
@@ -1024,6 +1044,7 @@ func (g *OpenAPICollector) getExternalTypeInfo(expr bindings.ExpressionType) (*E
 	switch e := expr.(type) {
 	case *bindings.LiteralKeyword:
 		info, exists := g.externalTypes[e]
+
 		return info, exists
 	case *bindings.UnionType:
 		if isNullable, nonNullType := g.isNullableUnion(e); isNullable {
