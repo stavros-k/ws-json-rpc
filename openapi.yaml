@@ -111,7 +111,7 @@ components:
 info:
     description: Local API Documentation
     title: Local API
-    version: vdev (2a71e88-dirty)
+    version: vdev (unknown)
 openapi: 3.0.3
 paths:
     /ping:

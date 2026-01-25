@@ -1,7 +1,7 @@
 {
   "info": {
     "title": "Local API",
-    "version": "vdev (2a71e88-dirty)",
+    "version": "vdev (unknown)",
     "description": "Local API Documentation",
     "servers": [
       {
@@ -285,7 +285,7 @@
       "representations": {
         "json": "{\n  \"teamID\": \"\",\n  \"users\": null\n}",
         "jsonSchema": "{\n  \"deprecated\": true,\n  \"description\": \"GetTeamResponse is the response to a get team request.\",\n  \"properties\": {\n    \"teamID\": {\n      \"description\": \"ID of the team\",\n      \"type\": \"string\"\n    },\n    \"users\": {\n      \"description\": \"Users in the team\",\n      \"items\": {\n        \"$ref\": \"#/components/schemas/User\"\n      },\n      \"type\": \"array\"\n    }\n  },\n  \"required\": [\n    \"teamID\",\n    \"users\"\n  ],\n  \"type\": \"object\"\n}",
-        "ts": "/**\n * GetTeamResponse is the response to a get team request.\n * @deprecated Use GetTeamResponseV2 instead.\n */\ntype GetTeamResponse = {\n    /**\n     * ID of the team\n     */\n    teamID: string;\n    /**\n     * Users in the team\n     */\n    users: User[];\n};\n"
+        "ts": "/**\n * GetTeamResponse is the response to a get team request.\n *\n * @deprecated Use GetTeamResponseV2 instead.\n */\ntype GetTeamResponse = {\n    /**\n     * ID of the team\n     */\n    teamID: string;\n    /**\n     * Users in the team\n     */\n    users: User[];\n};\n"
       }
     },
     "Handlers": {
@@ -435,7 +435,7 @@
       "representations": {
         "json": "",
         "jsonSchema": "{\n  \"description\": \"PingStatus represents the status of a ping request.\\n\\nPossible values:\\n- `ERROR`: **[DEPRECATED]** Use PingStatusErrorV2 instead. - PingStatusError means there was an error with the ping.\\n- `OK`: PingStatusOK means the ping was successful.\\n\",\n  \"enum\": [\n    \"ERROR\",\n    \"OK\"\n  ],\n  \"type\": \"string\"\n}",
-        "ts": "/**\n * PingStatus represents the status of a ping request.\n */\nenum PingStatus {\n    /**\n     * PingStatusError means there was an error with the ping.\n     * @deprecated Use PingStatusErrorV2 instead.\n     */\n    PingStatusError = \"ERROR\",\n    /**\n     * PingStatusOK means the ping was successful.\n     */\n    PingStatusOK = \"OK\"\n}\n"
+        "ts": "/**\n * PingStatus represents the status of a ping request.\n */\nenum PingStatus {\n    /**\n     * PingStatusError means there was an error with the ping.\n     *\n     * @deprecated Use PingStatusErrorV2 instead.\n     */\n    PingStatusError = \"ERROR\",\n    /**\n     * PingStatusOK means the ping was successful.\n     */\n    PingStatusOK = \"OK\"\n}\n"
       }
     },
     "User": {
@@ -484,7 +484,7 @@
       "representations": {
         "json": "",
         "jsonSchema": "{\n  \"description\": \"User represents a user in the system.\",\n  \"properties\": {\n    \"name\": {\n      \"deprecated\": true,\n      \"description\": \"Name of the user\",\n      \"type\": \"string\"\n    },\n    \"userID\": {\n      \"description\": \"ID of the user\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"userID\",\n    \"name\"\n  ],\n  \"type\": \"object\"\n}",
-        "ts": "/**\n * User represents a user in the system.\n */\ntype User = {\n    /**\n     * ID of the user\n     */\n    userID: string;\n    /**\n     * Name of the user\n     * @deprecated Use UserNameV2 instead.\n     */\n    name: string;\n};\n"
+        "ts": "/**\n * User represents a user in the system.\n */\ntype User = {\n    /**\n     * ID of the user\n     */\n    userID: string;\n    /**\n     * Name of the user\n     *\n     * @deprecated Use UserNameV2 instead.\n     */\n    name: string;\n};\n"
       }
     }
   },
