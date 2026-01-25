@@ -48,6 +48,15 @@ func extractTypeNameFromValue(value any) (string, error) {
 	return name, nil
 }
 
+// getExternalTypeInfo returns the external type metadata for a given expression.
+// Returns nil if the expression is not an external type.
+func (g *OpenAPICollector) getExternalTypeInfo(expr bindings.ExpressionType) (*ExternalTypeInfo, bool) {
+	if keyword, ok := expr.(*bindings.LiteralKeyword); ok {
+		return g.externalTypes[keyword], true // Lookup by pointer!
+	}
+	return nil, false
+}
+
 // OpenAPICollector handles TypeScript AST parsing and metadata extraction from Go types.
 // It walks the TypeScript AST to extract comprehensive type information in a single pass.
 type OpenAPICollector struct {
@@ -55,9 +64,10 @@ type OpenAPICollector struct {
 	vm       *bindings.Bindings
 	l        *slog.Logger
 
-	types    map[string]*TypeInfo   // Extracted type information
-	routes   map[string]*PathRoutes // Registered routes, keyed by path
-	dbSchema string                 // Database schema SQL
+	types         map[string]*TypeInfo                           // Extracted type information
+	routes        map[string]*PathRoutes                         // Registered routes, keyed by path
+	dbSchema      string                                         // Database schema SQL
+	externalTypes map[*bindings.LiteralKeyword]*ExternalTypeInfo // External type metadata, keyed by keyword pointer
 
 	docsFilePath        string // Path to write documentation JSON file
 	openAPISpecFilePath string // Path to write OpenAPI YAML file
@@ -104,6 +114,7 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 		l:                   l,
 		types:               make(map[string]*TypeInfo),
 		routes:              make(map[string]*PathRoutes),
+		externalTypes:       make(map[*bindings.LiteralKeyword]*ExternalTypeInfo),
 		docsFilePath:        opts.DocsFileOutputPath,
 		openAPISpecFilePath: opts.OpenAPISpecOutputPath,
 		apiInfo:             opts.APIInfo,
@@ -121,7 +132,7 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 		return nil, fmt.Errorf("failed to create bindings VM: %w", err)
 	}
 
-	gutsGenerator.tsParser, err = newTypescriptASTFromGoTypesDir(l, goTypesDirPath)
+	gutsGenerator.tsParser, err = gutsGenerator.newTypescriptASTFromGoTypesDir(l, goTypesDirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TypeScript AST from go types dir: %w", err)
 	}
@@ -229,20 +240,9 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	return nil
 }
 
-// timeTypeOverride returns a TypeOverride for time.Time.
-//
-//nolint:ireturn
-func timeTypeOverride() bindings.ExpressionType {
-	return &ExternalType{
-		GoType:         "time.Time",
-		TypeScriptType: "string",
-		OpenAPIFormat:  "date-time",
-	}
-}
-
 // newTypescriptASTFromGoTypesDir creates a TypeScript AST from Go type definitions,
 // preserving comments and applying transformations for TypeScript compatibility.
-func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*guts.Typescript, error) {
+func (g *OpenAPICollector) newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*guts.Typescript, error) {
 	l.Debug("Parsing Go types directory", slog.String("path", goTypesDirPath))
 
 	goParser, err := guts.NewGolangParser()
@@ -252,7 +252,8 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 
 	goParser.PreserveComments()
 	goParser.IncludeCustomDeclaration(map[string]guts.TypeOverride{
-		"time.Time": timeTypeOverride,
+		"time.Time":   g.createTimeTypeKeyword,
+		"net/url.URL": g.createURLTypeKeyword,
 	})
 
 	if _, err := os.Stat(goTypesDirPath); os.IsNotExist(err) {
@@ -285,6 +286,7 @@ func newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*gut
 	ts.ApplyMutations(
 		config.InterfaceToType,
 		config.SimplifyOptional,
+		config.NotNullMaps,
 	)
 
 	l.Debug("TypeScript AST generated successfully")
@@ -399,8 +401,8 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 			}
 
 			// Check if it's an external type and capture metadata
-			if ext, ok := member.Type.(*ExternalType); ok {
-				field.GoType = ext.GoType
+			if extInfo, exists := g.getExternalTypeInfo(member.Type); exists {
+				field.GoType = extInfo.GoType
 			}
 
 			typeInfo.Fields = append(typeInfo.Fields, field)
@@ -461,8 +463,8 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 		}
 
 		// Check if it's an external type and capture metadata
-		if ext, ok := field.Type.(*ExternalType); ok {
-			fieldInfo.GoType = ext.GoType
+		if extInfo, exists := g.getExternalTypeInfo(field.Type); exists {
+			fieldInfo.GoType = extInfo.GoType
 		}
 
 		typeInfo.Fields = append(typeInfo.Fields, fieldInfo)
@@ -614,11 +616,9 @@ func (g *OpenAPICollector) collectExpressionTypeReferences(expr bindings.Express
 		// Array: T[] - recurse to get the element type
 		g.collectExpressionTypeReferences(e.Node, refs)
 
-	// Primitive types and external types - no references to collect
+	// Primitive types - no references to collect
 	case *bindings.LiteralKeyword:
 	case *bindings.LiteralType:
-	case *ExternalType:
-
 	case *bindings.TypeLiteralNode:
 		panic("inline object found during reference collection - should have been rejected earlier")
 	case *bindings.TypeIntersection:
@@ -654,11 +654,6 @@ func (g *OpenAPICollector) generateOpenAPISpec() (*openapi3.T, error) {
 func (g *OpenAPICollector) serializeExpressionType(expr bindings.ExpressionType) (string, error) {
 	if expr == nil {
 		return "", errors.New("expression type is nil")
-	}
-
-	// Handle our custom ExternalType
-	if ext, ok := expr.(*ExternalType); ok {
-		return ext.TypeScriptType, nil
 	}
 
 	// Convert expression to TypeScript node and serialize
@@ -819,14 +814,6 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 	}
 
 	switch e := expr.(type) {
-	case *ExternalType:
-		// External types (e.g., time.Time)
-		return FieldType{
-			Kind:   FieldKindPrimitive,
-			Type:   e.TypeScriptType,
-			Format: e.OpenAPIFormat,
-		}, nil
-
 	case *bindings.ArrayType:
 		// Regular arrays (e.g., User[])
 		itemType, err := g.analyzeFieldType(e.Node)
@@ -883,16 +870,23 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 
 	case *bindings.LiteralKeyword:
 		// Literal keywords (primitives)
-		switch *e {
-		case bindings.KeywordString:
-			return FieldType{Kind: FieldKindPrimitive, Type: "string"}, nil
-		case bindings.KeywordNumber:
-			return FieldType{Kind: FieldKindPrimitive, Type: "number"}, nil
-		case bindings.KeywordBoolean:
-			return FieldType{Kind: FieldKindPrimitive, Type: "boolean"}, nil
-		default:
-			return FieldType{Kind: FieldKindPrimitive, Type: string(*e)}, nil
+		// Serialize to get the actual TypeScript type name
+		typeStr, err := g.serializeExpressionType(e)
+		if err != nil {
+			return FieldType{}, fmt.Errorf("failed to serialize keyword type: %w", err)
 		}
+
+		var format string
+		// Check if this is an external type (e.g., time.Time -> string with date-time format)
+		if extInfo, exists := g.getExternalTypeInfo(e); exists {
+			format = extInfo.OpenAPIFormat
+		}
+
+		return FieldType{
+			Kind:   FieldKindPrimitive,
+			Type:   typeStr,
+			Format: format,
+		}, nil
 	case *bindings.ArrayLiteralType:
 		// Tuple types are not supported in Go->TS serialization
 		return FieldType{}, errors.New("tuple types are not supported - Go does not have tuple types")

@@ -5,10 +5,17 @@ import (
 	"strings"
 )
 
-func extractParamName(path string) []string {
+// extractParamName extracts the parameter name from a path.
+// Currently it does not handle unclosed '{' braces.
+func extractParamName(path string) ([]string, error) {
 	dirtyParams := []string{}
 	cleanParams := []string{}
 
+	openBracket := strings.Count(path, "{")
+	closeBracket := strings.Count(path, "}")
+	if openBracket != closeBracket {
+		return nil, errors.New("mismatched number of '{' and '}' in path")
+	}
 	// Find the content between '{' and '}'
 	// Examples:
 	// - {userID} -> userID
@@ -36,7 +43,7 @@ func extractParamName(path string) []string {
 		}
 	}
 
-	return cleanParams
+	return cleanParams, nil
 }
 
 // sanitizePath removes double slashes and trailing slashes from a path.

@@ -30,7 +30,7 @@ func NewRouteBuilder(l *slog.Logger, collector generate.RouteMetadataCollector) 
 	}, nil
 }
 
-// Must exits the program if an error occurs.
+// Must terminates the program if an error occurs.
 func (rb *RouteBuilder) Must(err error) {
 	if err != nil {
 		rb.l.Error("Fatal error", slog.Any("error", err))
@@ -120,31 +120,29 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 	cleanPath = sanitizePath(cleanPath)
 	spec.fullPath = cleanPath
 
-	// Validation
 	if err := validateRouteSpec(spec); err != nil {
 		return fmt.Errorf("invalid route spec: %w", err)
 	}
 
-	// 1. Register route with chi
+	// Register route with router
 	rb.router.Method(spec.method, spec.fullPath, spec.Handler)
 
-	// 2. Validate path parameters and collect metadata
+	// Validate path parameters and collect metadata
 	documentedPathParams := map[string]struct{}{}
 	paramsInPath := map[string]struct{}{}
 
 	// Extract param names from path
 	for section := range strings.SplitSeq(spec.fullPath, "/") {
-		paramsName := extractParamName(section)
-		if len(paramsName) == 0 {
-			continue
+		paramsName, err := extractParamName(section)
+		if err != nil {
+			return fmt.Errorf("invalid path %s: %w", spec.fullPath, err)
 		}
-
 		for _, paramName := range paramsName {
 			paramsInPath[paramName] = struct{}{}
 		}
 	}
 
-	// 4. Collect parameters metadata
+	// Collect parameters metadata
 	var parameters []generate.ParameterInfo
 
 	for name, paramSpec := range spec.Parameters {
@@ -173,7 +171,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 			Required:    paramSpec.Required,
 		})
 
-		if paramSpec.In == "path" {
+		if paramSpec.In == ParameterInPath {
 			if _, exists := paramsInPath[name]; !exists {
 				return fmt.Errorf("documented path parameter %s not found in path", name)
 			}
@@ -193,7 +191,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 		}
 	}
 
-	// 5. Collect request metadata
+	// Collect request metadata
 	var requestInfo *generate.RequestInfo
 
 	if spec.RequestType != nil {
@@ -207,7 +205,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 		}
 	}
 
-	// 6. Collect responses metadata
+	// Collect responses metadata
 	responses := make(map[int]generate.ResponseInfo)
 
 	for statusCode, respSpec := range spec.Responses {
@@ -221,7 +219,7 @@ func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
 		responses[statusCode] = responseInfo
 	}
 
-	// 7. Register route with collector
+	// Register route with collector
 	if err := rb.collector.RegisterRoute(&generate.RouteInfo{
 		OperationID: spec.OperationID,
 		Method:      spec.method,

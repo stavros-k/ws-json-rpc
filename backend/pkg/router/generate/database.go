@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"time"
 	"ws-json-rpc/backend/internal/database/sqlite"
 	"ws-json-rpc/backend/pkg/database"
 	"ws-json-rpc/backend/pkg/utils"
@@ -17,16 +16,19 @@ func (g *OpenAPICollector) GenerateDatabaseSchema(l *slog.Logger, schemaOutputPa
 	l.Debug("Generating database schema from migrations")
 
 	// Create a temporary database file
-	tempDBPath := fmt.Sprintf("%s/temp-db-%d.sqlite", os.TempDir(), time.Now().Unix())
+	tempDBFile, err := os.CreateTemp(os.TempDir(), "temp-db-*.sqlite")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temporary database file: %w", err)
+	}
 
 	defer func() {
-		if err := os.Remove(tempDBPath); err != nil {
+		if err := os.Remove(tempDBFile.Name()); err != nil {
 			l.Error("failed to remove temporary database file", utils.ErrAttr(err))
 		}
 	}()
 
 	// Create a migrator for the temporary database
-	mig, err := database.NewMigrator(l, sqlite.GetMigrationsFS(), tempDBPath)
+	mig, err := database.NewMigrator(l, sqlite.GetMigrationsFS(), tempDBFile.Name())
 	if err != nil {
 		return "", fmt.Errorf("failed to create migrator: %w", err)
 	}

@@ -12,6 +12,7 @@ func TestExtractParamName(t *testing.T) {
 		name     string
 		path     string
 		expected []string
+		wantErr  bool
 	}{
 		{
 			name:     "no params",
@@ -38,13 +39,32 @@ func TestExtractParamName(t *testing.T) {
 			path:     "/users/{userID:[0-9]+}/{userName:[a-z]+}",
 			expected: []string{"userID", "userName"},
 		},
+		{
+			name:     "multiple params in the same section",
+			path:     "/users/{userID}-{userName}",
+			expected: []string{"userID", "userName"},
+		},
+		{
+			name:     "multiple params in the same section with regex",
+			path:     "/users/{userID:[0-9]+}-{userName:[a-z]+}",
+			expected: []string{"userID", "userName"},
+		},
+		{
+			name:     "mismatched brackets",
+			path:     "/users/{userID}-{userName",
+			wantErr:  true,
+			expected: nil,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := extractParamName(tt.path)
+			got, err := extractParamName(tt.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("extractParamName(%q) error = %v, wantErr %v", tt.path, err, tt.wantErr)
+			}
 			if !reflect.DeepEqual(got, tt.expected) {
 				t.Errorf("extractParamName(%q) = %v, want %v", tt.path, got, tt.expected)
 			}

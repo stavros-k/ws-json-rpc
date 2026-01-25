@@ -14,13 +14,40 @@ type NoopCollector struct{}
 func (n *NoopCollector) RegisterRoute(route *RouteInfo) error { return nil }
 func (n *NoopCollector) Generate() error                      { return nil }
 
-// ExternalType represents an external Go type with metadata for OpenAPI generation.
-type ExternalType struct {
-	bindings.LiteralKeyword
+// ExternalTypeInfo holds metadata about external Go types.
+type ExternalTypeInfo struct {
+	GoType        string // Original Go type (e.g., "time.Time")
+	OpenAPIFormat string // OpenAPI format (e.g., "date-time")
+}
 
-	GoType         string // Original Go type (e.g., "time.Time")
-	TypeScriptType string // TypeScript representation (e.g., "string")
-	OpenAPIFormat  string // OpenAPI format (e.g., "date-time")
+// createTimeTypeKeyword creates a LiteralKeyword for time.Time and registers it as an external type.
+// Each call creates a new keyword pointer and registers it in the external types map.
+//
+//nolint:ireturn
+func (g *OpenAPICollector) createTimeTypeKeyword() bindings.ExpressionType {
+	keyword := bindings.KeywordString
+	keywordPtr := &keyword
+
+	g.externalTypes[keywordPtr] = &ExternalTypeInfo{
+		GoType: "time.Time", OpenAPIFormat: "date-time",
+	}
+
+	return keywordPtr
+}
+
+// createURLTypeKeyword creates a LiteralKeyword for net/url.URL and registers it as an external type.
+// Each call creates a new keyword pointer and registers it in the external types map.
+//
+//nolint:ireturn
+func (g *OpenAPICollector) createURLTypeKeyword() bindings.ExpressionType {
+	keyword := bindings.KeywordString
+	keywordPtr := &keyword
+
+	g.externalTypes[keywordPtr] = &ExternalTypeInfo{
+		GoType: "net/url.URL", OpenAPIFormat: "uri",
+	}
+
+	return keywordPtr
 }
 
 // Type kind constants for TypeInfo.
