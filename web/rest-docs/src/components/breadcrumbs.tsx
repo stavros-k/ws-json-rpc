@@ -1,6 +1,6 @@
 import type { Route } from "next";
 import Link from "next/link";
-import { IoHome, IoChevronForward } from "react-icons/io5";
+import { IoChevronForward, IoHome } from "react-icons/io5";
 
 type BreadcrumbItem = {
     label: string;

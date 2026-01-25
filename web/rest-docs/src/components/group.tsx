@@ -12,7 +12,8 @@ export const Group = ({ group, size = "md" }: Props) => {
     }[size];
 
     return (
-        <span className={`${sizeClasses} bg-tag-blue-bg text-tag-blue-text rounded-lg font-bold border-2 border-tag-blue-border shadow-sm inline-block`}>
+        <span
+            className={`${sizeClasses} bg-tag-blue-bg text-tag-blue-text rounded-lg font-bold border-2 border-tag-blue-border shadow-sm inline-block`}>
             {group}
         </span>
     );

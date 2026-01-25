@@ -19,9 +19,7 @@ type TypeDataWithFields = Extract<TypeData, { fields: unknown }>;
 export type FieldMetadata = TypeDataWithFields["fields"][number];
 
 export type ErrorData = ApiDataMethods[MethodKeys]["errors"][number];
-export type ExampleData =
-    | ApiDataMethods[MethodKeys]["examples"][number]
-    | ApiDataEvents[EventKeys]["examples"][number];
+export type ExampleData = ApiDataMethods[MethodKeys]["examples"][number] | ApiDataEvents[EventKeys]["examples"][number];
 
 export function getTypeJson(typeName: TypeKeys | "null") {
     if (typeName === "null") return null;

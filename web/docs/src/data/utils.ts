@@ -1,7 +1,4 @@
-export function groupBy<T>(
-    items: T[],
-    keyFn: (item: T) => string
-): Record<string, T[]> {
+export function groupBy<T>(items: T[], keyFn: (item: T) => string): Record<string, T[]> {
     return items.reduce(
         (acc, item) => {
             const key = keyFn(item);

@@ -1,14 +1,14 @@
 import type { Route } from "next";
+import { BackButton } from "@/components/back-button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CardBoxWrapper } from "@/components/card-box-wrapper";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { CollapsibleCard } from "@/components/collapsible-group";
 import { CollapsibleResponse } from "@/components/collapsible-response";
 import { Deprecation } from "@/components/deprecation";
 import { Group } from "@/components/group";
-import { VerbBadge } from "@/components/verb-badge";
 import { RoutePath } from "@/components/route-path";
-import { Breadcrumbs } from "@/components/breadcrumbs";
-import { BackButton } from "@/components/back-button";
+import { VerbBadge } from "@/components/verb-badge";
 import { getAllOperations, getTypeJson, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -42,10 +42,7 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
             <Breadcrumbs
-                items={[
-                    { label: "Operations", href: "/api/operations" as Route },
-                    { label: operation.operationID },
-                ]}
+                items={[{ label: "Operations", href: "/api/operations" as Route }, { label: operation.operationID }]}
             />
 
             <BackButton

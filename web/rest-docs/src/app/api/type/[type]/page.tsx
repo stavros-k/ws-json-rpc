@@ -1,11 +1,11 @@
 import type { Route } from "next";
-import { TbBrandTypescript, TbInfoCircle, TbJson, TbFileCode } from "react-icons/tb";
+import { TbBrandTypescript, TbFileCode, TbInfoCircle, TbJson } from "react-icons/tb";
+import { BackButton } from "@/components/back-button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { Deprecation } from "@/components/deprecation";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
 import { TypeMetadata } from "@/components/type-metadata";
-import { Breadcrumbs } from "@/components/breadcrumbs";
-import { BackButton } from "@/components/back-button";
 import { docs, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -29,12 +29,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
 
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
-            <Breadcrumbs
-                items={[
-                    { label: "Types", href: "/api/types" as Route },
-                    { label: type },
-                ]}
-            />
+            <Breadcrumbs items={[{ label: "Types", href: "/api/types" as Route }, { label: type }]} />
 
             <BackButton
                 href='/api/types'
@@ -83,7 +78,9 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                         title: "JSON Example",
                         icon: <TbFileCode className='w-8 h-8 text-lang-json' />,
                         code:
-                            "representations" in data && data.representations?.json && data.representations.json.trim() ? (
+                            "representations" in data &&
+                            data.representations?.json &&
+                            data.representations.json.trim() ? (
                                 <CodeWrapper
                                     code={data.representations.json}
                                     lang='json'

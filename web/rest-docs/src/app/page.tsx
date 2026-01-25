@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TbWorld, TbApi, TbDatabase, TbCode, TbBook, TbSchema } from "react-icons/tb";
+import { TbApi, TbBook, TbCode, TbDatabase, TbSchema, TbWorld } from "react-icons/tb";
 import { VerbBadge } from "@/components/verb-badge";
 import { docs, getAllOperations } from "@/data/api";
 

@@ -1,19 +1,18 @@
 "use client";
 
 import type { Route } from "next";
-import { useState, useMemo } from "react";
-import { ItemCard } from "@/components/item-card";
-import { PageHeader } from "@/components/page-header";
-import { Group } from "@/components/group";
-import { VerbBadge } from "@/components/verb-badge";
-import { RoutePath } from "@/components/route-path";
-import { OperationFilters, type OperationFilterState } from "@/components/operation-filters";
-import { StatCard } from "@/components/stat-card";
-import { EmptyState } from "@/components/empty-state";
-import { CollapsibleGroup } from "@/components/collapsible-group";
+import { useMemo, useState } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { docs } from "@/data/api";
-import { getAllOperations } from "@/data/api";
+import { CollapsibleGroup } from "@/components/collapsible-group";
+import { EmptyState } from "@/components/empty-state";
+import { Group } from "@/components/group";
+import { ItemCard } from "@/components/item-card";
+import { type OperationFilterState, OperationFilters } from "@/components/operation-filters";
+import { PageHeader } from "@/components/page-header";
+import { RoutePath } from "@/components/route-path";
+import { StatCard } from "@/components/stat-card";
+import { VerbBadge } from "@/components/verb-badge";
+import { docs, getAllOperations } from "@/data/api";
 
 export default function OperationsPage() {
     const allOperations = getAllOperations();
@@ -109,11 +108,7 @@ export default function OperationsPage() {
 
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
-            <Breadcrumbs
-                items={[
-                    { label: "Operations" },
-                ]}
-            />
+            <Breadcrumbs items={[{ label: "Operations" }]} />
 
             <PageHeader
                 title='Operations'

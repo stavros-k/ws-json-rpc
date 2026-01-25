@@ -26,7 +26,8 @@ export function TypeKindBadge({ kind, size = "md" }: TypeKindBadgeProps) {
     }[size];
 
     return (
-        <span className={`${sizeClasses} inline-block rounded-lg bg-info-bg text-info-text border-2 border-info-border font-bold`}>
+        <span
+            className={`${sizeClasses} inline-block rounded-lg bg-info-bg text-info-text border-2 border-info-border font-bold`}>
             {getKindDisplayName(kind)}
         </span>
     );

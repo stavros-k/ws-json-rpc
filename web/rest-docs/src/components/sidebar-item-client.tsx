@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import type { getItemData } from "./sidebar";
 import type { ItemType } from "@/data/api";
-import { VerbBadge } from "./verb-badge";
 import { RoutePath } from "./route-path";
+import type { getItemData } from "./sidebar";
+import { VerbBadge } from "./verb-badge";
 
 type Props = {
     type: ItemType;

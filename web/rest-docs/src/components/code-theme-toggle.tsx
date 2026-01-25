@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IoChevronDown } from "react-icons/io5";
 import { type CodeTheme, THEMES } from "@/utils/code-theme";
 import type { Theme } from "./theme-toggle-client";
@@ -117,7 +117,9 @@ export const CodeThemeToggle = () => {
                             onMouseEnter={() => handleHover(id as CodeTheme)}
                             onMouseLeave={handleHoverEnd}
                             className={`w-full px-3 py-2 text-xs text-left hover:bg-bg-tertiary transition-colors ${
-                                codeTheme === id ? "bg-accent-blue/20 text-accent-blue font-semibold" : "text-text-primary"
+                                codeTheme === id
+                                    ? "bg-accent-blue/20 text-accent-blue font-semibold"
+                                    : "text-text-primary"
                             }`}>
                             {theme.label}
                         </button>
