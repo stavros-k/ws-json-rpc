@@ -40,6 +40,7 @@ type CreateUserResponse struct {
 	// Creation timestamp
 	CreatedAt time.Time `json:"createdAt"`
 	// URL to the user
+	// TODO: dont use url.URL as it is not serialize as you expect
 	URL *url.URL `json:"url"`
 }
 

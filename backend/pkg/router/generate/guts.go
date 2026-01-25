@@ -52,7 +52,8 @@ func extractTypeNameFromValue(value any) (string, error) {
 // Returns nil if the expression is not an external type.
 func (g *OpenAPICollector) getExternalTypeInfo(expr bindings.ExpressionType) (*ExternalTypeInfo, bool) {
 	if keyword, ok := expr.(*bindings.LiteralKeyword); ok {
-		return g.externalTypes[keyword], true // Lookup by pointer!
+		info, exists := g.externalTypes[keyword] //Lookup by pointer!
+		return info, exists
 	}
 	return nil, false
 }
@@ -240,6 +241,38 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	return nil
 }
 
+// ExternalTypeInfo holds metadata about external Go types.
+type ExternalTypeInfo struct {
+	GoType        string // Original Go type (e.g., "time.Time")
+	OpenAPIFormat string // OpenAPI format (e.g., "date-time")
+}
+
+// createTimeTypeKeyword creates a LiteralKeyword for time.Time and registers it as an external type.
+// Each call creates a new keyword pointer and registers it in the external types map.
+//
+//nolint:ireturn
+func (g *OpenAPICollector) createTimeTypeKeyword() bindings.ExpressionType {
+	keywordPtr := utils.Ptr(bindings.KeywordString)
+	g.externalTypes[keywordPtr] = &ExternalTypeInfo{
+		GoType: "time.Time", OpenAPIFormat: "date-time",
+	}
+
+	return keywordPtr
+}
+
+// createURLTypeKeyword creates a LiteralKeyword for net/url.URL and registers it as an external type.
+// Each call creates a new keyword pointer and registers it in the external types map.
+//
+//nolint:ireturn
+func (g *OpenAPICollector) createURLTypeKeyword() bindings.ExpressionType {
+	keywordPtr := utils.Ptr(bindings.KeywordString)
+	g.externalTypes[keywordPtr] = &ExternalTypeInfo{
+		GoType: "net/url.URL", OpenAPIFormat: "uri",
+	}
+
+	return keywordPtr
+}
+
 // newTypescriptASTFromGoTypesDir creates a TypeScript AST from Go type definitions,
 // preserving comments and applying transformations for TypeScript compatibility.
 func (g *OpenAPICollector) newTypescriptASTFromGoTypesDir(l *slog.Logger, goTypesDirPath string) (*guts.Typescript, error) {
@@ -385,7 +418,9 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 				return nil, fmt.Errorf("failed to analyze field type for %s.%s: %w", name, member.Name, err)
 			}
 
-			fieldInfo.Required = !member.QuestionToken
+			// A field is required only if it has no question token AND is not nullable
+			// In Go: *string becomes "string | null" (nullable, no question token) → should be optional
+			fieldInfo.Required = !member.QuestionToken && !fieldInfo.Nullable
 
 			fieldDesc := g.extractComments(member.SupportComments)
 			fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
@@ -446,7 +481,9 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 			return nil, fmt.Errorf("failed to analyze field type for %s.%s: %w", name, field.Name, err)
 		}
 
-		analyzedType.Required = !field.QuestionToken
+		// A field is required only if it has no question token AND is not nullable
+		// In Go: *string becomes "string | null" (nullable, no question token) → should be optional
+		analyzedType.Required = !field.QuestionToken && !analyzedType.Nullable
 
 		fieldDesc := g.extractComments(field.SupportComments)
 		fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
