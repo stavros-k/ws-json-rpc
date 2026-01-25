@@ -75,19 +75,6 @@ export default function Home() {
                         </div>
                     </Link>
 
-                    {/* Database Schema Card */}
-                    <Link
-                        href='/api/database/schema'
-                        className='block'>
-                        <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-info-border cursor-pointer hover:scale-105'>
-                            <div className='w-12 h-12 bg-info-bg rounded-xl flex items-center justify-center mb-4 shadow-md'>
-                                <TbDatabase className='w-7 h-7 text-info-text' />
-                            </div>
-                            <div className='text-lg font-bold text-text-primary mb-1 mt-[22px]'>Database</div>
-                            <p className='text-xs text-text-secondary'>Schema & tables</p>
-                        </div>
-                    </Link>
-
                     {/* HTTP Methods Card */}
                     <div className='bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:scale-105'>
                         <div className='w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4 shadow-md'>
@@ -110,6 +97,19 @@ export default function Home() {
                                 ))}
                         </div>
                     </div>
+
+                    {/* Database Schema Card */}
+                    <Link
+                        href='/api/database/schema'
+                        className='block'>
+                        <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-info-border cursor-pointer hover:scale-105'>
+                            <div className='w-12 h-12 bg-info-bg rounded-xl flex items-center justify-center mb-4 shadow-md'>
+                                <TbDatabase className='w-7 h-7 text-info-text' />
+                            </div>
+                            <div className='text-lg font-bold text-text-primary mb-1 mt-[22px]'>Database</div>
+                            <p className='text-xs text-text-secondary'>Schema & tables</p>
+                        </div>
+                    </Link>
                 </div>
             </div>
 

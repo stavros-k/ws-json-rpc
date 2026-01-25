@@ -127,18 +127,18 @@ export default function TypesPage() {
                                 title={key}
                                 description={type.description}
                                 badges={
-                                    <div className='flex flex-col gap-2 items-end'>
+                                    <div className='flex flex-wrap gap-2 items-start justify-end max-w-[200px]'>
                                         <TypeKindBadge
                                             kind={type.kind}
                                             size='sm'
                                         />
                                         {fieldCount > 0 && (
-                                            <span className='text-xs px-2 py-1 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold'>
+                                            <span className='text-xs px-2 py-1 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold whitespace-nowrap'>
                                                 {fieldCount} {fieldCount === 1 ? "field" : "fields"}
                                             </span>
                                         )}
                                         {enumCount > 0 && (
-                                            <span className='text-xs px-2 py-1 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 font-semibold'>
+                                            <span className='text-xs px-2 py-1 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 font-semibold whitespace-nowrap'>
                                                 {enumCount} {enumCount === 1 ? "value" : "values"}
                                             </span>
                                         )}
