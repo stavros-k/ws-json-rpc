@@ -1,5 +1,6 @@
-import { TbBrandTypescript, TbInfoCircle, TbJson } from "react-icons/tb";
+import { TbBrandTypescript, TbInfoCircle, TbJson, TbFileCode } from "react-icons/tb";
 import { CodeWrapper } from "@/components/code-wrapper";
+import { Deprecation } from "@/components/deprecation";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
 import { TypeMetadata } from "@/components/type-metadata";
 import { docs, type TypeKeys } from "@/data/api";
@@ -27,6 +28,8 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
         <main className='flex-1 p-10 overflow-y-auto'>
             <div>
                 <h1 className='text-4xl font-bold mb-3 text-text-primary'>{type}</h1>
+
+                <Deprecation deprecated={data.deprecated} />
 
                 <div className='text-text-tertiary mb-8 pb-6 border-b-2 border-border-primary'>
                     <p>{data.description}</p>
@@ -62,8 +65,24 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                             ),
                     },
                     {
+                        title: "JSON Example",
+                        icon: <TbFileCode className='w-8 h-8 text-lang-json' />,
+                        code:
+                            "representations" in data && data.representations?.json && data.representations.json.trim() ? (
+                                <CodeWrapper
+                                    code={data.representations.json}
+                                    lang='json'
+                                    label={{ text: type }}
+                                />
+                            ) : (
+                                <p className='text-sm text-text-tertiary p-4'>
+                                    No JSON example available for this type.
+                                </p>
+                            ),
+                    },
+                    {
                         title: "JSON Schema",
-                        icon: <TbJson className='w-8 h-8 text-lang-json' />,
+                        icon: <TbJson className='w-8 h-8 text-purple-400' />,
                         code:
                             "representations" in data && data.representations?.jsonSchema ? (
                                 <CodeWrapper

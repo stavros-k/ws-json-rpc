@@ -6,9 +6,10 @@ type APIRoutes = Docs["routes"];
 type ApiDataTypes = Docs["types"];
 
 export type Routes = keyof APIRoutes;
-export type Verbs = keyof APIRoutes[Routes]["verbs"];
-// FIXME: this should be a union of all operationIDs
-export type OperationIDs = APIRoutes[Routes]["verbs"][Verbs]["operationID"];
+export type RouteData = APIRoutes[Routes];
+export type Verbs = keyof RouteData["verbs"];
+export type VerbData = RouteData["verbs"][Verbs];
+export type OperationID = VerbData["operationID"];
 
 export type TypeKeys = keyof ApiDataTypes;
 export type TypeData = ApiDataTypes[TypeKeys];
@@ -16,13 +17,7 @@ export type TypeData = ApiDataTypes[TypeKeys];
 type TypeDataWithFields = Extract<TypeData, { fields: unknown[] }>;
 export type FieldMetadata = NonNullable<TypeDataWithFields["fields"]>[number];
 
-// Temporary: Map methods and events to empty objects since test.json uses routes
-// TODO: Refactor components to use routes instead of methods/events
-export type ItemType = "method" | "event" | "type";
-export type MethodKeys = never; // No methods in REST API
-export type EventKeys = never; // No events in REST API
-export type ErrorData = never; // TODO: Map from route responses
-export type ExampleData = never; // TODO: Map from route examples
+export type ItemType = "type";
 
 export function getTypeJson(typeName: TypeKeys | "null") {
     if (typeName === "null") return null;
@@ -42,10 +37,4 @@ export function getTypeJson(typeName: TypeKeys | "null") {
     return null;
 }
 
-// Extend docs with empty methods and events for backward compatibility
-// TODO: Migrate all code to use routes instead
-export const docs = {
-    ...docsData,
-    methods: {},
-    events: {},
-} as const;
+export const docs: Docs = docsData;

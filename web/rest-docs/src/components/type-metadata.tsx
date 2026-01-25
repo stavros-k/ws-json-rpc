@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BiLinkExternal } from "react-icons/bi";
 import type { FieldMetadata, TypeData } from "@/data/api";
 import { docs } from "@/data/api";
 
@@ -99,26 +100,26 @@ function EnumValuesSection({ enumValues }: { enumValues: EnumValue[] | null }) {
     return (
         <div>
             <h2 className='text-xl font-semibold mb-4 text-text-primary'>Possible Values</h2>
-            <div className='flex flex-col gap-3'>
+            <div className='flex flex-col gap-4'>
                 {enumValues.map((enumValue) => (
                     <div
                         key={enumValue.value}
-                        className='p-3 rounded-md bg-type-enum-bg border border-type-enum-border'>
-                        <div className='flex items-center gap-2 mb-1'>
-                            <code className='font-mono text-sm font-bold text-type-enum'>
+                        className='p-4 rounded-lg bg-bg-secondary border-2 border-border-primary hover:border-accent-blue/50 transition-all duration-200'>
+                        <div className='flex items-center gap-2 mb-2'>
+                            <code className='px-3 py-1.5 rounded-lg bg-type-enum-bg text-type-enum border-2 border-type-enum-border font-mono text-sm font-semibold'>
                                 &quot;{enumValue.value}&quot;
                             </code>
                             {enumValue.deprecated && (
-                                <span className='text-xs px-2 py-0.5 rounded bg-deprecated-bg text-deprecated-text border border-deprecated-border'>
+                                <span className='text-xs px-2 py-0.5 rounded bg-warning-bg text-warning-text border border-warning-border font-semibold'>
                                     DEPRECATED
                                 </span>
                             )}
                         </div>
                         {enumValue.description && (
-                            <p className='text-xs text-text-tertiary'>{enumValue.description}</p>
+                            <p className='text-sm text-text-tertiary'>{enumValue.description}</p>
                         )}
                         {enumValue.deprecated && (
-                            <p className='text-xs text-deprecated-text mt-1'>{enumValue.deprecated.message}</p>
+                            <p className='text-sm text-warning-text mt-2 italic'>{enumValue.deprecated.message}</p>
                         )}
                     </div>
                 ))}
@@ -138,6 +139,11 @@ function FieldItem({ field }: { field: FieldMetadata }) {
             <div className='flex items-start justify-between mb-2 gap-4'>
                 <div className='flex items-center gap-2 flex-wrap'>
                     <code className='text-lg font-semibold text-text-primary'>{field.name}</code>
+                    {"typeInfo" in field && field.typeInfo && field.typeInfo.required && (
+                        <span className='text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-semibold'>
+                            required
+                        </span>
+                    )}
                     {"typeInfo" in field && field.typeInfo && !field.typeInfo.required && (
                         <span className='text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'>
                             optional
@@ -155,18 +161,7 @@ function FieldItem({ field }: { field: FieldMetadata }) {
                             href={`/api/type/${actualType}`}
                             className='inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-type-reference/10 text-type-reference hover:bg-type-reference/20 border-2 border-type-reference/30 hover:border-type-reference font-mono text-sm font-semibold transition-all duration-200 hover:scale-105'>
                             {displayType}
-                            <svg
-                                className='w-3 h-3'
-                                fill='none'
-                                stroke='currentColor'
-                                viewBox='0 0 24 24'>
-                                <path
-                                    strokeLinecap='round'
-                                    strokeLinejoin='round'
-                                    strokeWidth={2}
-                                    d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14'
-                                />
-                            </svg>
+                            <BiLinkExternal className='w-3.5 h-3.5' />
                         </Link>
                     ) : (
                         <code className='px-3 py-1.5 rounded-lg bg-type-primitive/10 text-type-primitive border-2 border-type-primitive/30 font-mono text-sm font-semibold'>

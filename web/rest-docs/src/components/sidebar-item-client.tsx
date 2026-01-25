@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import type { getItemData } from "./sidebar";
 
 type Props = {
-    type: "method" | "event" | "type";
+    type: "type";
     item: ReturnType<typeof getItemData>;
 };
 
