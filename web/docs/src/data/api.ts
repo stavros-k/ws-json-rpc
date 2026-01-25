@@ -1,4 +1,4 @@
-import docsData from "../../../../test.json";
+import docsData from "../../../../api_docs.json";
 
 export type Docs = typeof docsData;
 

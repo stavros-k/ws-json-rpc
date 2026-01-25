@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 //go:embed all:docs/dist
@@ -75,7 +77,7 @@ func (wa WebApp) Handler(path string) http.Handler {
 }
 
 // Register registers the WebApp with the given ServeMux.
-func (wa WebApp) Register(mux *http.ServeMux, l *slog.Logger) {
+func (wa WebApp) Register(mux chi.Router, l *slog.Logger) {
 	wa.l = l.With(slog.String("app", wa.name), slog.String("urlBase", wa.urlBase), slog.String("component", "file-server"))
 	wa.l.Info("Registering web app")
 

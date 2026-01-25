@@ -16,6 +16,7 @@ import (
 	"ws-json-rpc/backend/pkg/router/generate"
 	"ws-json-rpc/backend/pkg/types"
 	"ws-json-rpc/backend/pkg/utils"
+	"ws-json-rpc/web"
 )
 
 const (
@@ -43,8 +44,8 @@ func main() {
 		collector, err = generate.NewOpenAPICollector(logger, generate.OpenAPICollectorOptions{
 			GoTypesDirPath:               "backend/internal/httpapi",
 			DatabaseSchemaFileOutputPath: "schema.sql",
-			DocsFileOutputPath:           "test.json",
-			OpenAPISpecOutputPath:        "test.yaml",
+			DocsFileOutputPath:           "api_docs.json",
+			OpenAPISpecOutputPath:        "openapi.yaml",
 			APIInfo: generate.APIInfo{
 				Title:       "Local API",
 				Version:     utils.GetVersionShort(),
@@ -64,6 +65,8 @@ func main() {
 
 	rb, err := router.NewRouteBuilder(logger, collector)
 	fatalIfErr(logger, err)
+
+	web.DocsApp().Register(rb.Router(), logger)
 
 	rb.Must(rb.Get("/ping", router.RouteSpec{
 		OperationID: "ping",
