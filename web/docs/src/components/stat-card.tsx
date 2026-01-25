@@ -15,10 +15,10 @@ export function StatCard({ label, value, color = "blue", subtitle }: StatCardPro
     }[color];
 
     return (
-        <div className={`${colorClasses} p-6 rounded-xl border-2 shadow-sm`}>
+        <div className={`${colorClasses} p-4 rounded-lg border-2 shadow-sm`}>
             <div className='text-center'>
-                <div className='text-4xl font-bold mb-2'>{value}</div>
-                <div className='text-sm font-semibold uppercase tracking-wide'>{label}</div>
+                <div className='text-2xl font-bold mb-1'>{value}</div>
+                <div className='text-xs font-semibold uppercase tracking-wide'>{label}</div>
                 {subtitle && <div className='text-xs mt-1 opacity-75'>{subtitle}</div>}
             </div>
         </div>
