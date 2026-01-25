@@ -7,8 +7,7 @@ import { CollapsibleCard } from "@/components/collapsible-group";
 import { CollapsibleResponse } from "@/components/collapsible-response";
 import { Deprecation } from "@/components/deprecation";
 import { Group } from "@/components/group";
-import { RoutePath } from "@/components/route-path";
-import { VerbBadge } from "@/components/verb-badge";
+import { OperationHeader } from "@/components/operation-header";
 import { getAllOperations, getTypeJson, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -58,15 +57,6 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                         size='md'
                     />
                 </div>
-                <div className='flex items-center gap-3 mb-4'>
-                    <VerbBadge
-                        verb={operation.method}
-                        size='lg'
-                    />
-                    <h2 className='text-xl font-mono font-semibold'>
-                        <RoutePath path={operation.path} />
-                    </h2>
-                </div>
 
                 <Deprecation
                     deprecated={operation.deprecated}
@@ -81,35 +71,11 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                 </div>
             </div>
 
-            {operation.parameters && operation.parameters.length > 0 && (
-                <CardBoxWrapper title='Parameters'>
-                    <div className='space-y-3'>
-                        {operation.parameters.map((param) => (
-                            <div
-                                key={param.name}
-                                className='p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary'>
-                                <div className='flex items-start justify-between gap-4 mb-2'>
-                                    <div className='flex items-center gap-2 flex-wrap'>
-                                        <code className='text-base font-semibold text-text-primary'>{param.name}</code>
-                                        {param.required && (
-                                            <span className='text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-semibold'>
-                                                required
-                                            </span>
-                                        )}
-                                        <span className='text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30'>
-                                            {param.in}
-                                        </span>
-                                    </div>
-                                    <code className='px-3 py-1.5 rounded-lg bg-type-primitive/10 text-type-primitive border-2 border-type-primitive/30 font-mono text-sm font-semibold'>
-                                        {param.type}
-                                    </code>
-                                </div>
-                                {param.description && <p className='text-sm text-text-tertiary'>{param.description}</p>}
-                            </div>
-                        ))}
-                    </div>
-                </CardBoxWrapper>
-            )}
+            <OperationHeader
+                method={operation.method}
+                path={operation.path}
+                parameters={operation.parameters}
+            />
 
             {operation.request && (
                 <CardBoxWrapper title='Request Body'>
