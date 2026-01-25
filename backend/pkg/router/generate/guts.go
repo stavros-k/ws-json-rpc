@@ -355,6 +355,47 @@ func (g *OpenAPICollector) extractTypeFromNode(name string, node bindings.Node) 
 	}
 }
 
+// processFieldMember processes a field member and returns FieldInfo.
+// This helper eliminates duplication between alias type members and interface fields.
+func (g *OpenAPICollector) processFieldMember(parentName, fieldName string, fieldType bindings.ExpressionType, hasQuestionToken bool, comments bindings.SupportComments) (FieldInfo, error) {
+	_, err := g.serializeExpressionType(fieldType)
+	if err != nil {
+		return FieldInfo{}, fmt.Errorf("failed to serialize field type for %s: %w", parentName, err)
+	}
+
+	// Extract structured type information
+	fieldInfo, err := g.analyzeFieldType(fieldType)
+	if err != nil {
+		return FieldInfo{}, fmt.Errorf("failed to analyze field type for %s.%s: %w", parentName, fieldName, err)
+	}
+
+	// A field is required only if it has no question token AND is not nullable
+	// In Go: *string becomes "string | null" (nullable, no question token) → should be optional
+	fieldInfo.Required = !hasQuestionToken && !fieldInfo.Nullable
+
+	fieldDesc := g.extractComments(comments)
+
+	fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
+	if err != nil {
+		return FieldInfo{}, fmt.Errorf("failed to parse deprecation info for field %s.%s: %w", parentName, fieldName, err)
+	}
+
+	field := FieldInfo{
+		Name:        fieldName,
+		DisplayType: generateDisplayType(fieldInfo),
+		TypeInfo:    fieldInfo,
+		Description: cleanedFieldDesc,
+		Deprecated:  fieldDeprecated,
+	}
+
+	// Check if it's an external type and capture metadata
+	if extInfo, exists := g.getExternalTypeInfo(fieldType); exists {
+		field.GoType = extInfo.GoType
+	}
+
+	return field, nil
+}
+
 // extractAliasType extracts type information from an alias node.
 func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) (*TypeInfo, error) {
 	desc := g.extractComments(alias.SupportComments)
@@ -393,39 +434,9 @@ func (g *OpenAPICollector) extractAliasType(name string, alias *bindings.Alias) 
 		typeInfo.Kind = TypeKindObject
 
 		for _, member := range alias.Members {
-			_, err := g.serializeExpressionType(member.Type)
+			field, err := g.processFieldMember(name, member.Name, member.Type, member.QuestionToken, member.SupportComments)
 			if err != nil {
-				return nil, fmt.Errorf("failed to serialize field type for %s: %w", name, err)
-			}
-
-			// Extract structured type information
-			fieldInfo, err := g.analyzeFieldType(member.Type)
-			if err != nil {
-				return nil, fmt.Errorf("failed to analyze field type for %s.%s: %w", name, member.Name, err)
-			}
-
-			// A field is required only if it has no question token AND is not nullable
-			// In Go: *string becomes "string | null" (nullable, no question token) → should be optional
-			fieldInfo.Required = !member.QuestionToken && !fieldInfo.Nullable
-
-			fieldDesc := g.extractComments(member.SupportComments)
-
-			fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse deprecation info for field %s.%s: %w", name, member.Name, err)
-			}
-
-			field := FieldInfo{
-				Name:        member.Name,
-				DisplayType: generateDisplayType(fieldInfo),
-				TypeInfo:    fieldInfo,
-				Description: cleanedFieldDesc,
-				Deprecated:  fieldDeprecated,
-			}
-
-			// Check if it's an external type and capture metadata
-			if extInfo, exists := g.getExternalTypeInfo(member.Type); exists {
-				field.GoType = extInfo.GoType
+				return nil, err
 			}
 
 			typeInfo.Fields = append(typeInfo.Fields, field)
@@ -459,39 +470,9 @@ func (g *OpenAPICollector) extractInterfaceType(name string, iface *bindings.Int
 	}
 
 	for _, field := range iface.Fields {
-		_, err := g.serializeExpressionType(field.Type)
+		fieldInfo, err := g.processFieldMember(name, field.Name, field.Type, field.QuestionToken, field.SupportComments)
 		if err != nil {
-			return nil, fmt.Errorf("failed to serialize field type for %s: %w", name, err)
-		}
-
-		// Extract structured type information
-		analyzedType, err := g.analyzeFieldType(field.Type)
-		if err != nil {
-			return nil, fmt.Errorf("failed to analyze field type for %s.%s: %w", name, field.Name, err)
-		}
-
-		// A field is required only if it has no question token AND is not nullable
-		// In Go: *string becomes "string | null" (nullable, no question token) → should be optional
-		analyzedType.Required = !field.QuestionToken && !analyzedType.Nullable
-
-		fieldDesc := g.extractComments(field.SupportComments)
-
-		fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse deprecation info for field %s.%s: %w", name, field.Name, err)
-		}
-
-		fieldInfo := FieldInfo{
-			Name:        field.Name,
-			DisplayType: generateDisplayType(analyzedType),
-			TypeInfo:    analyzedType,
-			Description: cleanedFieldDesc,
-			Deprecated:  fieldDeprecated,
-		}
-
-		// Check if it's an external type and capture metadata
-		if extInfo, exists := g.getExternalTypeInfo(field.Type); exists {
-			fieldInfo.GoType = extInfo.GoType
+			return nil, err
 		}
 
 		typeInfo.Fields = append(typeInfo.Fields, fieldInfo)
