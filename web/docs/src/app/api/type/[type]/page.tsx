@@ -1,5 +1,9 @@
-import { TbBrandTypescript, TbInfoCircle, TbJson } from "react-icons/tb";
+import type { Route } from "next";
+import { TbBrandTypescript, TbFileCode, TbInfoCircle, TbJson } from "react-icons/tb";
+import { BackButton } from "@/components/back-button";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CodeWrapper } from "@/components/code-wrapper";
+import { Deprecation } from "@/components/deprecation";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
 import { TypeMetadata } from "@/components/type-metadata";
 import { docs, type TypeKeys } from "@/data/api";
@@ -25,8 +29,17 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
 
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
+            <Breadcrumbs items={[{ label: "Types", href: "/api/types" as Route }, { label: type }]} />
+
+            <BackButton
+                href='/api/types'
+                label='Types'
+            />
+
             <div>
                 <h1 className='text-4xl font-bold mb-3 text-text-primary'>{type}</h1>
+
+                <Deprecation deprecated={data.deprecated} />
 
                 <div className='text-text-tertiary mb-8 pb-6 border-b-2 border-border-primary'>
                     <p>{data.description}</p>
@@ -48,27 +61,50 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                     {
                         title: "TypeScript",
                         icon: <TbBrandTypescript className='w-8 h-8 text-lang-ts' />,
-                        code: (
-                            <CodeWrapper
-                                code={data.tsType}
-                                lang='typescript'
-                                label={{ text: type }}
-                            />
-                        ),
+                        code:
+                            "representations" in data && data.representations?.ts ? (
+                                <CodeWrapper
+                                    code={data.representations.ts}
+                                    lang='typescript'
+                                    label={{ text: type }}
+                                />
+                            ) : (
+                                <p className='text-sm text-text-tertiary p-4'>
+                                    No TypeScript representation available for this type.
+                                </p>
+                            ),
                     },
                     {
-                        title: "JSON",
-                        icon: <TbJson className='w-8 h-8 text-lang-json' />,
+                        title: "JSON Example",
+                        icon: <TbFileCode className='w-8 h-8 text-lang-json' />,
                         code:
-                            "jsonRepresentation" in data && data.jsonRepresentation ? (
+                            "representations" in data &&
+                            data.representations?.json &&
+                            data.representations.json.trim() ? (
                                 <CodeWrapper
-                                    code={data.jsonRepresentation}
+                                    code={data.representations.json}
                                     lang='json'
                                     label={{ text: type }}
                                 />
                             ) : (
                                 <p className='text-sm text-text-tertiary p-4'>
-                                    No JSON representation available for this type.
+                                    No JSON example available for this type.
+                                </p>
+                            ),
+                    },
+                    {
+                        title: "JSON Schema",
+                        icon: <TbJson className='w-8 h-8 text-purple-400' />,
+                        code:
+                            "representations" in data && data.representations?.jsonSchema ? (
+                                <CodeWrapper
+                                    code={data.representations.jsonSchema}
+                                    lang='json'
+                                    label={{ text: type }}
+                                />
+                            ) : (
+                                <p className='text-sm text-text-tertiary p-4'>
+                                    No JSON schema available for this type.
                                 </p>
                             ),
                     },

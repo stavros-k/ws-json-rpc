@@ -1,33 +1,46 @@
-import docsData from "../../../../api_docs.json";
+import docsData from "../../../../test.json";
 
 export type Docs = typeof docsData;
 
-type ApiDataMethods = Docs["methods"];
-type ApiDataEvents = Docs["events"];
+type HTTPOperations = Docs["httpOperations"];
 type ApiDataTypes = Docs["types"];
 
-export type ItemType = "method" | "event" | "type";
-export type MethodKeys = keyof ApiDataMethods;
-export type EventKeys = keyof ApiDataEvents;
-export type TypeKeys = keyof ApiDataTypes;
+export type OperationID = keyof HTTPOperations;
+export type OperationData = HTTPOperations[OperationID];
 
-export type EventData = ApiDataEvents[EventKeys];
-export type MethodData = ApiDataMethods[MethodKeys];
+// Get union of all HTTP methods across all operations
+export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export type TypeKeys = keyof ApiDataTypes;
 export type TypeData = ApiDataTypes[TypeKeys];
 
-type TypeDataWithFields = Extract<TypeData, { fields: unknown }>;
-export type FieldMetadata = TypeDataWithFields["fields"][number];
+export type FieldMetadata = NonNullable<TypeData["fields"]>[number];
+export type UsedByItem = NonNullable<TypeData["usedBy"]>[number];
+export type EnumValue = NonNullable<TypeData["enumValues"]>[number];
 
-export type ErrorData = ApiDataMethods[MethodKeys]["errors"][number];
-export type ExampleData = ApiDataMethods[MethodKeys]["examples"][number] | ApiDataEvents[EventKeys]["examples"][number];
+export type ItemType = "type" | "operation";
 
 export function getTypeJson(typeName: TypeKeys | "null") {
     if (typeName === "null") return null;
     const type = docs.types[typeName];
-    if ("jsonRepresentation" in type && type.jsonRepresentation) {
-        return type.jsonRepresentation;
+    const representations = type?.representations;
+    if (!representations) return null;
+
+    // Use jsonSchema if json is empty, otherwise use json
+    const jsonRep = type.representations.json;
+    if (jsonRep && jsonRep.trim() !== "") {
+        return jsonRep;
+    }
+    // Fallback to jsonSchema if available
+    const jsonSchema = type.representations.jsonSchema;
+    if (jsonSchema && jsonSchema.trim() !== "") {
+        return jsonSchema;
     }
     return null;
+}
+
+export function getAllOperations(): OperationData[] {
+    return Object.values(docs.httpOperations);
 }
 
 export const docs: Docs = docsData;

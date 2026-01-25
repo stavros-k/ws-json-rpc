@@ -1,11 +1,9 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { IoHome } from "react-icons/io5";
-import { docs, type EventKeys, type ItemType, type MethodKeys, type TypeKeys } from "@/data/api";
-import { AutoSubscribeToggle } from "./auto-subscribe-toggle";
+import { docs, getAllOperations, type ItemType, type TypeKeys } from "@/data/api";
 import { CodeThemeToggle } from "./code-theme-toggle";
 import { ConnectionIndicator } from "./connection-indicator";
-import { MaxResultsControl } from "./max-results-control";
 import { SidebarSection } from "./sidebar-section";
 
 const SidebarLink = ({ title, href }: { title: string; href: Route }) => {
@@ -22,8 +20,9 @@ const SidebarLink = ({ title, href }: { title: string; href: Route }) => {
 
 export const Sidebar = () => {
     return (
-        <aside className='w-80 p-6 text-sm bg-bg-sidebar text-text-primary overflow-y-auto sticky top-0 max-h-screen border-r-2 border-border-sidebar'>
-            <div className='mb-8'>
+        <aside className='w-80 text-sm bg-bg-sidebar text-text-primary sticky top-0 max-h-screen border-r-2 border-border-sidebar flex flex-col'>
+            {/* Sticky Header */}
+            <div className='p-6 pb-4 border-b-2 border-border-sidebar'>
                 <div className='flex items-center justify-between mb-4'>
                     <h1 className='text-xl font-bold'>
                         <Link
@@ -39,37 +38,33 @@ export const Sidebar = () => {
                     <ConnectionIndicator />
                 </div>
                 <div className='space-y-3'>
-                    <AutoSubscribeToggle />
-                    <MaxResultsControl />
                     <CodeThemeToggle />
                 </div>
             </div>
 
-            <SidebarSection
-                title='Methods'
-                type='method'
-                overviewHref='/api/methods'
-            />
-            <SidebarSection
-                title='Events'
-                type='event'
-                overviewHref='/api/events'
-            />
-            <SidebarSection
-                title='Types'
-                type='type'
-                overviewHref='/api/types'
-            />
+            {/* Scrollable Content */}
+            <div
+                className='flex-1 overflow-y-scroll p-6 pt-4'
+                style={{
+                    scrollbarWidth: "auto",
+                    scrollbarColor: "rgb(100 116 139) transparent",
+                }}>
+                <SidebarSection
+                    title='Operations'
+                    type='operation'
+                    overviewHref='/api/operations'
+                />
+                <SidebarSection
+                    title='Types'
+                    type='type'
+                    overviewHref='/api/types'
+                />
 
-            <SidebarLink
-                title='JSON-RPC Protocol'
-                href='/api/protocol'
-            />
-
-            <SidebarLink
-                title='Database Schema'
-                href='/api/database/schema'
-            />
+                <SidebarLink
+                    title='Database Schema'
+                    href='/api/database/schema'
+                />
+            </div>
         </aside>
     );
 };
@@ -80,33 +75,7 @@ type getItemProps = {
 };
 
 export function getItemData({ type, itemName }: getItemProps) {
-    if (type === "method") {
-        const name = itemName as MethodKeys;
-        if (!docs.methods[name]) {
-            throw new Error(`Method ${name} not found`);
-        }
-        return {
-            type: type,
-            name: name,
-            urlPath: `/api/${type}/${name}`,
-            data: docs.methods[name],
-            title: docs.methods[name].title,
-            group: docs.methods[name].group,
-        } as const;
-    } else if (type === "event") {
-        const name = itemName as EventKeys;
-        if (!docs.events[name]) {
-            throw new Error(`Event ${name} not found`);
-        }
-        return {
-            type: type,
-            name: name,
-            urlPath: `/api/${type}/${name}`,
-            data: docs.events[name],
-            title: docs.events[name].title,
-            group: docs.events[name].group,
-        } as const;
-    } else if (type === "type") {
+    if (type === "type") {
         const name = itemName as TypeKeys;
         if (!docs.types[name]) {
             throw new Error(`Type ${name} not found`);
@@ -120,5 +89,23 @@ export function getItemData({ type, itemName }: getItemProps) {
             group: "",
         } as const;
     }
-    throw new Error("Invalid type");
+    if (type === "operation") {
+        // itemName is operationID for operations
+        const allOperations = getAllOperations();
+        const operation = allOperations.find((op) => op.operationID === itemName);
+        if (!operation) {
+            throw new Error(`Operation ${itemName} not found`);
+        }
+        return {
+            type: type,
+            name: itemName,
+            urlPath: `/api/operation/${itemName}`,
+            data: operation,
+            title: operation.operationID,
+            method: operation.method,
+            path: operation.path,
+            group: operation.group || "",
+        } as const;
+    }
+    throw new Error(`Invalid type: ${type}`);
 }

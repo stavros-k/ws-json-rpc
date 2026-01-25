@@ -46,8 +46,8 @@ export function FilterControls({ onFilterChange }: FilterControlsProps) {
                             onClick={() => handleProtocolChange(option.value)}
                             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200 ${
                                 selected === option.value
-                                    ? "bg-accent-blue text-text-primary shadow-md scale-105"
-                                    : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover border-2 border-border-primary hover:border-accent-blue"
+                                    ? "bg-bg-tertiary text-text-primary shadow-md border-2 border-accent-blue-border"
+                                    : "bg-bg-secondary text-text-primary border-2 border-border-primary hover:border-border-secondary"
                             }`}>
                             {option.label}
                         </button>

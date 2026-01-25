@@ -3,17 +3,13 @@
     "version": "1.0.0",
     "private": true,
     "workspaces": [
-        "web/docs",
-        "web/rest-docs"
+        "web/docs"
     ],
     "scripts": {
         "fmt": "biome check --write",
         "docs:dev": "npm run dev --workspace=web/docs",
         "docs:build": "npm run build --workspace=web/docs",
-        "docs:preview": "npm run preview --workspace=web/docs",
-        "rest-docs:dev": "npm run dev --workspace=web/rest-docs",
-        "rest-docs:build": "npm run build --workspace=web/rest-docs",
-        "rest-docs:start": "npm run start --workspace=web/rest-docs"
+        "docs:preview": "npm run preview --workspace=web/docs"
     },
     "devDependencies": {
         "@types/react": "19.2.9",
