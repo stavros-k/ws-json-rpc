@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import type { getItemData } from "./sidebar";
 import type { ItemType } from "@/data/api";
 import { VerbBadge } from "./verb-badge";
+import { RoutePath } from "./route-path";
 
 type Props = {
     type: ItemType;
@@ -36,7 +37,10 @@ export const SidebarItem = ({ type, item }: Props) => {
                             verb={verb}
                             size='xs'
                         />
-                        <span className='text-[10px] text-text-muted font-mono truncate'>{route}</span>
+                        <RoutePath
+                            path={route}
+                            className='text-[10px] text-text-muted font-mono truncate'
+                        />
                     </div>
                 )}
             </div>

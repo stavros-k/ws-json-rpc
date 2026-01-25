@@ -6,6 +6,9 @@ import { CollapsibleResponse } from "@/components/collapsible-response";
 import { Deprecation } from "@/components/deprecation";
 import { Group } from "@/components/group";
 import { VerbBadge } from "@/components/verb-badge";
+import { RoutePath } from "@/components/route-path";
+import { Breadcrumbs } from "@/components/breadcrumbs";
+import { BackButton } from "@/components/back-button";
 import { getAllOperations, getTypeJson, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -38,6 +41,18 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
 
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
+            <Breadcrumbs
+                items={[
+                    { label: "Operations", href: "/api/operations" as Route },
+                    { label: operation.operationID },
+                ]}
+            />
+
+            <BackButton
+                href='/api/operations'
+                label='Operations'
+            />
+
             <div>
                 <div className='flex items-center gap-3 mb-3'>
                     <h1 className='text-4xl font-bold text-text-primary'>{operation.operationID}</h1>
@@ -51,7 +66,9 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                         verb={operation.verb}
                         size='lg'
                     />
-                    <h2 className='text-xl text-accent-blue font-mono font-semibold'>{operation.route}</h2>
+                    <h2 className='text-xl font-mono font-semibold'>
+                        <RoutePath path={operation.route} />
+                    </h2>
                 </div>
 
                 <Deprecation

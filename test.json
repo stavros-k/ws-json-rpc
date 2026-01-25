@@ -398,7 +398,7 @@
           "operationID": "ping",
           "summary": "Ping the server",
           "description": "Check if the server is alive",
-          "group": "core",
+          "group": "Core",
           "deprecated": "",
           "request": null,
           "parameters": null,
@@ -443,7 +443,7 @@
           "operationID": "getTeam",
           "summary": "Get a team",
           "description": "Get a team by its ID",
-          "group": "team",
+          "group": "Team",
           "deprecated": "Use GetTeamResponseV2 instead.",
           "request": {
             "type": "GetTeamRequest",

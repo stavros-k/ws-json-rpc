@@ -6,9 +6,11 @@ import { ItemCard } from "@/components/item-card";
 import { PageHeader } from "@/components/page-header";
 import { Group } from "@/components/group";
 import { VerbBadge } from "@/components/verb-badge";
+import { RoutePath } from "@/components/route-path";
 import { OperationFilters, type OperationFilterState } from "@/components/operation-filters";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
+import { CollapsibleGroup } from "@/components/collapsible-group";
 import { docs } from "@/data/api";
 import { getAllOperations } from "@/data/api";
 
@@ -66,6 +68,27 @@ export default function OperationsPage() {
             return true;
         });
     }, [allOperations, filters]);
+
+    // Group operations by group
+    const groupedOperations = useMemo(() => {
+        const grouped = filteredOperations.reduce(
+            (acc, operation) => {
+                const group = operation.group || "Ungrouped";
+                if (!acc[group]) {
+                    acc[group] = [];
+                }
+                acc[group].push(operation);
+                return acc;
+            },
+            {} as Record<string, typeof filteredOperations>
+        );
+        return Object.entries(grouped).sort(([a], [b]) => {
+            // "Ungrouped" always last
+            if (a === "Ungrouped") return 1;
+            if (b === "Ungrouped") return -1;
+            return a.localeCompare(b);
+        });
+    }, [filteredOperations]);
 
     // Calculate statistics
     const deprecatedCount = useMemo(() => {
@@ -138,26 +161,37 @@ export default function OperationsPage() {
                     icon='🔍'
                 />
             ) : (
-                <div className='grid gap-5'>
-                    {filteredOperations.map((operation) => (
-                        <ItemCard
-                            key={operation.operationID}
-                            href={`/api/operation/${operation.operationID}` as Route}
-                            title={operation.operationID}
-                            subtitle={
-                                <div className='flex items-center gap-2'>
-                                    <VerbBadge
-                                        verb={operation.verb}
-                                        size='sm'
+                <div>
+                    {groupedOperations.map(([groupName, operations]) => (
+                        <CollapsibleGroup
+                            key={groupName}
+                            title={groupName}
+                            defaultOpen={true}>
+                            <div className='grid gap-5'>
+                                {operations.map((operation) => (
+                                    <ItemCard
+                                        key={operation.operationID}
+                                        href={`/api/operation/${operation.operationID}` as Route}
+                                        title={operation.operationID}
+                                        subtitle={
+                                            <div className='flex items-center gap-2'>
+                                                <VerbBadge
+                                                    verb={operation.verb}
+                                                    size='sm'
+                                                />
+                                                <RoutePath
+                                                    path={operation.route}
+                                                    className='font-mono'
+                                                />
+                                            </div>
+                                        }
+                                        description={operation.summary || operation.description}
+                                        deprecated={!!operation.deprecated}
+                                        hoverBorderColor='hover:border-accent-green-light'
                                     />
-                                    <span className='font-mono'>{operation.route}</span>
-                                </div>
-                            }
-                            description={operation.summary || operation.description}
-                            tags={<Group group={operation.group || ""} size='sm' />}
-                            deprecated={!!operation.deprecated}
-                            hoverBorderColor='hover:border-accent-green-light'
-                        />
+                                ))}
+                            </div>
+                        </CollapsibleGroup>
                     ))}
                 </div>
             )}

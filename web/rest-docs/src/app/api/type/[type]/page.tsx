@@ -1,8 +1,11 @@
+import type { Route } from "next";
 import { TbBrandTypescript, TbInfoCircle, TbJson, TbFileCode } from "react-icons/tb";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { Deprecation } from "@/components/deprecation";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
 import { TypeMetadata } from "@/components/type-metadata";
+import { Breadcrumbs } from "@/components/breadcrumbs";
+import { BackButton } from "@/components/back-button";
 import { docs, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -26,6 +29,18 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
 
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
+            <Breadcrumbs
+                items={[
+                    { label: "Types", href: "/api/types" as Route },
+                    { label: type },
+                ]}
+            />
+
+            <BackButton
+                href='/api/types'
+                label='Types'
+            />
+
             <div>
                 <h1 className='text-4xl font-bold mb-3 text-text-primary'>{type}</h1>
 

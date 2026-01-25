@@ -8,6 +8,7 @@ import { TypeKindBadge, getKindDisplayName } from "@/components/type-kind-badge"
 import { TypeFilters, type TypeFilterState } from "@/components/type-filters";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
+import { CollapsibleGroup } from "@/components/collapsible-group";
 import { docs } from "@/data/api";
 
 export default function TypesPage() {
@@ -51,6 +52,22 @@ export default function TypesPage() {
             return true;
         });
     }, [allTypes, filters]);
+
+    // Group types by kind
+    const groupedTypes = useMemo(() => {
+        const grouped = filteredTypes.reduce(
+            (acc, [key, type]) => {
+                const kind = getKindDisplayName(type.kind);
+                if (!acc[kind]) {
+                    acc[kind] = [];
+                }
+                acc[kind].push([key, type] as const);
+                return acc;
+            },
+            {} as Record<string, typeof filteredTypes>
+        );
+        return Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+    }, [filteredTypes]);
 
     // Calculate statistics
     const deprecatedCount = useMemo(() => {
@@ -112,43 +129,52 @@ export default function TypesPage() {
                     icon='🔍'
                 />
             ) : (
-                <div className='grid gap-5'>
-                    {filteredTypes.map(([key, type]) => {
-                        const fields = "fields" in type ? type.fields : undefined;
-                        const fieldCount = fields?.length || 0;
-                        const enumValues = "enumValues" in type ? type.enumValues : undefined;
-                        const enumCount = enumValues?.length || 0;
-                        const isDeprecated = !!type.deprecated;
+                <div>
+                    {groupedTypes.map(([kindName, types]) => (
+                        <CollapsibleGroup
+                            key={kindName}
+                            title={kindName}
+                            defaultOpen={true}>
+                            <div className='grid gap-5'>
+                                {types.map(([key, type]) => {
+                                    const fields = "fields" in type ? type.fields : undefined;
+                                    const fieldCount = fields?.length || 0;
+                                    const enumValues = "enumValues" in type ? type.enumValues : undefined;
+                                    const enumCount = enumValues?.length || 0;
+                                    const isDeprecated = !!type.deprecated;
 
-                        return (
-                            <ItemCard
-                                key={key}
-                                href={`/api/type/${key}` as Route}
-                                title={key}
-                                description={type.description}
-                                badges={
-                                    <div className='flex flex-wrap gap-2 items-start justify-end max-w-[200px]'>
-                                        <TypeKindBadge
-                                            kind={type.kind}
-                                            size='sm'
+                                    return (
+                                        <ItemCard
+                                            key={key}
+                                            href={`/api/type/${key}` as Route}
+                                            title={key}
+                                            description={type.description}
+                                            badges={
+                                                <div className='flex flex-wrap gap-2 items-start justify-end max-w-[200px]'>
+                                                    <TypeKindBadge
+                                                        kind={type.kind}
+                                                        size='sm'
+                                                    />
+                                                    {fieldCount > 0 && (
+                                                        <span className='text-xs px-2 py-1 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold whitespace-nowrap'>
+                                                            {fieldCount} {fieldCount === 1 ? "field" : "fields"}
+                                                        </span>
+                                                    )}
+                                                    {enumCount > 0 && (
+                                                        <span className='text-xs px-2 py-1 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 font-semibold whitespace-nowrap'>
+                                                            {enumCount} {enumCount === 1 ? "value" : "values"}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            }
+                                            deprecated={isDeprecated}
+                                            hoverBorderColor='hover:border-accent-blue-light'
                                         />
-                                        {fieldCount > 0 && (
-                                            <span className='text-xs px-2 py-1 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold whitespace-nowrap'>
-                                                {fieldCount} {fieldCount === 1 ? "field" : "fields"}
-                                            </span>
-                                        )}
-                                        {enumCount > 0 && (
-                                            <span className='text-xs px-2 py-1 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 font-semibold whitespace-nowrap'>
-                                                {enumCount} {enumCount === 1 ? "value" : "values"}
-                                            </span>
-                                        )}
-                                    </div>
-                                }
-                                deprecated={isDeprecated}
-                                hoverBorderColor='hover:border-accent-blue-light'
-                            />
-                        );
-                    })}
+                                    );
+                                })}
+                            </div>
+                        </CollapsibleGroup>
+                    ))}
                 </div>
             )}
         </main>
