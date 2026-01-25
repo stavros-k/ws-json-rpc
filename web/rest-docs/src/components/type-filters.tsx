@@ -56,8 +56,8 @@ export function TypeFilters({ kinds, onFilterChange }: TypeFiltersProps) {
                             onClick={() => handleKindChange("all")}
                             className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 ${
                                 selectedKind === "all"
-                                    ? "bg-accent-blue text-text-primary shadow-md"
-                                    : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover border-2 border-border-primary hover:border-accent-blue"
+                                    ? "bg-bg-tertiary text-text-primary shadow-md border-2 border-accent-blue-border"
+                                    : "bg-bg-secondary text-text-primary border-2 border-border-primary hover:border-border-secondary"
                             }`}>
                             All
                         </button>
@@ -68,8 +68,8 @@ export function TypeFilters({ kinds, onFilterChange }: TypeFiltersProps) {
                                 onClick={() => handleKindChange(kind)}
                                 className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 ${
                                     selectedKind === kind
-                                        ? "bg-accent-blue text-text-primary shadow-md"
-                                        : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover border-2 border-border-primary hover:border-accent-blue"
+                                        ? "bg-bg-tertiary text-text-primary shadow-md border-2 border-accent-blue-border"
+                                        : "bg-bg-secondary text-text-primary border-2 border-border-primary hover:border-border-secondary"
                                 }`}>
                                 {getKindDisplayName(kind)}
                             </button>

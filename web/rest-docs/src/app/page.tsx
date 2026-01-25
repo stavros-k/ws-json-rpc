@@ -9,6 +9,7 @@ const operationCount = Object.values(docs.routes).reduce((total, route) => {
     return total + Object.keys(route.verbs).length;
 }, 0);
 const typeCount = Object.keys(docs.types).length;
+const tableCount = docs.database.tableCount || 0;
 
 // Calculate HTTP method distribution
 const httpMethods = Object.values(docs.routes).reduce(
@@ -47,14 +48,16 @@ export default function Home() {
             {/* API Overview */}
             <div className='w-full px-6 py-12 lg:px-8'>
                 <h2 className='text-3xl font-bold text-text-primary text-center mb-10'>API Overview</h2>
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto'>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto'>
                     {/* Operations Card */}
                     <div className='bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-accent-blue hover:scale-105'>
-                        <div className='w-12 h-12 bg-accent-blue/20 rounded-xl flex items-center justify-center mb-4 shadow-md'>
-                            <TbApi className='w-7 h-7 text-accent-blue' />
+                        <div className='flex items-center gap-3 mb-4'>
+                            <div className='w-12 h-12 bg-accent-blue/20 rounded-xl flex items-center justify-center shadow-md'>
+                                <TbApi className='w-7 h-7 text-accent-blue' />
+                            </div>
+                            <div className='text-lg font-bold text-text-primary'>Operations</div>
                         </div>
                         <div className='text-4xl font-bold text-accent-blue mb-2'>{operationCount}</div>
-                        <div className='text-lg font-bold text-text-primary mb-1'>Operations</div>
                         <p className='text-xs text-text-secondary'>
                             Across {routeCount} route{routeCount !== 1 ? "s" : ""}
                         </p>
@@ -65,50 +68,59 @@ export default function Home() {
                         href='/api/types'
                         className='block'>
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-success-border cursor-pointer hover:scale-105'>
-                            <div className='w-12 h-12 bg-success-bg rounded-xl flex items-center justify-center mb-4 shadow-md'>
-                                <TbCode className='w-7 h-7 text-success-text' />
+                            <div className='flex items-center gap-3 mb-4'>
+                                <div className='w-12 h-12 bg-success-bg rounded-xl flex items-center justify-center shadow-md'>
+                                    <TbCode className='w-7 h-7 text-success-text' />
+                                </div>
+                                <div className='text-lg font-bold text-text-primary'>Types</div>
                             </div>
                             <div className='text-4xl font-bold text-success-text mb-2'>{typeCount}</div>
-                            <div className='text-lg font-bold text-text-primary mb-1'>Types</div>
                             <p className='text-xs text-text-secondary'>Type definitions</p>
                         </div>
                     </Link>
-
-                    {/* HTTP Methods Card */}
-                    <div className='bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:scale-105'>
-                        <div className='w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4 shadow-md'>
-                            <TbWorld className='w-7 h-7 text-purple-500' />
-                        </div>
-                        <div className='text-lg font-bold text-text-primary mb-2'>HTTP Methods</div>
-                        <div className='flex flex-col gap-2'>
-                            {Object.entries(httpMethods)
-                                .sort(([, a], [, b]) => b - a)
-                                .map(([method, count]) => (
-                                    <div
-                                        key={method}
-                                        className='flex items-center justify-between'>
-                                        <VerbBadge
-                                            verb={method}
-                                            size='sm'
-                                        />
-                                        <span className='text-sm font-bold text-text-secondary'>{count}</span>
-                                    </div>
-                                ))}
-                        </div>
-                    </div>
 
                     {/* Database Schema Card */}
                     <Link
                         href='/api/database/schema'
                         className='block'>
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-info-border cursor-pointer hover:scale-105'>
-                            <div className='w-12 h-12 bg-info-bg rounded-xl flex items-center justify-center mb-4 shadow-md'>
-                                <TbDatabase className='w-7 h-7 text-info-text' />
+                            <div className='flex items-center gap-3 mb-4'>
+                                <div className='w-12 h-12 bg-info-bg rounded-xl flex items-center justify-center shadow-md'>
+                                    <TbDatabase className='w-7 h-7 text-info-text' />
+                                </div>
+                                <div className='text-lg font-bold text-text-primary'>Database</div>
                             </div>
-                            <div className='text-lg font-bold text-text-primary mb-1 mt-[22px]'>Database</div>
-                            <p className='text-xs text-text-secondary'>Schema & tables</p>
+                            <div className='text-4xl font-bold text-info-text mb-2'>{tableCount}</div>
+                            <p className='text-xs text-text-secondary'>
+                                Table{tableCount !== 1 ? "s" : ""}
+                            </p>
                         </div>
                     </Link>
+                </div>
+            </div>
+
+            {/* HTTP Methods Section */}
+            <div className='w-full px-6 py-12 lg:px-8 bg-bg-secondary/20'>
+                <h2 className='text-3xl font-bold text-text-primary text-center mb-10'>HTTP Methods</h2>
+                <div className='flex flex-wrap justify-center gap-4 max-w-7xl mx-auto'>
+                    {Object.entries(httpMethods)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([method, count]) => (
+                            <div
+                                key={method}
+                                className='bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:scale-105 w-40'>
+                                <div className='text-center'>
+                                    <VerbBadge
+                                        verb={method}
+                                        size='lg'
+                                    />
+                                    <div className='text-3xl font-bold text-text-primary mt-4'>{count}</div>
+                                    <p className='text-xs text-text-secondary mt-1'>
+                                        Operation{count !== 1 ? "s" : ""}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
                 </div>
             </div>
 

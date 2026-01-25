@@ -64,8 +64,8 @@ export function OperationFilters({ verbs, groups, onFilterChange }: OperationFil
                             onClick={() => handleVerbChange("all")}
                             className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 ${
                                 selectedVerb === "all"
-                                    ? "bg-accent-blue text-text-primary shadow-md"
-                                    : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover border-2 border-border-primary hover:border-accent-blue"
+                                    ? "bg-bg-tertiary text-text-primary shadow-md border-2 border-accent-blue-border"
+                                    : "bg-bg-secondary text-text-primary border-2 border-border-primary hover:border-border-secondary"
                             }`}>
                             All
                         </button>
@@ -76,8 +76,8 @@ export function OperationFilters({ verbs, groups, onFilterChange }: OperationFil
                                 onClick={() => handleVerbChange(verb)}
                                 className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 ${
                                     selectedVerb === verb
-                                        ? "bg-accent-blue text-text-primary shadow-md"
-                                        : "bg-bg-tertiary text-text-secondary hover:bg-bg-hover border-2 border-border-primary hover:border-accent-blue"
+                                        ? "bg-bg-tertiary text-text-primary shadow-md border-2 border-accent-blue-border"
+                                        : "bg-bg-secondary text-text-primary border-2 border-border-primary hover:border-border-secondary"
                                 }`}>
                                 {verb}
                             </button>
