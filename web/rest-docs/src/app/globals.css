@@ -136,6 +136,10 @@ html[data-theme="light"] {
     --color-shadow-sm: light-dark(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.5));
     --color-shadow-md: light-dark(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.6));
     --color-shadow-lg: light-dark(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.7));
+
+    /* Deprecated */
+    --opacity-deprecated: 0.7;
+    --opacity-deprecated-hover: 0.85;
 }
 
 /* Shiki Colors - based on code theme */

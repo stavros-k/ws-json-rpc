@@ -29,7 +29,7 @@ export const ItemCard = ({
         <Link
             href={href}
             className={`block p-6 bg-bg-secondary rounded-xl border-2 border-border-primary ${hoverBorderColor} hover:shadow-lg transition-all duration-200 relative ${
-                deprecated ? "opacity-60 hover:opacity-80 pb-12" : ""
+                deprecated ? "opacity-deprecated hover:opacity-deprecated-hover pb-12" : ""
             }`}>
             <div className='flex items-start justify-between gap-4'>
                 <div className='flex-1 min-w-0'>

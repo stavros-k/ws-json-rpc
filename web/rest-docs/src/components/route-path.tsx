@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 type RoutePathProps = {
     path: string;
     className?: string;
@@ -18,13 +20,14 @@ export function RoutePath({ path, className = "" }: RoutePathProps) {
                 const uniqueKey = count === 0 ? segment : `${segment}-${count}`;
 
                 const isParam = segment.startsWith("{") && segment.endsWith("}");
+                const paramName = isParam ? segment.slice(1, -1) : null;
                 if (isParam) {
                     return (
-                        <span
-                            key={uniqueKey}
-                            className='text-accent-blue font-bold'>
-                            {segment}
-                        </span>
+                        <Fragment key={uniqueKey}>
+                            <span className='text-type-enum'>{"{"}</span>
+                            <span className='text-accent-blue font-bold'>{paramName}</span>
+                            <span className='text-type-enum'>{"}"}</span>
+                        </Fragment>
                     );
                 }
                 return (

@@ -25,10 +25,10 @@ export const SidebarItem = ({ type, item }: Props) => {
             key={urlPath}
             href={urlPath}
             className={`block ${
-                isActive ? "bg-accent-blue text-white shadow-md" : "bg-bg-secondary text-text-primary"
-            } py-2 px-2.5 rounded-lg mb-1.5 text-sm no-underline transition-all duration-200 hover:bg-bg-tertiary hover:shadow-sm border-2 ${
-                isActive ? "border-accent-blue-border" : "border-border-primary"
-            } ${isDeprecated ? "opacity-40" : ""}`}>
+                isActive ? "bg-bg-tertiary text-text-primary shadow-md" : "bg-bg-secondary text-text-primary"
+            } py-2 px-2.5 rounded-lg mb-1.5 text-sm no-underline transition-all duration-200 hover:shadow-sm border-2 ${
+                isActive ? "border-accent-blue-border" : "border-border-primary hover:border-border-secondary"
+            } ${isDeprecated ? "opacity-deprecated" : ""}`}>
             <div className='flex flex-col gap-1'>
                 <span className='font-semibold text-base'>{title || item.name}</span>
                 {verb && route && (
