@@ -89,6 +89,21 @@
           "description": "Creation timestamp",
           "deprecated": null,
           "goType": "time.Time"
+        },
+        {
+          "name": "url",
+          "displayType": "String",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "format": "uri",
+            "required": false,
+            "nullable": true,
+            "itemsType": null
+          },
+          "description": "URL to the user",
+          "deprecated": null,
+          "goType": "ws-json-rpc/backend/pkg/types.URL"
         }
       ],
       "enumValues": null,
@@ -104,7 +119,7 @@
           "role": "response"
         }
       ],
-      "jsonRepresentation": "{\n  \"userID\": \"\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\"\n}"
+      "jsonRepresentation": "{\n  \"userID\": \"\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\",\n  \"url\": null\n}"
     },
     "GetTeamRequest": {
       "name": "GetTeamRequest",
@@ -389,7 +404,7 @@
               "type": "CreateUserResponse",
               "description": "Invalid request",
               "examples": {
-                "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\"\n}"
+                "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
               }
             },
             "500": {
@@ -450,7 +465,7 @@
               "type": "CreateUserResponse",
               "description": "Invalid request",
               "examples": {
-                "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\"\n}"
+                "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": null\n}"
               }
             },
             "500": {

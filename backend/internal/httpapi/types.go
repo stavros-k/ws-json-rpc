@@ -1,8 +1,9 @@
 package httpapi
 
 import (
-	"net/url"
 	"time"
+
+	"ws-json-rpc/backend/pkg/types"
 )
 
 // PingResponse is the response to a ping request.
@@ -40,8 +41,7 @@ type CreateUserResponse struct {
 	// Creation timestamp
 	CreatedAt time.Time `json:"createdAt"`
 	// URL to the user
-	// TODO: dont use url.URL as it is not serialize as you expect
-	URL *url.URL `json:"url"`
+	URL *types.URL `json:"url"`
 }
 
 // GetTeamRequest is the request to get a team.

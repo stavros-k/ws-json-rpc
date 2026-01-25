@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,6 +14,7 @@ import (
 	"ws-json-rpc/backend/internal/httpapi"
 	"ws-json-rpc/backend/pkg/router"
 	"ws-json-rpc/backend/pkg/router/generate"
+	"ws-json-rpc/backend/pkg/types"
 	"ws-json-rpc/backend/pkg/utils"
 )
 
@@ -88,7 +88,7 @@ func main() {
 				Description: "Invalid request",
 				Type:        httpapi.CreateUserResponse{},
 				Examples: map[string]any{
-					"example-1": httpapi.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), URL: &url.URL{Scheme: "https", Host: "localhost:8080", Path: "/user"}},
+					"example-1": httpapi.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
 				},
 			},
 			500: {

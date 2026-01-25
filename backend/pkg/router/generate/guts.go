@@ -50,11 +50,19 @@ func extractTypeNameFromValue(value any) (string, error) {
 
 // getExternalTypeInfo returns the external type metadata for a given expression.
 // Returns nil if the expression is not an external type.
+// Unwraps nullable unions (T | null) to check the underlying type.
 func (g *OpenAPICollector) getExternalTypeInfo(expr bindings.ExpressionType) (*ExternalTypeInfo, bool) {
-	if keyword, ok := expr.(*bindings.LiteralKeyword); ok {
-		info, exists := g.externalTypes[keyword] //Lookup by pointer!
+	switch e := expr.(type) {
+	case *bindings.LiteralKeyword:
+		info, exists := g.externalTypes[e]
 		return info, exists
+	case *bindings.UnionType:
+		if isNullable, nonNullType := g.isNullableUnion(e); isNullable {
+			// Recursively check the non-null type
+			return g.getExternalTypeInfo(nonNullType)
+		}
 	}
+
 	return nil, false
 }
 
@@ -260,14 +268,14 @@ func (g *OpenAPICollector) createTimeTypeKeyword() bindings.ExpressionType {
 	return keywordPtr
 }
 
-// createURLTypeKeyword creates a LiteralKeyword for net/url.URL and registers it as an external type.
+// createURLTypeKeyword creates a LiteralKeyword for types.URL and registers it as an external type.
 // Each call creates a new keyword pointer and registers it in the external types map.
 //
 //nolint:ireturn
 func (g *OpenAPICollector) createURLTypeKeyword() bindings.ExpressionType {
 	keywordPtr := utils.Ptr(bindings.KeywordString)
 	g.externalTypes[keywordPtr] = &ExternalTypeInfo{
-		GoType: "net/url.URL", OpenAPIFormat: "uri",
+		GoType: "ws-json-rpc/backend/pkg/types.URL", OpenAPIFormat: "uri",
 	}
 
 	return keywordPtr
@@ -285,8 +293,8 @@ func (g *OpenAPICollector) newTypescriptASTFromGoTypesDir(l *slog.Logger, goType
 
 	goParser.PreserveComments()
 	goParser.IncludeCustomDeclaration(map[string]guts.TypeOverride{
-		"time.Time":   g.createTimeTypeKeyword,
-		"net/url.URL": g.createURLTypeKeyword,
+		"time.Time":                         g.createTimeTypeKeyword,
+		"ws-json-rpc/backend/pkg/types.URL": g.createURLTypeKeyword,
 	})
 
 	if _, err := os.Stat(goTypesDirPath); os.IsNotExist(err) {
