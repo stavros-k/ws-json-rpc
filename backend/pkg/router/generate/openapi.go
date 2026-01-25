@@ -204,31 +204,39 @@ func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 
 	spec.Components.Schemas = schemas
 
-	// Build paths from routes
-	for path, pathRoutes := range doc.Routes {
-		pathItem := &openapi3.PathItem{}
+	// Build paths from http_operations
+	pathItems := make(map[string]*openapi3.PathItem)
 
-		for method, route := range pathRoutes.Verbs {
-			op, err := buildOperation(route, doc.Types)
-			if err != nil {
-				return nil, fmt.Errorf("failed to build operation %s %s: %w", method, route.Path, err)
-			}
-
-			// Add operation to path item
-			switch method {
-			case "GET":
-				pathItem.Get = op
-			case "POST":
-				pathItem.Post = op
-			case "PUT":
-				pathItem.Put = op
-			case "PATCH":
-				pathItem.Patch = op
-			case "DELETE":
-				pathItem.Delete = op
-			}
+	for _, route := range doc.HTTPOperations {
+		// Get or create path item for this path
+		pathItem, exists := pathItems[route.Path]
+		if !exists {
+			pathItem = &openapi3.PathItem{}
+			pathItems[route.Path] = pathItem
 		}
 
+		op, err := buildOperation(route, doc.Types)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build operation %s %s: %w", route.Method, route.Path, err)
+		}
+
+		// Add operation to path item
+		switch route.Method {
+		case "GET":
+			pathItem.Get = op
+		case "POST":
+			pathItem.Post = op
+		case "PUT":
+			pathItem.Put = op
+		case "PATCH":
+			pathItem.Patch = op
+		case "DELETE":
+			pathItem.Delete = op
+		}
+	}
+
+	// Add all path items to spec
+	for path, pathItem := range pathItems {
 		spec.Paths.Set(path, pathItem)
 	}
 
@@ -286,7 +294,7 @@ func buildOperation(route *RouteInfo, types map[string]*TypeInfo) (*openapi3.Ope
 
 	// Add responses
 	for statusCode, resp := range route.Responses {
-		statusStr := strconv.Itoa(statusCode)
+		statusStr := strconv.Itoa(int(statusCode))
 		response := &openapi3.Response{Description: &resp.Description}
 
 		if resp.TypeName != "" {
@@ -324,7 +332,7 @@ func convertExamplesToOpenAPI(examples map[string]any) openapi3.Examples {
 
 	result := make(openapi3.Examples)
 	for name, value := range examples {
-		result[name] = &openapi3.ExampleRef{Value: &openapi3.Example{Value: value}}
+		result[string(name)] = &openapi3.ExampleRef{Value: &openapi3.Example{Value: value}}
 	}
 
 	return result

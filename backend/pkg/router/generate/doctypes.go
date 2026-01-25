@@ -57,15 +57,15 @@ type UsageInfo struct {
 // RouteInfo contains metadata about a REST route.
 type RouteInfo struct {
 	OperationID string               `json:"operationID"`
-	Method      string               `json:"-"` // Not serialized - used as map key
-	Path        string               `json:"-"` // Not serialized - used as map key
+	Method      string               `json:"method"` // HTTP method (GET, POST, etc.)
+	Path        string               `json:"path"`   // URL path
 	Summary     string               `json:"summary"`
 	Description string               `json:"description"`
 	Group       string               `json:"group"`
 	Deprecated  string               `json:"deprecated"`
 	Request     *RequestInfo         `json:"request"`
 	Parameters  []ParameterInfo      `json:"parameters"`
-	Responses   map[int]ResponseInfo `json:"responses"`
+	Responses   map[int]ResponseInfo `json:"responses"` // Keyed by status code
 }
 
 // RequestInfo describes a request body.
@@ -73,8 +73,8 @@ type RequestInfo struct {
 	TypeName            string            `json:"type"` // Extracted type name (set by generator)
 	TypeValue           any               `json:"-"`    // Zero value of the type (set by route builder)
 	Description         string            `json:"description"`
-	ExamplesStringified map[string]string `json:"examples"`
-	Examples            map[string]any    `json:"-"`
+	ExamplesStringified map[string]string `json:"examples"` // Keyed by example name
+	Examples            map[string]any    `json:"-"`        // Keyed by example name
 }
 
 // ParameterInfo describes a route parameter.
@@ -93,21 +93,16 @@ type ResponseInfo struct {
 	TypeName            string            `json:"type"` // Extracted type name (set by generator), empty for responses without body
 	TypeValue           any               `json:"-"`    // Zero value of the type (set by route builder)
 	Description         string            `json:"description"`
-	ExamplesStringified map[string]string `json:"examples"`
-	Examples            map[string]any    `json:"-"`
-}
-
-// PathRoutes groups routes by HTTP method for a given path.
-type PathRoutes struct {
-	Verbs map[string]*RouteInfo `json:"verbs"` // Keyed by HTTP method (GET, POST, etc.)
+	ExamplesStringified map[string]string `json:"examples"` // Keyed by example name
+	Examples            map[string]any    `json:"-"`        // Keyed by example name
 }
 
 // APIDocumentation is the complete API documentation structure.
 type APIDocumentation struct {
-	Info     APIInfo                `json:"info"`
-	Types    map[string]*TypeInfo   `json:"types"`
-	Routes   map[string]*PathRoutes `json:"routes"` // Keyed by path
-	Database Database               `json:"database"`
+	Info           APIInfo               `json:"info"`
+	Types          map[string]*TypeInfo  `json:"types"`           // Keyed by type name
+	HTTPOperations map[string]*RouteInfo `json:"http_operations"` // Keyed by operationID
+	Database       Database              `json:"database"`
 }
 
 // APIInfo contains API metadata.

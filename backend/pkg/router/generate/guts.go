@@ -30,8 +30,8 @@ type OpenAPICollector struct {
 	vm       *bindings.Bindings
 	l        *slog.Logger
 
-	types         map[string]*TypeInfo                           // Extracted type information
-	routes        map[string]*PathRoutes                         // Registered routes, keyed by path
+	types         map[string]*TypeInfo                           // Extracted type information, keyed by type name
+	httpOps       map[string]*RouteInfo                          // Registered HTTP operations, keyed by operationID
 	database      Database                                       // Database schema and stats
 	externalTypes map[*bindings.LiteralKeyword]*ExternalTypeInfo // External type metadata, keyed by keyword pointer
 
@@ -79,7 +79,7 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 	gutsGenerator := &OpenAPICollector{
 		l:                   l,
 		types:               make(map[string]*TypeInfo),
-		routes:              make(map[string]*PathRoutes),
+		httpOps:             make(map[string]*RouteInfo),
 		externalTypes:       make(map[*bindings.LiteralKeyword]*ExternalTypeInfo),
 		docsFilePath:        opts.DocsFileOutputPath,
 		openAPISpecFilePath: opts.OpenAPISpecOutputPath,
@@ -165,11 +165,9 @@ func stringifyRequestExamples(r *RequestInfo) *RequestInfo {
 }
 
 func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
-	// Get or create PathRoutes for this path
-	pathRoutes, exists := g.routes[route.Path]
-	if !exists {
-		pathRoutes = &PathRoutes{Verbs: make(map[string]*RouteInfo)}
-		g.routes[route.Path] = pathRoutes
+	// Validate operationID is unique
+	if _, exists := g.httpOps[route.OperationID]; exists {
+		return fmt.Errorf("duplicate operationID: %s", route.OperationID)
 	}
 
 	// Extract type names from zero values using reflection, and stringify examples
@@ -214,8 +212,8 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 		route.Parameters[i].TypeName = typeName
 	}
 
-	// Add route under its HTTP method
-	pathRoutes.Verbs[route.Method] = route
+	// Add operation keyed by operationID
+	g.httpOps[route.OperationID] = route
 	return nil
 }
 
@@ -516,10 +514,10 @@ func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*T
 
 func (g *OpenAPICollector) getDocumentation() *APIDocumentation {
 	return &APIDocumentation{
-		Types:    g.types,
-		Routes:   g.routes,
-		Database: g.database,
-		Info:     g.apiInfo,
+		Types:          g.types,
+		HTTPOperations: g.httpOps,
+		Database:       g.database,
+		Info:           g.apiInfo,
 	}
 }
 
@@ -545,7 +543,7 @@ func (g *OpenAPICollector) collectReferencesFromMembers(members []*bindings.Prop
 // computeTypeRelationships computes ReferencedBy and UsedBy for all types
 // (References are already computed during type extraction).
 func (g *OpenAPICollector) computeTypeRelationships() {
-	g.l.Debug("Computing type relationships", slog.Int("typeCount", len(g.types)), slog.Int("routeCount", len(g.routes)))
+	g.l.Debug("Computing type relationships", slog.Int("typeCount", len(g.types)), slog.Int("operationCount", len(g.httpOps)))
 
 	// Build ReferencedBy from References
 	g.buildReferencedBy()
@@ -584,7 +582,7 @@ func (g *OpenAPICollector) generateTSRepresentations() error {
 	g.l.Debug("Generating TypeScript representations for all types", slog.Int("typeCount", len(g.types)))
 
 	for name, typeInfo := range g.types {
-		node, exists := g.tsParser.Node(name)
+		node, exists := g.tsParser.Node(string(name))
 		if !exists {
 			return fmt.Errorf("type %s not found in TypeScript AST", name)
 		}
@@ -620,22 +618,20 @@ func (g *OpenAPICollector) buildReferencedBy() {
 
 // buildUsedBy tracks which operations use each type.
 func (g *OpenAPICollector) buildUsedBy() {
-	for _, pathRoutes := range g.routes {
-		for _, route := range pathRoutes.Verbs {
-			// Track request type
-			if route.Request != nil {
-				g.addUsage(route.Request.TypeName, route.OperationID, "request")
-			}
+	for _, route := range g.httpOps {
+		// Track request type
+		if route.Request != nil {
+			g.addUsage(route.Request.TypeName, route.OperationID, "request")
+		}
 
-			// Track response types
-			for _, resp := range route.Responses {
-				g.addUsage(resp.TypeName, route.OperationID, "response")
-			}
+		// Track response types
+		for _, resp := range route.Responses {
+			g.addUsage(resp.TypeName, route.OperationID, "response")
+		}
 
-			// Track parameter types
-			for _, param := range route.Parameters {
-				g.addUsage(param.TypeName, route.OperationID, "parameter")
-			}
+		// Track parameter types
+		for _, param := range route.Parameters {
+			g.addUsage(param.TypeName, route.OperationID, "parameter")
 		}
 	}
 }

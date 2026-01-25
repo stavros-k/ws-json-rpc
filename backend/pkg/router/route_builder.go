@@ -26,9 +26,10 @@ type RouteBuilder struct {
 // NewRouteBuilder creates a new RouteBuilder.
 func NewRouteBuilder(l *slog.Logger, collector generate.RouteMetadataCollector) (*RouteBuilder, error) {
 	return &RouteBuilder{
-		router:    chi.NewRouter(),
-		collector: collector,
-		l:         l.With(slog.String("component", "route-builder")),
+		router:       chi.NewRouter(),
+		collector:    collector,
+		operationIDs: make(map[string]struct{}),
+		l:            l.With(slog.String("component", "route-builder")),
 	}, nil
 }
 
