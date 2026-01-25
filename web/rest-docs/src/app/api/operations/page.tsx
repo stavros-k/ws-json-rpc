@@ -5,14 +5,13 @@ import { useMemo, useState } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CollapsibleGroup } from "@/components/collapsible-group";
 import { EmptyState } from "@/components/empty-state";
-import { Group } from "@/components/group";
 import { ItemCard } from "@/components/item-card";
 import { type OperationFilterState, OperationFilters } from "@/components/operation-filters";
 import { PageHeader } from "@/components/page-header";
 import { RoutePath } from "@/components/route-path";
 import { StatCard } from "@/components/stat-card";
 import { VerbBadge } from "@/components/verb-badge";
-import { docs, getAllOperations } from "@/data/api";
+import { getAllOperations } from "@/data/api";
 
 export default function OperationsPage() {
     const allOperations = getAllOperations();

@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { TbApi, TbBook, TbCode, TbDatabase, TbSchema, TbWorld } from "react-icons/tb";
+import { TbApi, TbCode, TbDatabase, TbWorld } from "react-icons/tb";
 import { VerbBadge } from "@/components/verb-badge";
-import { docs, getAllOperations } from "@/data/api";
+import { docs } from "@/data/api";
 
 // Calculate total number of operations across all routes
 const routeCount = Object.keys(docs.routes).length;
@@ -9,7 +9,6 @@ const operationCount = Object.values(docs.routes).reduce((total, route) => {
     return total + Object.keys(route.verbs).length;
 }, 0);
 const typeCount = Object.keys(docs.types).length;
-const serverCount = docs.info.servers?.length || 0;
 
 // Calculate HTTP method distribution
 const httpMethods = Object.values(docs.routes).reduce(
@@ -118,9 +117,9 @@ export default function Home() {
                 <div className='w-full px-6 py-12 lg:px-8 bg-bg-secondary/20 mb-8'>
                     <h2 className='text-3xl font-bold text-text-primary text-center mb-10'>Available Servers</h2>
                     <div className='grid md:grid-cols-2 gap-6 max-w-4xl mx-auto'>
-                        {docs.info.servers.map((server, index) => (
+                        {docs.info.servers.map((server) => (
                             <div
-                                key={index}
+                                key={server.URL}
                                 className='bg-bg-secondary p-6 rounded-2xl border-2 border-border-primary shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300'>
                                 <div className='w-12 h-12 bg-accent-blue/20 rounded-xl flex items-center justify-center mb-4 shadow-md'>
                                     <TbWorld className='w-7 h-7 text-accent-blue' />

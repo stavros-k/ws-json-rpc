@@ -95,6 +95,7 @@ export const CodeThemeToggle = () => {
             <div className='flex items-center justify-between gap-3'>
                 <label className='text-sm font-medium text-text-primary'>Code Theme</label>
                 <button
+                    type='button'
                     onClick={() => setIsOpen(!isOpen)}
                     className='px-2 py-1 text-xs border border-border-primary rounded bg-bg-primary text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-blue flex items-center gap-1 min-w-[120px] justify-between hover:bg-bg-tertiary transition-colors'>
                     <span>{THEMES[codeTheme].label}</span>
@@ -113,6 +114,7 @@ export const CodeThemeToggle = () => {
                     {filteredThemes.map(([id, theme]) => (
                         <button
                             key={id}
+                            type='button'
                             onClick={() => handleSelect(id as CodeTheme)}
                             onMouseEnter={() => handleHover(id as CodeTheme)}
                             onMouseLeave={handleHoverEnd}
