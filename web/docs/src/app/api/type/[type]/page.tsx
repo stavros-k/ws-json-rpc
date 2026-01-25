@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { Deprecation } from "@/components/deprecation";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
+import { TypeKindBadge } from "@/components/type-kind-badge";
 import { TypeMetadata } from "@/components/type-metadata";
 import { docs, type TypeKeys } from "@/data/api";
 
@@ -37,7 +38,10 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
             />
 
             <div>
-                <h1 className='text-4xl font-bold mb-3 text-text-primary'>{type}</h1>
+                <div className='flex items-center justify-between gap-3 mb-3'>
+                    <h1 className='text-4xl font-bold text-text-primary'>{type}</h1>
+                    <TypeKindBadge kind={data.kind} />
+                </div>
 
                 <Deprecation deprecated={data.deprecated} />
 

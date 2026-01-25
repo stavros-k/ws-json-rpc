@@ -2,8 +2,9 @@ import type { Route } from "next";
 import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
 import type { EnumValue, FieldMetadata, TypeData, UsedByItem } from "@/data/api";
-import { docs } from "@/data/api";
-import { TypeKindBadge } from "./type-kind-badge";
+import { docs, getAllOperations } from "@/data/api";
+import { VerbBadge } from "./verb-badge";
+import { RoutePath } from "./route-path";
 
 interface TypeMetadataProps {
     data: TypeData;
@@ -29,6 +30,8 @@ function TypeDescription({ description }: { description?: string }) {
 function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
     if (!usedBy || usedBy.length === 0) return null;
 
+    const allOperations = getAllOperations();
+
     // Group by operationID and collect roles
     const grouped = usedBy.reduce(
         (acc, item) => {
@@ -45,32 +48,48 @@ function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
         <div>
             <h2 className='text-xl font-semibold mb-4 text-text-primary'>Used By Operations</h2>
             <p className='text-sm text-text-tertiary mb-4'>This type is used by the following API operations:</p>
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-                {Object.entries(grouped).map(([operationID, roles]) => (
-                    <Link
-                        key={operationID}
-                        href={`/api/operation/${operationID}` as Route}
-                        className='block p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary hover:border-accent-blue transition-all duration-200 hover:shadow-md'>
-                        <div className='flex items-start justify-between gap-3'>
-                            <code className='font-mono text-sm font-semibold text-text-primary break-all hover:text-accent-blue transition-colors'>
-                                {operationID}
-                            </code>
-                            <div className='flex flex-wrap gap-1 shrink-0'>
-                                {Array.from(roles).map((role) => (
-                                    <span
-                                        key={role}
-                                        className={`text-xs px-2 py-0.5 rounded font-medium ${
-                                            role === "request"
-                                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                                : "bg-green-500/20 text-green-400 border border-green-500/30"
-                                        }`}>
-                                        {role}
-                                    </span>
-                                ))}
+            <div className='grid grid-cols-1 gap-3'>
+                {Object.entries(grouped).map(([operationID, roles]) => {
+                    const operation = allOperations.find((op) => op.operationID === operationID);
+                    return (
+                        <Link
+                            key={operationID}
+                            href={`/api/operation/${operationID}` as Route}
+                            className='block p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary hover:border-accent-blue transition-all duration-200 hover:shadow-md'>
+                            <div className='flex flex-col gap-2'>
+                                <div className='flex items-center justify-between gap-3'>
+                                    <div className='flex items-center gap-2 min-w-0'>
+                                        {operation && (
+                                            <>
+                                                <VerbBadge
+                                                    verb={operation.method}
+                                                    size='xs'
+                                                />
+                                                <span className='text-sm font-mono font-semibold truncate'>
+                                                    <RoutePath path={operation.path} />
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <div className='flex flex-wrap gap-1 shrink-0'>
+                                        {Array.from(roles).map((role) => (
+                                            <span
+                                                key={role}
+                                                className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                                    role === "request"
+                                                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                                        : "bg-green-500/20 text-green-400 border border-green-500/30"
+                                                }`}>
+                                                {role}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                                <code className='text-xs text-text-muted font-mono'>{operationID}</code>
                             </div>
-                        </div>
-                    </Link>
-                ))}
+                        </Link>
+                    );
+                })}
             </div>
         </div>
     );
@@ -215,7 +234,6 @@ export function TypeMetadata({ data, typeName }: TypeMetadataProps) {
 
     return (
         <div className='space-y-6'>
-            <TypeKindBadge kind={data.kind} />
             <TypeDescription description={data.description} />
 
             {isPrimitiveOrEnum && (
