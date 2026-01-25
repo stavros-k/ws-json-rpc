@@ -269,12 +269,17 @@ func main() {
 		return
 	}
 
-	web.DocsApp().Register(rb.Router(), logger)
+	router := rb.Router()
+
+	web.DocsApp().Register(router, logger)
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
+	})
 
 	addr := fmt.Sprintf(":%d", config.Port)
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           rb.Router(),
+		Handler:           router,
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 

@@ -13,8 +13,8 @@ import (
 var docsFS embed.FS
 
 type Router interface {
-	Handle(pattern string, handler http.Handler)
 	HandleFunc(pattern string, handler http.HandlerFunc)
+	Mount(pattern string, handler http.Handler)
 }
 
 func DocsApp() WebApp { return NewWebApp("docs", docsFS, "docs/dist", "/docs/") }
@@ -90,6 +90,6 @@ func (wa WebApp) Register(mux Router, l *slog.Logger) {
 		http.Redirect(w, r, wa.urlBase, http.StatusMovedPermanently)
 	})
 
-	// Serve the app at the base URL
-	mux.Handle(wa.urlBase, wa.Handler(wa.urlBase))
+	// Mount the web app with prefix stripping
+	mux.Mount(baseWithoutSlash, wa.Handler(wa.urlBase))
 }
