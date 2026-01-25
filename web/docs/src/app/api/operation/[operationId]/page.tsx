@@ -51,7 +51,7 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
             />
 
             <div>
-                <div className='flex items-center gap-3 mb-3'>
+                <div className='flex items-center justify-between gap-3 mb-3'>
                     <h1 className='text-4xl font-bold text-text-primary'>{operation.operationID}</h1>
                     <Group
                         group={operation.group || ""}
