@@ -161,6 +161,15 @@ func (g *OpenAPICollector) Generate() error {
 	// Compute type relationships
 	g.computeTypeRelationships()
 
+	// Generate JSON schemas for all types
+	if err := g.generateJSONSchemaRepresentations(); err != nil {
+		return fmt.Errorf("failed to generate JSON schema representations: %w", err)
+	}
+
+	if err := g.generateTSRepresentations(); err != nil {
+		return fmt.Errorf("failed to generate TypeScript representations: %w", err)
+	}
+
 	// Write OpenAPI spec
 	if err := g.writeSpecYAML(g.openAPISpecFilePath); err != nil {
 		return fmt.Errorf("failed to write OpenAPI spec: %w", err)
@@ -211,8 +220,8 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 		route.Request.TypeName = typeName
 
 		if typeInfo, ok := g.types[typeName]; ok {
-			if typeInfo.JSONRepresentation == "" {
-				typeInfo.JSONRepresentation = string(utils.MustToJSONIndent(route.Request.TypeValue))
+			if typeInfo.Representations.JSON == "" {
+				typeInfo.Representations.JSON = string(utils.MustToJSONIndent(route.Request.TypeValue))
 			}
 		}
 
@@ -228,8 +237,8 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 		resp.TypeName = typeName
 
 		if typeInfo, ok := g.types[typeName]; ok {
-			if typeInfo.JSONRepresentation == "" {
-				typeInfo.JSONRepresentation = string(utils.MustToJSONIndent(resp.TypeValue))
+			if typeInfo.Representations.JSON == "" {
+				typeInfo.Representations.JSON = string(utils.MustToJSONIndent(resp.TypeValue))
 			}
 		}
 
@@ -529,13 +538,12 @@ func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*T
 		return nil, fmt.Errorf("failed to extract enum values for %s: %w", name, err)
 	}
 
-	g.l.Debug("Extracted enum type",
-		slog.String("name", name),
-		slog.Int("enumValueCount", len(enumVals)))
+	g.l.Debug("Extracted enum type", slog.String("name", name), slog.Int("enumValueCount", len(enumVals)))
 	deprecated, cleanedDesc, err := g.parseDeprecation(desc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse deprecation info for enum %s: %w", name, err)
 	}
+
 	return &TypeInfo{
 		Name:        name,
 		Kind:        TypeKindStringEnum,
@@ -585,6 +593,52 @@ func (g *OpenAPICollector) computeTypeRelationships() {
 	// Build UsedBy from routes
 	g.buildUsedBy()
 	g.l.Debug("Computed UsedBy relationships")
+}
+
+// generateJSONSchemaRepresentations generates JSON Schema for all types as a post-processing step.
+func (g *OpenAPICollector) generateJSONSchemaRepresentations() error {
+	g.l.Debug("Generating JSON schemas for all types", slog.Int("typeCount", len(g.types)))
+
+	for name, typeInfo := range g.types {
+		schema, err := toOpenAPISchema(typeInfo)
+		if err != nil {
+			return fmt.Errorf("failed to generate JSON schema for type %s: %w", name, err)
+		}
+
+		jsonSchema, err := schemaToJSONString(schema)
+		if err != nil {
+			return fmt.Errorf("failed to serialize JSON schema for type %s: %w", name, err)
+		}
+
+		typeInfo.Representations.JSONSchema = jsonSchema
+	}
+
+	g.l.Debug("JSON schemas generated successfully")
+
+	return nil
+}
+
+// generateTSRepresentations generates TypeScript representations for all types as a post-processing step.
+func (g *OpenAPICollector) generateTSRepresentations() error {
+	g.l.Debug("Generating TypeScript representations for all types", slog.Int("typeCount", len(g.types)))
+
+	for name, typeInfo := range g.types {
+		node, exists := g.tsParser.Node(name)
+		if !exists {
+			return fmt.Errorf("type %s not found in TypeScript AST", name)
+		}
+
+		tsRepresentation, err := g.serializeNode(node)
+		if err != nil {
+			return fmt.Errorf("failed to generate TypeScript representation for type %s: %w", name, err)
+		}
+
+		typeInfo.Representations.TS = tsRepresentation
+	}
+
+	g.l.Debug("TypeScript representations generated successfully")
+
+	return nil
 }
 
 // buildReferencedBy builds the inverse of References for all types.
@@ -693,6 +747,28 @@ func (g *OpenAPICollector) generateOpenAPISpec() (*openapi3.T, error) {
 	}
 
 	return spec, nil
+}
+
+func (g *OpenAPICollector) serializeNode(node bindings.Node) (string, error) {
+	tsNode, err := g.vm.ToTypescriptNode(node)
+	if err != nil {
+		return "", fmt.Errorf("failed to convert node to TypeScript node: %w", err)
+	}
+
+	serialized, err := g.vm.SerializeToTypescript(tsNode)
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize TypeScript node: %w", err)
+	}
+
+	var str strings.Builder
+	for line := range strings.SplitSeq(serialized, "\n") {
+		if strings.HasPrefix(line, "// From") {
+			continue
+		}
+		str.WriteString(line + "\n")
+	}
+
+	return str.String(), nil
 }
 
 // serializeExpressionType converts an expression type to its TypeScript string representation.

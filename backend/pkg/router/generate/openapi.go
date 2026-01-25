@@ -327,3 +327,17 @@ func convertExamplesToOpenAPI(examples map[string]any) openapi3.Examples {
 
 	return result
 }
+
+// schemaToJSONString converts an OpenAPI schema to a stringified JSON representation.
+func schemaToJSONString(schema *openapi3.Schema) (string, error) {
+	if schema == nil {
+		return "", nil
+	}
+
+	jsonBytes, err := schema.MarshalJSON()
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal schema to JSON: %w", err)
+	}
+
+	return string(jsonBytes), nil
+}

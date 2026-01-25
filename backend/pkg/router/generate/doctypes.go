@@ -2,17 +2,23 @@ package generate
 
 // TypeInfo contains comprehensive metadata about a Go type extracted from guts.
 type TypeInfo struct {
-	Name               string           `json:"name"`               // Type name (e.g., "PingResponse")
-	Kind               string           `json:"kind"`               // "Object", "String Enum", "Array", etc.
-	Description        string           `json:"description"`        // Type-level documentation
-	Deprecated         *DeprecationInfo `json:"deprecated"`         // Deprecation information
-	Fields             []FieldInfo      `json:"fields"`             // For object types: fields
-	EnumValues         []EnumValue      `json:"enumValues"`         // For enum types: enum constants
-	References         []string         `json:"references"`         // Types this type references
-	ReferencedBy       []string         `json:"referencedBy"`       // Types that reference this type
-	UsedBy             []UsageInfo      `json:"usedBy"`             // Operations/routes that use this type
-	JSONRepresentation string           `json:"jsonRepresentation"` // JSON representation of the type (zero value example)
-	GoType             string           `json:"-"`                  // Original Go type (for external types)
+	Name            string           `json:"name"`            // Type name (e.g., "PingResponse")
+	Kind            string           `json:"kind"`            // "Object", "String Enum", "Array", etc.
+	Description     string           `json:"description"`     // Type-level documentation
+	Deprecated      *DeprecationInfo `json:"deprecated"`      // Deprecation information
+	Fields          []FieldInfo      `json:"fields"`          // For object types: fields
+	EnumValues      []EnumValue      `json:"enumValues"`      // For enum types: enum constants
+	References      []string         `json:"references"`      // Types this type references
+	ReferencedBy    []string         `json:"referencedBy"`    // Types that reference this type
+	UsedBy          []UsageInfo      `json:"usedBy"`          // Operations/routes that use this type
+	Representations Representations  `json:"representations"` // JSON, JSON Schema, and TypeScript representations of the type
+	GoType          string           `json:"-"`               // Original Go type (for external types)
+}
+
+type Representations struct {
+	JSON       string `json:"json"`       // JSON representation of the type (zero value example)
+	JSONSchema string `json:"jsonSchema"` // JSON Schema representation of the type
+	TS         string `json:"ts"`         // TypeScript representation of the type
 }
 
 // FieldType represents the structured type information for a field.
