@@ -1,22 +1,22 @@
 import Link from "next/link";
 import { TbApi, TbCode, TbDatabase, TbWorld } from "react-icons/tb";
 import { VerbBadge } from "@/components/verb-badge";
-import { docs } from "@/data/api";
+import { docs, getAllOperations } from "@/data/api";
 
-// Calculate total number of operations across all routes
-const routeCount = Object.keys(docs.routes).length;
-const operationCount = Object.values(docs.routes).reduce((total, route) => {
-    return total + Object.keys(route.verbs).length;
-}, 0);
+// Calculate total number of operations
+const operations = getAllOperations();
+const operationCount = operations.length;
 const typeCount = Object.keys(docs.types).length;
 const tableCount = docs.database.tableCount || 0;
 
+// Get unique paths for route count
+const uniquePaths = new Set(operations.map((op) => op.path));
+const routeCount = uniquePaths.size;
+
 // Calculate HTTP method distribution
-const httpMethods = Object.values(docs.routes).reduce(
-    (acc, route) => {
-        Object.keys(route.verbs).forEach((verb) => {
-            acc[verb] = (acc[verb] || 0) + 1;
-        });
+const httpMethods = operations.reduce(
+    (acc, op) => {
+        acc[op.method] = (acc[op.method] || 0) + 1;
         return acc;
     },
     {} as Record<string, number>
@@ -91,9 +91,7 @@ export default function Home() {
                                 <div className='text-lg font-bold text-text-primary'>Database</div>
                             </div>
                             <div className='text-4xl font-bold text-info-text mb-2'>{tableCount}</div>
-                            <p className='text-xs text-text-secondary'>
-                                Table{tableCount !== 1 ? "s" : ""}
-                            </p>
+                            <p className='text-xs text-text-secondary'>Table{tableCount !== 1 ? "s" : ""}</p>
                         </div>
                     </Link>
                 </div>

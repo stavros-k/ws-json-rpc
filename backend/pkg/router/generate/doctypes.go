@@ -100,8 +100,8 @@ type ResponseInfo struct {
 // APIDocumentation is the complete API documentation structure.
 type APIDocumentation struct {
 	Info           APIInfo               `json:"info"`
-	Types          map[string]*TypeInfo  `json:"types"`           // Keyed by type name
-	HTTPOperations map[string]*RouteInfo `json:"http_operations"` // Keyed by operationID
+	Types          map[string]*TypeInfo  `json:"types"`          // Keyed by type name
+	HTTPOperations map[string]*RouteInfo `json:"httpOperations"` // Keyed by operationID
 	Database       Database              `json:"database"`
 }
 

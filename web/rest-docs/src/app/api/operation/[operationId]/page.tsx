@@ -60,11 +60,11 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                 </div>
                 <div className='flex items-center gap-3 mb-4'>
                     <VerbBadge
-                        verb={operation.verb}
+                        verb={operation.method}
                         size='lg'
                     />
                     <h2 className='text-xl font-mono font-semibold'>
-                        <RoutePath path={operation.route} />
+                        <RoutePath path={operation.path} />
                     </h2>
                 </div>
 

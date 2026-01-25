@@ -102,8 +102,8 @@ export function getItemData({ type, itemName }: getItemProps) {
             urlPath: `/api/operation/${itemName}`,
             data: operation,
             title: operation.operationID,
-            verb: operation.verb,
-            route: operation.route,
+            method: operation.method,
+            path: operation.path,
             group: operation.group || "",
         } as const;
     }

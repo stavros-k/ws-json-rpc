@@ -17,8 +17,8 @@ export const SidebarItem = ({ type, item }: Props) => {
     const { urlPath, data, title } = item;
     const isDeprecated = !!data?.deprecated;
     const isActive = currentName === item.name;
-    const verb = "verb" in item ? item.verb : undefined;
-    const route = "route" in item ? item.route : undefined;
+    const method = "method" in item ? item.method : undefined;
+    const path = "path" in item ? item.path : undefined;
 
     return (
         <Link
@@ -31,14 +31,14 @@ export const SidebarItem = ({ type, item }: Props) => {
             } ${isDeprecated ? "opacity-deprecated" : ""}`}>
             <div className='flex flex-col gap-1'>
                 <span className='font-semibold text-base'>{title || item.name}</span>
-                {verb && route && (
+                {method && path && (
                     <div className='flex items-center gap-1'>
                         <VerbBadge
-                            verb={verb}
+                            verb={method}
                             size='xs'
                         />
                         <RoutePath
-                            path={route}
+                            path={path}
                             className='text-[10px] text-text-muted font-mono truncate'
                         />
                     </div>

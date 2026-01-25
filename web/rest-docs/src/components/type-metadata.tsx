@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
-import type { FieldMetadata, TypeData } from "@/data/api";
+import type { EnumValue, FieldMetadata, TypeData, UsedByItem } from "@/data/api";
 import { docs } from "@/data/api";
 import { TypeKindBadge } from "./type-kind-badge";
 
@@ -25,11 +25,6 @@ function TypeDescription({ description }: { description?: string }) {
         </div>
     );
 }
-
-type UsedByItem = {
-    operationID: string;
-    role: string;
-};
 
 function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
     if (!usedBy || usedBy.length === 0) return null;
@@ -80,12 +75,6 @@ function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
         </div>
     );
 }
-
-type EnumValue = {
-    value: string;
-    description: string;
-    deprecated: string | null;
-};
 
 function EnumValuesSection({ enumValues }: { enumValues: EnumValue[] | null }) {
     if (!enumValues || enumValues.length === 0) return null;

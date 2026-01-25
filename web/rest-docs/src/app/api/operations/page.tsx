@@ -22,10 +22,10 @@ export default function OperationsPage() {
         search: "",
     });
 
-    // Extract unique verbs and groups
-    const verbs = useMemo(() => {
-        const uniqueVerbs = new Set(allOperations.map((op) => op.verb.toUpperCase()));
-        return Array.from(uniqueVerbs).sort();
+    // Extract unique methods and groups
+    const methods = useMemo(() => {
+        const uniqueMethods = new Set(allOperations.map((op) => op.method.toUpperCase()));
+        return Array.from(uniqueMethods).sort();
     }, [allOperations]);
 
     const groups = useMemo(() => {
@@ -36,8 +36,8 @@ export default function OperationsPage() {
     // Filter operations
     const filteredOperations = useMemo(() => {
         return allOperations.filter((operation) => {
-            // Verb filter
-            if (filters.verb !== "all" && operation.verb.toUpperCase() !== filters.verb) {
+            // Method filter
+            if (filters.verb !== "all" && operation.method.toUpperCase() !== filters.verb) {
                 return false;
             }
 
@@ -55,11 +55,11 @@ export default function OperationsPage() {
             if (filters.search) {
                 const searchLower = filters.search.toLowerCase();
                 const matchesName = operation.operationID.toLowerCase().includes(searchLower);
-                const matchesRoute = operation.route.toLowerCase().includes(searchLower);
+                const matchesPath = operation.path.toLowerCase().includes(searchLower);
                 const matchesSummary = operation.summary?.toLowerCase().includes(searchLower);
                 const matchesDescription = operation.description?.toLowerCase().includes(searchLower);
 
-                if (!matchesName && !matchesRoute && !matchesSummary && !matchesDescription) {
+                if (!matchesName && !matchesPath && !matchesSummary && !matchesDescription) {
                     return false;
                 }
             }
@@ -94,11 +94,11 @@ export default function OperationsPage() {
         return allOperations.filter((op) => op.deprecated).length;
     }, [allOperations]);
 
-    const verbCounts = useMemo(() => {
+    const methodCounts = useMemo(() => {
         return allOperations.reduce(
             (acc, op) => {
-                const verb = op.verb.toUpperCase();
-                acc[verb] = (acc[verb] || 0) + 1;
+                const method = op.method.toUpperCase();
+                acc[method] = (acc[method] || 0) + 1;
                 return acc;
             },
             {} as Record<string, number>
@@ -121,9 +121,9 @@ export default function OperationsPage() {
                     value={allOperations.length}
                     color='blue'
                 />
-                {Object.entries(verbCounts)
+                {Object.entries(methodCounts)
                     .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([verb, count]) => {
+                    .map(([method, count]) => {
                         const colorMap: Record<string, "blue" | "green" | "yellow" | "red" | "purple"> = {
                             GET: "blue",
                             POST: "green",
@@ -133,10 +133,10 @@ export default function OperationsPage() {
                         };
                         return (
                             <StatCard
-                                key={verb}
-                                label={verb}
+                                key={method}
+                                label={method}
                                 value={count}
-                                color={colorMap[verb] || "blue"}
+                                color={colorMap[method] || "blue"}
                             />
                         );
                     })}
@@ -150,7 +150,7 @@ export default function OperationsPage() {
             </div>
 
             <OperationFilters
-                verbs={verbs}
+                verbs={methods}
                 groups={groups}
                 onFilterChange={setFilters}
             />
@@ -177,11 +177,11 @@ export default function OperationsPage() {
                                         subtitle={
                                             <div className='flex items-center gap-2'>
                                                 <VerbBadge
-                                                    verb={operation.verb}
+                                                    verb={operation.method}
                                                     size='sm'
                                                 />
                                                 <RoutePath
-                                                    path={operation.route}
+                                                    path={operation.path}
                                                     className='font-mono'
                                                 />
                                             </div>
