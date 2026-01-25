@@ -908,7 +908,9 @@ func (g *OpenAPICollector) extractEnumMemberValues(enum *bindings.Enum) ([]EnumV
 // generateDisplayType creates a human-readable type string from FieldType.
 func generateDisplayType(ft FieldType) string {
 	switch ft.Kind {
-	case FieldKindPrimitive, FieldKindReference, FieldKindEnum:
+	case FieldKindReference, FieldKindEnum:
+		return ft.Type
+	case FieldKindPrimitive:
 		caser := cases.Title(language.English)
 		return caser.String(ft.Type)
 

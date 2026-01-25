@@ -1,6 +1,8 @@
 package generate
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -338,6 +340,7 @@ func schemaToJSONString(schema *openapi3.Schema) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal schema to JSON: %w", err)
 	}
-
-	return string(jsonBytes), nil
+	var dest bytes.Buffer
+	json.Indent(&dest, jsonBytes, "", "  ")
+	return dest.String(), nil
 }

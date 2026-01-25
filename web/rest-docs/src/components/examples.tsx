@@ -1,7 +1,14 @@
-import type { ExampleData } from "@/data/api";
 import { CardBoxWrapper } from "./card-box-wrapper";
 import { CodeWrapper } from "./code-wrapper";
 import { CollapsibleCard } from "./collapsible-group";
+
+// Temporary type until we migrate to routes
+type ExampleData = {
+    title: string;
+    description: string;
+    params?: string;
+    result?: string;
+};
 
 type Props = {
     isMethod?: boolean;

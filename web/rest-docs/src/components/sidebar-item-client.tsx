@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Protocols } from "./protocols";
 import type { getItemData } from "./sidebar";
 
 type Props = {
@@ -27,7 +26,6 @@ export const SidebarItem = ({ type, item }: Props) => {
             } ${isDeprecated ? "opacity-40" : ""}`}>
             <div className='flex items-center justify-between'>
                 <span className='font-medium'>{title || item.name}</span>
-                <Protocols item={item} />
             </div>
         </Link>
     );

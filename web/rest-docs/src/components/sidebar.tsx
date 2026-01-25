@@ -2,10 +2,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import { IoHome } from "react-icons/io5";
 import { docs, type EventKeys, type ItemType, type MethodKeys, type TypeKeys } from "@/data/api";
-import { AutoSubscribeToggle } from "./auto-subscribe-toggle";
 import { CodeThemeToggle } from "./code-theme-toggle";
 import { ConnectionIndicator } from "./connection-indicator";
-import { MaxResultsControl } from "./max-results-control";
 import { SidebarSection } from "./sidebar-section";
 
 const SidebarLink = ({ title, href }: { title: string; href: Route }) => {
@@ -39,22 +37,10 @@ export const Sidebar = () => {
                     <ConnectionIndicator />
                 </div>
                 <div className='space-y-3'>
-                    <AutoSubscribeToggle />
-                    <MaxResultsControl />
                     <CodeThemeToggle />
                 </div>
             </div>
 
-            <SidebarSection
-                title='Methods'
-                type='method'
-                overviewHref='/api/methods'
-            />
-            <SidebarSection
-                title='Events'
-                type='event'
-                overviewHref='/api/events'
-            />
             <SidebarSection
                 title='Types'
                 type='type'
@@ -80,33 +66,7 @@ type getItemProps = {
 };
 
 export function getItemData({ type, itemName }: getItemProps) {
-    if (type === "method") {
-        const name = itemName as MethodKeys;
-        if (!docs.methods[name]) {
-            throw new Error(`Method ${name} not found`);
-        }
-        return {
-            type: type,
-            name: name,
-            urlPath: `/api/${type}/${name}`,
-            data: docs.methods[name],
-            title: docs.methods[name].title,
-            group: docs.methods[name].group,
-        } as const;
-    } else if (type === "event") {
-        const name = itemName as EventKeys;
-        if (!docs.events[name]) {
-            throw new Error(`Event ${name} not found`);
-        }
-        return {
-            type: type,
-            name: name,
-            urlPath: `/api/${type}/${name}`,
-            data: docs.events[name],
-            title: docs.events[name].title,
-            group: docs.events[name].group,
-        } as const;
-    } else if (type === "type") {
+    if (type === "type") {
         const name = itemName as TypeKeys;
         if (!docs.types[name]) {
             throw new Error(`Type ${name} not found`);
@@ -120,5 +80,6 @@ export function getItemData({ type, itemName }: getItemProps) {
             group: "",
         } as const;
     }
-    throw new Error("Invalid type");
+    // Methods and events are not supported in REST API
+    throw new Error("Invalid type - only 'type' is supported");
 }

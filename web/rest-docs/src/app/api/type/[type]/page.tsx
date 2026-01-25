@@ -48,27 +48,32 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                     {
                         title: "TypeScript",
                         icon: <TbBrandTypescript className='w-8 h-8 text-lang-ts' />,
-                        code: (
-                            <CodeWrapper
-                                code={data.tsType}
-                                lang='typescript'
-                                label={{ text: type }}
-                            />
-                        ),
+                        code:
+                            "representations" in data && data.representations?.ts ? (
+                                <CodeWrapper
+                                    code={data.representations.ts}
+                                    lang='typescript'
+                                    label={{ text: type }}
+                                />
+                            ) : (
+                                <p className='text-sm text-text-tertiary p-4'>
+                                    No TypeScript representation available for this type.
+                                </p>
+                            ),
                     },
                     {
-                        title: "JSON",
+                        title: "JSON Schema",
                         icon: <TbJson className='w-8 h-8 text-lang-json' />,
                         code:
-                            "jsonRepresentation" in data && data.jsonRepresentation ? (
+                            "representations" in data && data.representations?.jsonSchema ? (
                                 <CodeWrapper
-                                    code={data.jsonRepresentation}
+                                    code={data.representations.jsonSchema}
                                     lang='json'
                                     label={{ text: type }}
                                 />
                             ) : (
                                 <p className='text-sm text-text-tertiary p-4'>
-                                    No JSON representation available for this type.
+                                    No JSON schema available for this type.
                                 </p>
                             ),
                     },

@@ -1,4 +1,3 @@
-import type { ErrorData } from "@/data/api";
 import { CardBoxWrapper } from "./card-box-wrapper";
 
 type Props = {
@@ -11,6 +10,14 @@ const HeaderRow = ({ children }: Props) => {
 
 const DataRow = ({ children }: Props) => {
     return <td className='p-3 border-b border-border-primary text-sm text-text-tertiary'>{children}</td>;
+};
+
+// Temporary type until we migrate to routes
+type ErrorData = {
+    code: string;
+    title: string;
+    message: string;
+    description: string;
 };
 
 type ErrorsProps = {

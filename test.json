@@ -54,7 +54,7 @@
       "usedBy": null,
       "representations": {
         "json": "",
-        "jsonSchema": "{\"description\":\"CreateUserRequest is the request to create a new user.\",\"properties\":{\"password\":{\"description\":\"Password to create\",\"type\":\"string\"},\"username\":{\"description\":\"Username to create\",\"type\":\"string\"}},\"required\":[\"username\",\"password\"],\"type\":\"object\"}",
+        "jsonSchema": "{\n  \"description\": \"CreateUserRequest is the request to create a new user.\",\n  \"properties\": {\n    \"password\": {\n      \"description\": \"Password to create\",\n      \"type\": \"string\"\n    },\n    \"username\": {\n      \"description\": \"Username to create\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"username\",\n    \"password\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * CreateUserRequest is the request to create a new user.\n */\ntype CreateUserRequest = {\n    /**\n     * Username to create\n     */\n    username: string;\n    /**\n     * Password to create\n     */\n    password: string;\n};\n"
       }
     },
@@ -125,7 +125,7 @@
       ],
       "representations": {
         "json": "{\n  \"userID\": \"\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\",\n  \"url\": null\n}",
-        "jsonSchema": "{\"description\":\"CreateUserResponse is the response to a create user request.\",\"properties\":{\"createdAt\":{\"description\":\"Creation timestamp\",\"format\":\"date-time\",\"type\":\"string\"},\"url\":{\"description\":\"URL to the user\",\"format\":\"uri\",\"nullable\":true,\"type\":\"string\"},\"userID\":{\"description\":\"ID of the created user\",\"type\":\"string\"}},\"required\":[\"userID\",\"createdAt\"],\"type\":\"object\"}",
+        "jsonSchema": "{\n  \"description\": \"CreateUserResponse is the response to a create user request.\",\n  \"properties\": {\n    \"createdAt\": {\n      \"description\": \"Creation timestamp\",\n      \"format\": \"date-time\",\n      \"type\": \"string\"\n    },\n    \"url\": {\n      \"description\": \"URL to the user\",\n      \"format\": \"uri\",\n      \"nullable\": true,\n      \"type\": \"string\"\n    },\n    \"userID\": {\n      \"description\": \"ID of the created user\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"userID\",\n    \"createdAt\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * CreateUserResponse is the response to a create user request.\n */\ntype CreateUserResponse = {\n    /**\n     * ID of the created user\n     */\n    userID: string;\n    /**\n     * Creation timestamp\n     */\n    createdAt: string;\n    /**\n     * URL to the user\n     */\n    url: string | null;\n};\n"
       }
     },
@@ -162,7 +162,7 @@
       ],
       "representations": {
         "json": "{\n  \"teamID\": \"\"\n}",
-        "jsonSchema": "{\"description\":\"GetTeamRequest is the request to get a team.\",\"properties\":{\"teamID\":{\"description\":\"ID of the team to get\",\"type\":\"string\"}},\"required\":[\"teamID\"],\"type\":\"object\"}",
+        "jsonSchema": "{\n  \"description\": \"GetTeamRequest is the request to get a team.\",\n  \"properties\": {\n    \"teamID\": {\n      \"description\": \"ID of the team to get\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"teamID\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * GetTeamRequest is the request to get a team.\n */\ntype GetTeamRequest = {\n    /**\n     * ID of the team to get\n     */\n    teamID: string;\n};\n"
       }
     },
@@ -229,7 +229,7 @@
       ],
       "representations": {
         "json": "{\n  \"teamID\": \"\",\n  \"users\": null\n}",
-        "jsonSchema": "{\"deprecated\":true,\"description\":\"GetTeamResponse is the response to a get team request.\",\"properties\":{\"teamID\":{\"description\":\"ID of the team\",\"type\":\"string\"},\"users\":{\"description\":\"Users in the team\",\"items\":{\"$ref\":\"#/components/schemas/User\"},\"type\":\"array\"}},\"required\":[\"teamID\",\"users\"],\"type\":\"object\"}",
+        "jsonSchema": "{\n  \"deprecated\": true,\n  \"description\": \"GetTeamResponse is the response to a get team request.\",\n  \"properties\": {\n    \"teamID\": {\n      \"description\": \"ID of the team\",\n      \"type\": \"string\"\n    },\n    \"users\": {\n      \"description\": \"Users in the team\",\n      \"items\": {\n        \"$ref\": \"#/components/schemas/User\"\n      },\n      \"type\": \"array\"\n    }\n  },\n  \"required\": [\n    \"teamID\",\n    \"users\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * GetTeamResponse is the response to a get team request.\n * @deprecated Use GetTeamResponseV2 instead.\n */\ntype GetTeamResponse = {\n    /**\n     * ID of the team\n     */\n    teamID: string;\n    /**\n     * Users in the team\n     */\n    users: User[];\n};\n"
       }
     },
@@ -256,7 +256,7 @@
         },
         {
           "name": "status",
-          "displayType": "Pingstatus",
+          "displayType": "PingStatus",
           "typeInfo": {
             "kind": "reference",
             "type": "PingStatus",
@@ -310,7 +310,7 @@
       ],
       "representations": {
         "json": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
-        "jsonSchema": "{\"description\":\"PingResponse is the response to a ping request.\",\"properties\":{\"message\":{\"description\":\"Human-readable message\",\"type\":\"string\"},\"metadata\":{\"nullable\":true,\"type\":\"string\"},\"status\":{\"$ref\":\"#/components/schemas/PingStatus\"}},\"required\":[\"message\",\"status\"],\"type\":\"object\"}",
+        "jsonSchema": "{\n  \"description\": \"PingResponse is the response to a ping request.\",\n  \"properties\": {\n    \"message\": {\n      \"description\": \"Human-readable message\",\n      \"type\": \"string\"\n    },\n    \"metadata\": {\n      \"nullable\": true,\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"$ref\": \"#/components/schemas/PingStatus\"\n    }\n  },\n  \"required\": [\n    \"message\",\n    \"status\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * PingResponse is the response to a ping request.\n */\ntype PingResponse = {\n    /**\n     * Human-readable message\n     */\n    message: string;\n    /**\n     * Status of the ping\n     */\n    status: PingStatus;\n    metadata?: string | null;\n};\n"
       }
     },
@@ -341,7 +341,7 @@
       "usedBy": null,
       "representations": {
         "json": "",
-        "jsonSchema": "{\"description\":\"PingStatus represents the status of a ping request.\\n\\nPossible values:\\n- `ERROR`: **[DEPRECATED]** Use PingStatusErrorV2 instead. - PingStatusError means there was an error with the ping.\\n- `OK`: PingStatusOK means the ping was successful.\\n\",\"enum\":[\"ERROR\",\"OK\"],\"type\":\"string\"}",
+        "jsonSchema": "{\n  \"description\": \"PingStatus represents the status of a ping request.\\n\\nPossible values:\\n- `ERROR`: **[DEPRECATED]** Use PingStatusErrorV2 instead. - PingStatusError means there was an error with the ping.\\n- `OK`: PingStatusOK means the ping was successful.\\n\",\n  \"enum\": [\n    \"ERROR\",\n    \"OK\"\n  ],\n  \"type\": \"string\"\n}",
         "ts": "/**\n * PingStatus represents the status of a ping request.\n */\nenum PingStatus {\n    /**\n     * PingStatusError means there was an error with the ping.\n     * @deprecated Use PingStatusErrorV2 instead.\n     */\n    PingStatusError = \"ERROR\",\n    /**\n     * PingStatusOK means the ping was successful.\n     */\n    PingStatusOK = \"OK\"\n}\n"
       }
     },
@@ -392,7 +392,7 @@
       "usedBy": null,
       "representations": {
         "json": "",
-        "jsonSchema": "{\"description\":\"User represents a user in the system.\",\"properties\":{\"name\":{\"deprecated\":true,\"description\":\"Name of the user\",\"type\":\"string\"},\"userID\":{\"description\":\"ID of the user\",\"type\":\"string\"}},\"required\":[\"userID\",\"name\"],\"type\":\"object\"}",
+        "jsonSchema": "{\n  \"description\": \"User represents a user in the system.\",\n  \"properties\": {\n    \"name\": {\n      \"deprecated\": true,\n      \"description\": \"Name of the user\",\n      \"type\": \"string\"\n    },\n    \"userID\": {\n      \"description\": \"ID of the user\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"userID\",\n    \"name\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * User represents a user in the system.\n */\ntype User = {\n    /**\n     * ID of the user\n     */\n    userID: string;\n    /**\n     * Name of the user\n     * @deprecated Use UserNameV2 instead.\n     */\n    name: string;\n};\n"
       }
     }
