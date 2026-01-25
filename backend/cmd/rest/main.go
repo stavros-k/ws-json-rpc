@@ -60,6 +60,8 @@ func main() {
 		fatalIfErr(logger, err)
 	}
 
+	handlers := &httpapi.Handlers{}
+
 	rb, err := router.NewRouteBuilder(logger, collector)
 	fatalIfErr(logger, err)
 
@@ -69,6 +71,7 @@ func main() {
 		Description: "Check if the server is alive",
 		Group:       "Core",
 		RequestType: nil,
+		Handler:     handlers.Ping,
 		Responses: map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
@@ -95,9 +98,6 @@ func main() {
 				Description: "Internal server error",
 				Type:        httpapi.PingResponse{},
 			},
-		},
-		Handler: func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
 		},
 	}))
 	rb.MustGet("/team/{teamID}", router.RouteSpec{
