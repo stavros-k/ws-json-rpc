@@ -79,7 +79,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                             ),
                     },
                     {
-                        title: "JSON Example",
+                        title: "JSON (Zero Value)",
                         icon: <TbFileCode className='w-8 h-8 text-lang-json' />,
                         code:
                             "representations" in data &&
@@ -91,9 +91,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                                     label={{ text: type }}
                                 />
                             ) : (
-                                <p className='text-sm text-text-tertiary p-4'>
-                                    No JSON example available for this type.
-                                </p>
+                                <p className='text-sm text-text-tertiary p-4'>No JSON available for this type.</p>
                             ),
                     },
                     {

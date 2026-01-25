@@ -49,7 +49,7 @@ export const SidebarItem = ({ type, item }: Props) => {
                         />
                         <RoutePath
                             path={path}
-                            className='text-[10px] text-text-muted font-mono truncate'
+                            className='text-xs text-text-muted font-mono truncate'
                         />
                     </div>
                 )}
