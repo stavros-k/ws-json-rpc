@@ -13,7 +13,7 @@ export const SidebarItem = ({ type, item }: Props) => {
     const params = useParams();
     const currentName = type === "operation" ? params.operationId : params[type];
     const { urlPath, data, title } = item;
-    const isDeprecated = "deprecated" in data ? data.deprecated : false;
+    const isDeprecated = !!data?.deprecated;
     const isActive = currentName === item.name;
     const subtitle = "subtitle" in item ? item.subtitle : "";
 
@@ -28,9 +28,7 @@ export const SidebarItem = ({ type, item }: Props) => {
             } ${isDeprecated ? "opacity-40" : ""}`}>
             <div className='flex flex-col'>
                 <span className='font-medium'>{title || item.name}</span>
-                {subtitle && (
-                    <span className='text-xs text-text-muted mt-0.5 font-mono'>{subtitle}</span>
-                )}
+                {subtitle && <span className='text-xs text-text-muted mt-0.5 font-mono'>{subtitle}</span>}
             </div>
         </Link>
     );

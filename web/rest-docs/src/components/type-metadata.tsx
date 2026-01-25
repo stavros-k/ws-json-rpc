@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
 import type { FieldMetadata, TypeData } from "@/data/api";
@@ -60,11 +61,12 @@ function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
             <p className='text-sm text-text-tertiary mb-4'>This type is used by the following API operations:</p>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
                 {Object.entries(grouped).map(([operationID, roles]) => (
-                    <div
+                    <Link
                         key={operationID}
-                        className='p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary hover:border-accent-blue/50 transition-all duration-200'>
+                        href={`/api/operation/${operationID}` as Route}
+                        className='block p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary hover:border-accent-blue transition-all duration-200 hover:shadow-md'>
                         <div className='flex items-start justify-between gap-3'>
-                            <code className='font-mono text-sm font-semibold text-text-primary break-all'>
+                            <code className='font-mono text-sm font-semibold text-text-primary break-all hover:text-accent-blue transition-colors'>
                                 {operationID}
                             </code>
                             <div className='flex flex-wrap gap-1 shrink-0'>
@@ -81,7 +83,7 @@ function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
                                 ))}
                             </div>
                         </div>
-                    </div>
+                    </Link>
                 ))}
             </div>
         </div>
@@ -91,7 +93,7 @@ function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
 type EnumValue = {
     value: string;
     description: string;
-    deprecated: { message: string } | null;
+    deprecated: string | null;
 };
 
 function EnumValuesSection({ enumValues }: { enumValues: EnumValue[] | null }) {
@@ -115,11 +117,9 @@ function EnumValuesSection({ enumValues }: { enumValues: EnumValue[] | null }) {
                                 </span>
                             )}
                         </div>
-                        {enumValue.description && (
-                            <p className='text-sm text-text-tertiary'>{enumValue.description}</p>
-                        )}
+                        {enumValue.description && <p className='text-sm text-text-tertiary'>{enumValue.description}</p>}
                         {enumValue.deprecated && (
-                            <p className='text-sm text-warning-text mt-2 italic'>{enumValue.deprecated.message}</p>
+                            <p className='text-sm text-warning-text mt-2 italic'>{enumValue.deprecated}</p>
                         )}
                     </div>
                 ))}
@@ -196,7 +196,6 @@ function FieldsSection({ fields }: { fields: FieldMetadata[] | undefined }) {
     );
 }
 
-
 function ReferencedBySection({ referencedBy, typeName }: { referencedBy: string[] | undefined; typeName: string }) {
     const hasReferencedBy = referencedBy && referencedBy.length > 0;
 
@@ -231,9 +230,7 @@ export function TypeMetadata({ data, typeName }: TypeMetadataProps) {
     const enumValues =
         "enumValues" in data && Array.isArray(data.enumValues) && data.enumValues.length > 0 ? data.enumValues : null;
     const usedBy =
-        "usedBy" in data && Array.isArray(data.usedBy) && data.usedBy.length > 0
-            ? (data.usedBy as UsedByItem[])
-            : null;
+        "usedBy" in data && Array.isArray(data.usedBy) && data.usedBy.length > 0 ? (data.usedBy as UsedByItem[]) : null;
     const referencedBy = "referencedBy" in data ? data.referencedBy : undefined;
 
     return (

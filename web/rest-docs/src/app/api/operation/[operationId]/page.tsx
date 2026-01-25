@@ -2,8 +2,9 @@ import type { Route } from "next";
 import { CardBoxWrapper } from "@/components/card-box-wrapper";
 import { CodeWrapper } from "@/components/code-wrapper";
 import { CollapsibleCard } from "@/components/collapsible-group";
+import { CollapsibleResponse } from "@/components/collapsible-response";
 import { Deprecation } from "@/components/deprecation";
-import { GroupAndTags } from "@/components/group-and-tags";
+import { Group } from "@/components/group";
 import { getAllOperations, getTypeJson, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -43,7 +44,7 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                 </h2>
 
                 <Deprecation
-                    deprecated={{ message: operation.deprecated }}
+                    deprecated={operation.deprecated}
                     itemType='operation'
                 />
 
@@ -52,10 +53,7 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                     {operation.description && operation.description !== operation.summary && (
                         <p className='text-sm'>{operation.description}</p>
                     )}
-                    <GroupAndTags
-                        group={operation.group || ""}
-                        tags={operation.tags}
-                    />
+                    <Group group={operation.group || ""} />
                 </div>
             </div>
 
@@ -111,25 +109,12 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                     <div className='space-y-4'>
                         {Object.entries(operation.responses).map(([statusCode, response]) => {
                             const responseJson = getTypeJson(response.type as TypeKeys);
-                            const statusBadge = (
-                                <span
-                                    className={`text-lg font-bold px-3 py-1.5 rounded-lg font-mono ${
-                                        statusCode.startsWith("2")
-                                            ? "bg-green-500/20 text-green-400 border-2 border-green-500/30"
-                                            : statusCode.startsWith("4")
-                                              ? "bg-yellow-500/20 text-yellow-400 border-2 border-yellow-500/30"
-                                              : "bg-red-500/20 text-red-400 border-2 border-red-500/30"
-                                    }`}>
-                                    {statusCode}
-                                </span>
-                            );
 
                             return (
-                                <CollapsibleCard
+                                <CollapsibleResponse
                                     key={statusCode}
-                                    title={statusCode}
-                                    subtitle={response.description}
-                                    defaultOpen={false}>
+                                    statusCode={statusCode}
+                                    description={response.description}>
                                     <CodeWrapper
                                         label={{
                                             text: response.type,
@@ -155,7 +140,7 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                                             ))}
                                         </div>
                                     )}
-                                </CollapsibleCard>
+                                </CollapsibleResponse>
                             );
                         })}
                     </div>

@@ -1,16 +1,11 @@
-type DeprecationInfo = {
-    message: string;
-} | null;
-
 type Props = {
-    deprecated: DeprecationInfo | boolean;
+    deprecated: string;
     itemType?: "type" | "operation";
 };
 
 export const Deprecation = ({ deprecated, itemType = "type" }: Props) => {
     if (!deprecated) return null;
 
-    const message = typeof deprecated === "boolean" ? "" : deprecated.message;
     const itemLabel = itemType === "operation" ? "operation" : "type";
 
     return (
@@ -19,7 +14,7 @@ export const Deprecation = ({ deprecated, itemType = "type" }: Props) => {
                 <span className='text-xl'>⚠️</span>
                 <div>
                     <p className='font-bold mb-1'>This {itemLabel} is deprecated</p>
-                    {message && <p className='text-sm'>{message}</p>}
+                    <p className='text-sm'>{deprecated}</p>
                 </div>
             </div>
         </div>

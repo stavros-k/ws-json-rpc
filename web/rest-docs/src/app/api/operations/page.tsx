@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import { ItemCard } from "@/components/item-card";
 import { PageHeader } from "@/components/page-header";
-import { GroupAndTags } from "@/components/group-and-tags";
+import { Group } from "@/components/group";
 import { getAllOperations } from "@/data/api";
 
 export const metadata = {
@@ -26,12 +26,7 @@ export default function OperationsPage() {
                         title={operation.operationID}
                         subtitle={`${operation.verb.toUpperCase()} ${operation.route}`}
                         description={operation.summary || operation.description}
-                        tags={
-                            <GroupAndTags
-                                group={operation.group || ""}
-                                tags={operation.tags}
-                            />
-                        }
+                        tags={<Group group={operation.group || ""} />}
                         deprecated={!!operation.deprecated}
                         hoverBorderColor='hover:border-accent-green-light'
                     />

@@ -8,6 +8,8 @@ export async function generateMetadata() {
 }
 
 export default function DatabaseSchema() {
+    const tableCount = docs.database.tableCount || 0;
+
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
             <div>
@@ -18,7 +20,19 @@ export default function DatabaseSchema() {
                     <p>This page displays the database schema used by the application.</p>
                 </div>
             </div>
-            {/* FIXME: Add table count stat here */}
+
+            <div className='mb-8'>
+                <div className='inline-block p-6 bg-bg-secondary rounded-xl border-2 border-border-primary'>
+                    <div className='flex items-center gap-4'>
+                        <div className='text-center'>
+                            <div className='text-4xl font-bold text-accent-blue mb-1'>{tableCount}</div>
+                            <div className='text-sm text-text-secondary font-semibold'>
+                                {tableCount === 1 ? "Table" : "Tables"}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <CardBoxWrapper title='Schema'>
                 <CodeWrapper
