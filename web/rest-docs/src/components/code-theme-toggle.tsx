@@ -93,7 +93,7 @@ export const CodeThemeToggle = () => {
             ref={dropdownRef}
             className='px-3 py-2 rounded-lg border border-border-primary bg-bg-secondary relative'>
             <div className='flex items-center justify-between gap-3'>
-                <label className='text-sm font-medium text-text-primary'>Code Theme</label>
+                <span className='text-sm font-medium text-text-primary'>Code Theme</span>
                 <button
                     type='button'
                     onClick={() => setIsOpen(!isOpen)}

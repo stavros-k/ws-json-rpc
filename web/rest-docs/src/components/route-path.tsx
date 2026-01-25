@@ -9,12 +9,12 @@ export function RoutePath({ path, className = "" }: RoutePathProps) {
 
     return (
         <span className={className}>
-            {segments.map((segment, index) => {
+            {segments.map((segment, idx) => {
                 const isParam = segment.startsWith("{") && segment.endsWith("}");
                 if (isParam) {
                     return (
                         <span
-                            key={index}
+                            key={`param-${segment}-${idx}`}
                             className='text-accent-blue font-bold'>
                             {segment}
                         </span>
@@ -22,7 +22,7 @@ export function RoutePath({ path, className = "" }: RoutePathProps) {
                 }
                 return (
                     <span
-                        key={index}
+                        key={`segment-${segment}-${idx}`}
                         className='text-text-secondary'>
                         {segment}
                     </span>
