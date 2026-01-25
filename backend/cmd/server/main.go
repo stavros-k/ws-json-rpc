@@ -66,8 +66,6 @@ func main() {
 	rb, err := router.NewRouteBuilder(logger, collector)
 	fatalIfErr(logger, err)
 
-	web.DocsApp().Register(rb.Router(), logger)
-
 	rb.Must(rb.Get("/ping", router.RouteSpec{
 		OperationID: "ping",
 		Summary:     "Ping the server",
@@ -270,6 +268,8 @@ func main() {
 
 		return
 	}
+
+	web.DocsApp().Register(rb.Router(), logger)
 
 	addr := fmt.Sprintf(":%d", config.Port)
 	httpServer := &http.Server{

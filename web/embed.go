@@ -7,12 +7,15 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-
-	"github.com/go-chi/chi/v5"
 )
 
 //go:embed all:docs/dist
 var docsFS embed.FS
+
+type Router interface {
+	Handle(pattern string, handler http.Handler)
+	HandleFunc(pattern string, handler http.HandlerFunc)
+}
 
 func DocsApp() WebApp { return NewWebApp("docs", docsFS, "docs/dist", "/docs/") }
 
@@ -77,7 +80,7 @@ func (wa WebApp) Handler(path string) http.Handler {
 }
 
 // Register registers the WebApp with the given ServeMux.
-func (wa WebApp) Register(mux chi.Router, l *slog.Logger) {
+func (wa WebApp) Register(mux Router, l *slog.Logger) {
 	wa.l = l.With(slog.String("app", wa.name), slog.String("urlBase", wa.urlBase), slog.String("component", "file-server"))
 	wa.l.Info("Registering web app")
 
