@@ -11,6 +11,7 @@ import { OperationFilters, type OperationFilterState } from "@/components/operat
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
 import { CollapsibleGroup } from "@/components/collapsible-group";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { docs } from "@/data/api";
 import { getAllOperations } from "@/data/api";
 
@@ -108,6 +109,12 @@ export default function OperationsPage() {
 
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
+            <Breadcrumbs
+                items={[
+                    { label: "Operations" },
+                ]}
+            />
+
             <PageHeader
                 title='Operations'
                 description='Browse all API operations and endpoints'

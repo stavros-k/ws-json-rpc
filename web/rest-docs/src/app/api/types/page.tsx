@@ -9,6 +9,7 @@ import { TypeFilters, type TypeFilterState } from "@/components/type-filters";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
 import { CollapsibleGroup } from "@/components/collapsible-group";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { docs } from "@/data/api";
 
 export default function TypesPage() {
@@ -86,6 +87,12 @@ export default function TypesPage() {
 
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
+            <Breadcrumbs
+                items={[
+                    { label: "Types" },
+                ]}
+            />
+
             <PageHeader
                 title='Types'
                 description='Browse all type definitions used in the API'

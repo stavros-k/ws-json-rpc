@@ -20,8 +20,9 @@ const SidebarLink = ({ title, href }: { title: string; href: Route }) => {
 
 export const Sidebar = () => {
     return (
-        <aside className='w-80 p-6 text-sm bg-bg-sidebar text-text-primary overflow-y-auto sticky top-0 max-h-screen border-r-2 border-border-sidebar'>
-            <div className='mb-8'>
+        <aside className='w-80 text-sm bg-bg-sidebar text-text-primary sticky top-0 max-h-screen border-r-2 border-border-sidebar flex flex-col'>
+            {/* Sticky Header */}
+            <div className='p-6 pb-4 border-b-2 border-border-sidebar'>
                 <div className='flex items-center justify-between mb-4'>
                     <h1 className='text-xl font-bold'>
                         <Link
@@ -41,21 +42,24 @@ export const Sidebar = () => {
                 </div>
             </div>
 
-            <SidebarSection
-                title='Operations'
-                type='operation'
-                overviewHref='/api/operations'
-            />
-            <SidebarSection
-                title='Types'
-                type='type'
-                overviewHref='/api/types'
-            />
+            {/* Scrollable Content */}
+            <div className='flex-1 overflow-y-auto p-6 pt-4'>
+                <SidebarSection
+                    title='Operations'
+                    type='operation'
+                    overviewHref='/api/operations'
+                />
+                <SidebarSection
+                    title='Types'
+                    type='type'
+                    overviewHref='/api/types'
+                />
 
-            <SidebarLink
-                title='Database Schema'
-                href='/api/database/schema'
-            />
+                <SidebarLink
+                    title='Database Schema'
+                    href='/api/database/schema'
+                />
+            </div>
         </aside>
     );
 };

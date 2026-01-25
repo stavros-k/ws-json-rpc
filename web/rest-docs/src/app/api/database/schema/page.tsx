@@ -1,5 +1,6 @@
 import { CardBoxWrapper } from "@/components/card-box-wrapper";
 import { CodeWrapper } from "@/components/code-wrapper";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { docs } from "@/data/api";
 export async function generateMetadata() {
     return {
@@ -12,6 +13,12 @@ export default function DatabaseSchema() {
 
     return (
         <main className='flex-1 p-10 overflow-y-auto'>
+            <Breadcrumbs
+                items={[
+                    { label: "Database Schema" },
+                ]}
+            />
+
             <div>
                 <h1 className='text-4xl font-bold mb-3 text-text-primary'>Database Schema</h1>
                 <h2 className='text-xl text-text-primary mb-4'>Database structure definition</h2>

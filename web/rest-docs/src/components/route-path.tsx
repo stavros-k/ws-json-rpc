@@ -20,7 +20,13 @@ export function RoutePath({ path, className = "" }: RoutePathProps) {
                         </span>
                     );
                 }
-                return <span key={index}>{segment}</span>;
+                return (
+                    <span
+                        key={index}
+                        className='text-text-secondary'>
+                        {segment}
+                    </span>
+                );
             })}
         </span>
     );
