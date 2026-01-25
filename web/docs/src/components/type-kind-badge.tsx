@@ -1,6 +1,6 @@
 type TypeKindBadgeProps = {
     kind: string;
-    size?: "sm" | "md";
+    size?: "xs" | "sm" | "md";
 };
 
 const kindDisplayNames: Record<string, string> = {
@@ -21,6 +21,7 @@ export function getKindDisplayName(kind: string): string {
 
 export function TypeKindBadge({ kind, size = "md" }: TypeKindBadgeProps) {
     const sizeClasses = {
+        xs: "text-[9px] px-1.5 py-0.5",
         sm: "text-xs px-2 py-1",
         md: "text-sm px-3 py-1.5",
     }[size];
