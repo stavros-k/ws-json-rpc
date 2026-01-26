@@ -15,7 +15,7 @@ type ErrorResponse struct {
 	RequestID string `json:"requestID"`
 	// High-level error message
 	Message string `json:"message"`
-	// Field-level validation errors (optional)
+	// Field-level validation errors
 	Errors map[string]string `json:"errors,omitempty"`
 }
 
