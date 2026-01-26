@@ -48,8 +48,6 @@ const (
 	// PingStatusOK means the ping was successful.
 	PingStatusOK PingStatus = "OK"
 	// PingStatusError means there was an error with the ping.
-	//
-	// Deprecated: Use PingStatusErrorV2 instead.
 	PingStatusError PingStatus = "ERROR"
 )
 

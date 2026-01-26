@@ -37,7 +37,7 @@ func RegisterPing(path string, rb *router.RouteBuilder, s *Server) {
 				},
 			},
 			500: {
-				Description: "Database unreachable",
+				Description: "Internal server error",
 				Type:        apitypes.PingResponse{},
 				Examples: map[string]any{
 					"Database unreachable": apitypes.PingResponse{Message: "Database unreachable", Status: apitypes.PingStatusError},

@@ -284,10 +284,6 @@
           "role": "response"
         },
         {
-          "operationID": "ping",
-          "role": "response"
-        },
-        {
           "operationID": "putTeam",
           "role": "response"
         },
@@ -482,6 +478,10 @@
           "role": "response"
         },
         {
+          "operationID": "ping",
+          "role": "response"
+        },
+        {
           "operationID": "putTeam",
           "role": "response"
         }
@@ -502,7 +502,7 @@
         {
           "value": "ERROR",
           "description": "PingStatusError means there was an error with the ping.",
-          "deprecated": "Use PingStatusErrorV2 instead."
+          "deprecated": ""
         },
         {
           "value": "OK",
@@ -517,8 +517,8 @@
       "usedBy": null,
       "representations": {
         "json": "",
-        "jsonSchema": "{\n  \"description\": \"PingStatus represents the status of a ping request.\\n\\nPossible values:\\n- `ERROR`: **[DEPRECATED]** Use PingStatusErrorV2 instead. - PingStatusError means there was an error with the ping.\\n- `OK`: PingStatusOK means the ping was successful.\\n\",\n  \"enum\": [\n    \"ERROR\",\n    \"OK\"\n  ],\n  \"type\": \"string\"\n}",
-        "ts": "/**\n * PingStatus represents the status of a ping request.\n */\nenum PingStatus {\n    /**\n     * PingStatusError means there was an error with the ping.\n     *\n     * @deprecated Use PingStatusErrorV2 instead.\n     */\n    PingStatusError = \"ERROR\",\n    /**\n     * PingStatusOK means the ping was successful.\n     */\n    PingStatusOK = \"OK\"\n}\n"
+        "jsonSchema": "{\n  \"description\": \"PingStatus represents the status of a ping request.\\n\\nPossible values:\\n- `ERROR`: PingStatusError means there was an error with the ping.\\n- `OK`: PingStatusOK means the ping was successful.\\n\",\n  \"enum\": [\n    \"ERROR\",\n    \"OK\"\n  ],\n  \"type\": \"string\"\n}",
+        "ts": "/**\n * PingStatus represents the status of a ping request.\n */\nenum PingStatus {\n    /**\n     * PingStatusError means there was an error with the ping.\n     */\n    PingStatusError = \"ERROR\",\n    /**\n     * PingStatusOK means the ping was successful.\n     */\n    PingStatusOK = \"OK\"\n}\n"
       }
     },
     "User": {
@@ -772,10 +772,10 @@
         },
         "500": {
           "statusCode": 500,
-          "type": "ErrorResponse",
-          "description": "Internal Server Error",
+          "type": "PingResponse",
+          "description": "Internal server error",
           "examples": {
-            "Internal Server Error": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Internal Server Error\"\n}"
+            "Database unreachable": "{\n  \"message\": \"Database unreachable\",\n  \"status\": \"ERROR\"\n}"
           }
         }
       }

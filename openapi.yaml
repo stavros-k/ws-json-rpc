@@ -111,7 +111,7 @@ components:
                 PingStatus represents the status of a ping request.
 
                 Possible values:
-                - `ERROR`: **[DEPRECATED]** Use PingStatusErrorV2 instead. - PingStatusError means there was an error with the ping.
+                - `ERROR`: PingStatusError means there was an error with the ping.
                 - `OK`: PingStatusOK means the ping was successful.
             enum:
                 - ERROR
@@ -169,13 +169,13 @@ paths:
                     content:
                         application/json:
                             examples:
-                                Internal Server Error:
+                                Database unreachable:
                                     value:
-                                        message: Internal Server Error
-                                        requestID: 00000000-0000-0000-0000-000000000000
+                                        message: Database unreachable
+                                        status: ERROR
                             schema:
-                                $ref: '#/components/schemas/ErrorResponse'
-                    description: Internal Server Error
+                                $ref: '#/components/schemas/PingResponse'
+                    description: Internal server error
             summary: Ping the server
             tags:
                 - Core
