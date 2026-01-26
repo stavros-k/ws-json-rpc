@@ -249,30 +249,6 @@
           "description": "Field-level validation errors",
           "deprecated": "",
           "goType": ""
-        },
-        {
-          "name": "test",
-          "displayType": "Object",
-          "typeInfo": {
-            "kind": "object",
-            "type": "object",
-            "format": "",
-            "required": false,
-            "nullable": false,
-            "itemsType": null,
-            "additionalProperties": {
-              "kind": "reference",
-              "type": "PingResponse",
-              "format": "",
-              "required": false,
-              "nullable": false,
-              "itemsType": null,
-              "additionalProperties": null
-            }
-          },
-          "description": "",
-          "deprecated": "",
-          "goType": ""
         }
       ],
       "enumValues": null,
@@ -324,8 +300,8 @@
       ],
       "representations": {
         "json": "{\n  \"requestID\": \"\",\n  \"message\": \"\"\n}",
-        "jsonSchema": "{\n  \"additionalProperties\": false,\n  \"description\": \"ErrorResponse is the unified error response type. It supports both simple errors (just message) and validation errors (message + field errors).\",\n  \"properties\": {\n    \"errors\": {\n      \"additionalProperties\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Field-level validation errors\",\n      \"type\": \"object\"\n    },\n    \"message\": {\n      \"description\": \"High-level error message\",\n      \"type\": \"string\"\n    },\n    \"requestID\": {\n      \"description\": \"Request ID for tracking\",\n      \"type\": \"string\"\n    },\n    \"test\": {\n      \"additionalProperties\": {\n        \"$ref\": \"#/components/schemas/PingResponse\"\n      },\n      \"type\": \"object\"\n    }\n  },\n  \"required\": [\n    \"requestID\",\n    \"message\"\n  ],\n  \"type\": \"object\"\n}",
-        "ts": "/**\n * ErrorResponse is the unified error response type.\n * It supports both simple errors (just message) and validation errors (message + field errors).\n */\ntype ErrorResponse = {\n    /**\n     * Request ID for tracking\n     */\n    requestID: string;\n    /**\n     * High-level error message\n     */\n    message: string;\n    /**\n     * Field-level validation errors\n     */\n    errors?: Record<string, string>;\n    test?: Record<string, PingResponse>;\n};\n"
+        "jsonSchema": "{\n  \"additionalProperties\": false,\n  \"description\": \"ErrorResponse is the unified error response type. It supports both simple errors (just message) and validation errors (message + field errors).\",\n  \"properties\": {\n    \"errors\": {\n      \"additionalProperties\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Field-level validation errors\",\n      \"type\": \"object\"\n    },\n    \"message\": {\n      \"description\": \"High-level error message\",\n      \"type\": \"string\"\n    },\n    \"requestID\": {\n      \"description\": \"Request ID for tracking\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"requestID\",\n    \"message\"\n  ],\n  \"type\": \"object\"\n}",
+        "ts": "/**\n * ErrorResponse is the unified error response type.\n * It supports both simple errors (just message) and validation errors (message + field errors).\n */\ntype ErrorResponse = {\n    /**\n     * Request ID for tracking\n     */\n    requestID: string;\n    /**\n     * High-level error message\n     */\n    message: string;\n    /**\n     * Field-level validation errors\n     */\n    errors?: Record<string, string>;\n};\n"
       }
     },
     "GetTeamRequest": {

@@ -16,8 +16,7 @@ type ErrorResponse struct {
 	// High-level error message
 	Message string `json:"message"`
 	// Field-level validation errors
-	Errors map[string]string       `json:"errors,omitempty"`
-	Test   map[string]PingResponse `json:"test,omitempty"`
+	Errors map[string]string `json:"errors,omitempty"`
 }
 
 func (e *ErrorResponse) Error() string {
