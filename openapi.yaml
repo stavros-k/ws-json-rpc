@@ -66,7 +66,15 @@ components:
                 - teamID
                 - users
             type: object
-        Handlers:
+        HTTPHandlerError:
+            properties:
+                message:
+                    type: string
+                requestID:
+                    type: string
+            required:
+                - requestID
+                - message
             type: object
         PingResponse:
             description: PingResponse is the response to a ping request.
@@ -94,6 +102,19 @@ components:
                 - ERROR
                 - OK
             type: string
+        ServerErrorResponse:
+            description: ServerErrorResponse is the response for server errors.
+            properties:
+                message:
+                    description: Human-readable message
+                    type: string
+                requestID:
+                    description: The request ID
+                    type: string
+            required:
+                - requestID
+                - message
+            type: object
         User:
             description: User represents a user in the system.
             properties:
@@ -114,7 +135,7 @@ info:
     version: vdev (unknown)
 openapi: 3.0.3
 paths:
-    /ping:
+    /api/ping:
         get:
             description: Check if the server is alive
             operationId: ping
@@ -123,48 +144,39 @@ paths:
                     content:
                         application/json:
                             examples:
-                                example-1:
+                                Success:
                                     value:
                                         message: Pong
                                         status: OK
                             schema:
                                 $ref: '#/components/schemas/PingResponse'
                     description: Successful ping response
-                "201":
+                "413":
                     content:
                         application/json:
                             examples:
-                                example-1:
+                                Request Entity Too Large:
                                     value:
-                                        teamID: "123"
-                                        users:
-                                            - name: John
-                                              userID: "123"
+                                        message: Request Entity Too Large
+                                        requestID: 00000000-0000-0000-0000-000000000000
                             schema:
-                                $ref: '#/components/schemas/GetTeamResponse'
-                    description: Successful ping response
-                "400":
-                    content:
-                        application/json:
-                            examples:
-                                example-1:
-                                    value:
-                                        createdAt: "2000-01-01T00:00:00Z"
-                                        url: https://localhost:8080/user
-                                        userID: "123"
-                            schema:
-                                $ref: '#/components/schemas/CreateUserResponse'
-                    description: Invalid request
+                                $ref: '#/components/schemas/ServerErrorResponse'
+                    description: Request entity too large
                 "500":
                     content:
                         application/json:
+                            examples:
+                                Internal Server Error:
+                                    value:
+                                        message: Internal Server Error
+                                        requestID: 00000000-0000-0000-0000-000000000000
                             schema:
-                                $ref: '#/components/schemas/PingResponse'
+                                $ref: '#/components/schemas/ServerErrorResponse'
                     description: Internal server error
             summary: Ping the server
             tags:
                 - Core
-    /team:
+    /api/team:
         delete:
             description: Create a team by its name
             operationId: deleteTeam
@@ -202,11 +214,27 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/CreateUserResponse'
                     description: Invalid request
+                "413":
+                    content:
+                        application/json:
+                            examples:
+                                Request Entity Too Large:
+                                    value:
+                                        message: Request Entity Too Large
+                                        requestID: 00000000-0000-0000-0000-000000000000
+                            schema:
+                                $ref: '#/components/schemas/ServerErrorResponse'
+                    description: Request entity too large
                 "500":
                     content:
                         application/json:
+                            examples:
+                                Internal Server Error:
+                                    value:
+                                        message: Internal Server Error
+                                        requestID: 00000000-0000-0000-0000-000000000000
                             schema:
-                                $ref: '#/components/schemas/PingResponse'
+                                $ref: '#/components/schemas/ServerErrorResponse'
                     description: Internal server error
             summary: Create a team
             tags:
@@ -248,11 +276,27 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/CreateUserResponse'
                     description: Invalid request
+                "413":
+                    content:
+                        application/json:
+                            examples:
+                                Request Entity Too Large:
+                                    value:
+                                        message: Request Entity Too Large
+                                        requestID: 00000000-0000-0000-0000-000000000000
+                            schema:
+                                $ref: '#/components/schemas/ServerErrorResponse'
+                    description: Request entity too large
                 "500":
                     content:
                         application/json:
+                            examples:
+                                Internal Server Error:
+                                    value:
+                                        message: Internal Server Error
+                                        requestID: 00000000-0000-0000-0000-000000000000
                             schema:
-                                $ref: '#/components/schemas/PingResponse'
+                                $ref: '#/components/schemas/ServerErrorResponse'
                     description: Internal server error
             summary: Create a team
             tags:
@@ -294,16 +338,32 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/CreateUserResponse'
                     description: Invalid request
+                "413":
+                    content:
+                        application/json:
+                            examples:
+                                Request Entity Too Large:
+                                    value:
+                                        message: Request Entity Too Large
+                                        requestID: 00000000-0000-0000-0000-000000000000
+                            schema:
+                                $ref: '#/components/schemas/ServerErrorResponse'
+                    description: Request entity too large
                 "500":
                     content:
                         application/json:
+                            examples:
+                                Internal Server Error:
+                                    value:
+                                        message: Internal Server Error
+                                        requestID: 00000000-0000-0000-0000-000000000000
                             schema:
-                                $ref: '#/components/schemas/PingResponse'
+                                $ref: '#/components/schemas/ServerErrorResponse'
                     description: Internal server error
             summary: Create a team
             tags:
                 - Team
-    /team/{teamID}:
+    /api/team/{teamID}:
         get:
             deprecated: true
             description: Get a team by its ID
@@ -365,11 +425,27 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/CreateUserResponse'
                     description: Invalid request
+                "413":
+                    content:
+                        application/json:
+                            examples:
+                                Request Entity Too Large:
+                                    value:
+                                        message: Request Entity Too Large
+                                        requestID: 00000000-0000-0000-0000-000000000000
+                            schema:
+                                $ref: '#/components/schemas/ServerErrorResponse'
+                    description: Request entity too large
                 "500":
                     content:
                         application/json:
+                            examples:
+                                Internal Server Error:
+                                    value:
+                                        message: Internal Server Error
+                                        requestID: 00000000-0000-0000-0000-000000000000
                             schema:
-                                $ref: '#/components/schemas/PingResponse'
+                                $ref: '#/components/schemas/ServerErrorResponse'
                     description: Internal server error
             summary: Get a team
             tags:

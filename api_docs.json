@@ -172,10 +172,6 @@
           "role": "response"
         },
         {
-          "operationID": "ping",
-          "role": "response"
-        },
-        {
           "operationID": "putTeam",
           "role": "response"
         }
@@ -276,10 +272,6 @@
         {
           "operationID": "getTeam",
           "role": "response"
-        },
-        {
-          "operationID": "ping",
-          "role": "response"
         }
       ],
       "representations": {
@@ -288,20 +280,51 @@
         "ts": "/**\n * GetTeamResponse is the response to a get team request.\n *\n * @deprecated Use GetTeamResponseV2 instead.\n */\ntype GetTeamResponse = {\n    /**\n     * ID of the team\n     */\n    teamID: string;\n    /**\n     * Users in the team\n     */\n    users: User[];\n};\n"
       }
     },
-    "Handlers": {
-      "name": "Handlers",
+    "HTTPHandlerError": {
+      "name": "HTTPHandlerError",
       "kind": "object",
       "description": "",
       "deprecated": "",
-      "fields": [],
+      "fields": [
+        {
+          "name": "requestID",
+          "displayType": "String",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
+          },
+          "description": "",
+          "deprecated": "",
+          "goType": ""
+        },
+        {
+          "name": "message",
+          "displayType": "String",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
+          },
+          "description": "",
+          "deprecated": "",
+          "goType": ""
+        }
+      ],
       "enumValues": null,
       "references": [],
       "referencedBy": null,
       "usedBy": null,
       "representations": {
         "json": "",
-        "jsonSchema": "{\n  \"type\": \"object\"\n}",
-        "ts": "type Handlers = {};\n"
+        "jsonSchema": "{\n  \"properties\": {\n    \"message\": {\n      \"type\": \"string\"\n    },\n    \"requestID\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"requestID\",\n    \"message\"\n  ],\n  \"type\": \"object\"\n}",
+        "ts": "type HTTPHandlerError = {\n    requestID: string;\n    message: string;\n};\n"
       }
     },
     "PingResponse": {
@@ -367,14 +390,6 @@
           "role": "response"
         },
         {
-          "operationID": "createTeam",
-          "role": "response"
-        },
-        {
-          "operationID": "deleteTeam",
-          "role": "response"
-        },
-        {
           "operationID": "deleteTeam",
           "role": "response"
         },
@@ -383,19 +398,7 @@
           "role": "response"
         },
         {
-          "operationID": "getTeam",
-          "role": "response"
-        },
-        {
           "operationID": "ping",
-          "role": "response"
-        },
-        {
-          "operationID": "ping",
-          "role": "response"
-        },
-        {
-          "operationID": "putTeam",
           "role": "response"
         },
         {
@@ -436,6 +439,94 @@
         "json": "",
         "jsonSchema": "{\n  \"description\": \"PingStatus represents the status of a ping request.\\n\\nPossible values:\\n- `ERROR`: **[DEPRECATED]** Use PingStatusErrorV2 instead. - PingStatusError means there was an error with the ping.\\n- `OK`: PingStatusOK means the ping was successful.\\n\",\n  \"enum\": [\n    \"ERROR\",\n    \"OK\"\n  ],\n  \"type\": \"string\"\n}",
         "ts": "/**\n * PingStatus represents the status of a ping request.\n */\nenum PingStatus {\n    /**\n     * PingStatusError means there was an error with the ping.\n     *\n     * @deprecated Use PingStatusErrorV2 instead.\n     */\n    PingStatusError = \"ERROR\",\n    /**\n     * PingStatusOK means the ping was successful.\n     */\n    PingStatusOK = \"OK\"\n}\n"
+      }
+    },
+    "ServerErrorResponse": {
+      "name": "ServerErrorResponse",
+      "kind": "object",
+      "description": "ServerErrorResponse is the response for server errors.",
+      "deprecated": "",
+      "fields": [
+        {
+          "name": "requestID",
+          "displayType": "String",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
+          },
+          "description": "The request ID",
+          "deprecated": "",
+          "goType": ""
+        },
+        {
+          "name": "message",
+          "displayType": "String",
+          "typeInfo": {
+            "kind": "primitive",
+            "type": "string",
+            "format": "",
+            "required": true,
+            "nullable": false,
+            "itemsType": null
+          },
+          "description": "Human-readable message",
+          "deprecated": "",
+          "goType": ""
+        }
+      ],
+      "enumValues": null,
+      "references": [],
+      "referencedBy": null,
+      "usedBy": [
+        {
+          "operationID": "createTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "createTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "deleteTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "deleteTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "getTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "ping",
+          "role": "response"
+        },
+        {
+          "operationID": "ping",
+          "role": "response"
+        },
+        {
+          "operationID": "putTeam",
+          "role": "response"
+        },
+        {
+          "operationID": "putTeam",
+          "role": "response"
+        }
+      ],
+      "representations": {
+        "json": "{\n  \"requestID\": \"\",\n  \"message\": \"\"\n}",
+        "jsonSchema": "{\n  \"description\": \"ServerErrorResponse is the response for server errors.\",\n  \"properties\": {\n    \"message\": {\n      \"description\": \"Human-readable message\",\n      \"type\": \"string\"\n    },\n    \"requestID\": {\n      \"description\": \"The request ID\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"requestID\",\n    \"message\"\n  ],\n  \"type\": \"object\"\n}",
+        "ts": "/**\n * ServerErrorResponse is the response for server errors.\n */\ntype ServerErrorResponse = {\n    /**\n     * The request ID\n     */\n    requestID: string;\n    /**\n     * Human-readable message\n     */\n    message: string;\n};\n"
       }
     },
     "User": {
@@ -492,7 +583,7 @@
     "createTeam": {
       "operationID": "createTeam",
       "method": "POST",
-      "path": "/team",
+      "path": "/api/team",
       "summary": "Create a team",
       "description": "Create a team by its name",
       "group": "Team",
@@ -522,18 +613,28 @@
             "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
           }
         },
+        "413": {
+          "statusCode": 413,
+          "type": "ServerErrorResponse",
+          "description": "Request entity too large",
+          "examples": {
+            "Request Entity Too Large": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Request Entity Too Large\"\n}"
+          }
+        },
         "500": {
           "statusCode": 500,
-          "type": "PingResponse",
+          "type": "ServerErrorResponse",
           "description": "Internal server error",
-          "examples": {}
+          "examples": {
+            "Internal Server Error": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Internal Server Error\"\n}"
+          }
         }
       }
     },
     "deleteTeam": {
       "operationID": "deleteTeam",
       "method": "DELETE",
-      "path": "/team",
+      "path": "/api/team",
       "summary": "Create a team",
       "description": "Create a team by its name",
       "group": "Team",
@@ -563,18 +664,28 @@
             "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
           }
         },
+        "413": {
+          "statusCode": 413,
+          "type": "ServerErrorResponse",
+          "description": "Request entity too large",
+          "examples": {
+            "Request Entity Too Large": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Request Entity Too Large\"\n}"
+          }
+        },
         "500": {
           "statusCode": 500,
-          "type": "PingResponse",
+          "type": "ServerErrorResponse",
           "description": "Internal server error",
-          "examples": {}
+          "examples": {
+            "Internal Server Error": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Internal Server Error\"\n}"
+          }
         }
       }
     },
     "getTeam": {
       "operationID": "getTeam",
       "method": "GET",
-      "path": "/team/{teamID}",
+      "path": "/api/team/{teamID}",
       "summary": "Get a team",
       "description": "Get a team by its ID",
       "group": "Team",
@@ -620,18 +731,28 @@
             "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": null\n}"
           }
         },
+        "413": {
+          "statusCode": 413,
+          "type": "ServerErrorResponse",
+          "description": "Request entity too large",
+          "examples": {
+            "Request Entity Too Large": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Request Entity Too Large\"\n}"
+          }
+        },
         "500": {
           "statusCode": 500,
-          "type": "PingResponse",
+          "type": "ServerErrorResponse",
           "description": "Internal server error",
-          "examples": {}
+          "examples": {
+            "Internal Server Error": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Internal Server Error\"\n}"
+          }
         }
       }
     },
     "ping": {
       "operationID": "ping",
       "method": "GET",
-      "path": "/ping",
+      "path": "/api/ping",
       "summary": "Ping the server",
       "description": "Check if the server is alive",
       "group": "Core",
@@ -644,37 +765,31 @@
           "type": "PingResponse",
           "description": "Successful ping response",
           "examples": {
-            "example-1": "{\n  \"message\": \"Pong\",\n  \"status\": \"OK\"\n}"
+            "Success": "{\n  \"message\": \"Pong\",\n  \"status\": \"OK\"\n}"
           }
         },
-        "201": {
-          "statusCode": 201,
-          "type": "GetTeamResponse",
-          "description": "Successful ping response",
+        "413": {
+          "statusCode": 413,
+          "type": "ServerErrorResponse",
+          "description": "Request entity too large",
           "examples": {
-            "example-1": "{\n  \"teamID\": \"123\",\n  \"users\": [\n    {\n      \"userID\": \"123\",\n      \"name\": \"John\"\n    }\n  ]\n}"
-          }
-        },
-        "400": {
-          "statusCode": 400,
-          "type": "CreateUserResponse",
-          "description": "Invalid request",
-          "examples": {
-            "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
+            "Request Entity Too Large": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Request Entity Too Large\"\n}"
           }
         },
         "500": {
           "statusCode": 500,
-          "type": "PingResponse",
+          "type": "ServerErrorResponse",
           "description": "Internal server error",
-          "examples": {}
+          "examples": {
+            "Internal Server Error": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Internal Server Error\"\n}"
+          }
         }
       }
     },
     "putTeam": {
       "operationID": "putTeam",
       "method": "PUT",
-      "path": "/team",
+      "path": "/api/team",
       "summary": "Create a team",
       "description": "Create a team by its name",
       "group": "Team",
@@ -704,11 +819,21 @@
             "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
           }
         },
+        "413": {
+          "statusCode": 413,
+          "type": "ServerErrorResponse",
+          "description": "Request entity too large",
+          "examples": {
+            "Request Entity Too Large": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Request Entity Too Large\"\n}"
+          }
+        },
         "500": {
           "statusCode": 500,
-          "type": "PingResponse",
+          "type": "ServerErrorResponse",
           "description": "Internal server error",
-          "examples": {}
+          "examples": {
+            "Internal Server Error": "{\n  \"requestID\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"Internal Server Error\"\n}"
+          }
         }
       }
     }

@@ -7,6 +7,7 @@ require (
 	github.com/coder/guts v1.6.4-0.20260124161544-87754f89923f
 	github.com/getkin/kin-openapi v0.133.0
 	github.com/go-chi/chi/v5 v5.2.4
+	github.com/google/uuid v1.6.0
 	github.com/oasdiff/yaml v0.0.0-20250309154309-f31be36b4037
 	golang.org/x/text v0.33.0
 )

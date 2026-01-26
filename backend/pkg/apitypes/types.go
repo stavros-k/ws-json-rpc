@@ -1,10 +1,28 @@
-package httpapi
+package apitypes
 
 import (
 	"time"
 
 	"ws-json-rpc/backend/pkg/types"
 )
+
+type HTTPHandlerError struct {
+	StatusCode int    `json:"-"`
+	RequestID  string `json:"requestID"`
+	Message    string `json:"message"`
+}
+
+func (e *HTTPHandlerError) Error() string {
+	return e.Message
+}
+
+// ServerErrorResponse is the response for server errors.
+type ServerErrorResponse struct {
+	// The request ID
+	RequestID string `json:"requestID"`
+	// Human-readable message
+	Message string `json:"message"`
+}
 
 // PingResponse is the response to a ping request.
 type PingResponse struct {

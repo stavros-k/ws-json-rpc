@@ -47,10 +47,11 @@ func (rb *RouteBuilder) Route(path string, fn func(rb *RouteBuilder)) *RouteBuil
 	// Isolate sub-router
 	rb.router.Group(func(r chi.Router) {
 		subRB := &RouteBuilder{
-			router:    r,
-			collector: rb.collector,
-			prefix:    rb.prefix,
-			l:         rb.l.With(slog.String("prefix", rb.prefix)),
+			router:       r,
+			collector:    rb.collector,
+			operationIDs: rb.operationIDs,
+			prefix:       rb.prefix,
+			l:            rb.l.With(slog.String("prefix", rb.prefix)),
 		}
 		fn(subRB)
 	})
