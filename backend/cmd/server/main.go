@@ -71,6 +71,8 @@ func main() {
 	fatalIfErr(logger, err)
 
 	rb.Route("/api", func(rb *router.RouteBuilder) {
+		// Add request ID
+		rb.Use(server.RequestIDMiddleware)
 		// Add request logger
 		rb.Use(server.LoggerMiddleware)
 

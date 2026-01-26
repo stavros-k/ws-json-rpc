@@ -1,25 +1,12 @@
 package api
 
 import (
-	"context"
 	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 )
-
-type contextKey string
-
-const loggerKey contextKey = "logger"
-
-// GetLogger retrieves the request-scoped logger from context
-func GetLogger(ctx context.Context) *slog.Logger {
-	if logger, ok := ctx.Value(loggerKey).(*slog.Logger); ok {
-		return logger
-	}
-	return slog.Default() // Fallback (should never happen)
-}
 
 // responseWriter wraps http.ResponseWriter to capture status code
 type responseWriter struct {
@@ -46,8 +33,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
-// LoggerMiddleware adds a request-scoped logger to the context and logs requests
-func (s *Server) LoggerMiddleware(next http.Handler) http.Handler {
+func (s *Server) RequestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get or generate request ID
 		requestID := r.Header.Get(RequestIDHeader)
@@ -55,6 +41,17 @@ func (s *Server) LoggerMiddleware(next http.Handler) http.Handler {
 			requestID = uuid.New().String()
 		}
 
+		// Store request ID in context
+		ctx := WithRequestID(r.Context(), requestID)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// LoggerMiddleware adds a request-scoped logger to the context and logs requests
+func (s *Server) LoggerMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestID := GetRequestID(r.Context())
 		// Create request-scoped logger with context
 		reqLogger := s.l.With(
 			slog.String("request_id", requestID),
@@ -66,8 +63,8 @@ func (s *Server) LoggerMiddleware(next http.Handler) http.Handler {
 
 		w.Header().Set(RequestIDHeader, requestID)
 
-		// Store logger in context
-		ctx := context.WithValue(r.Context(), loggerKey, reqLogger)
+		// Store logger and request ID in context
+		ctx := WithLogger(r.Context(), reqLogger)
 
 		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 

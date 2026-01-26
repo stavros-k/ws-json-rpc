@@ -46,6 +46,7 @@ func NewHTTPError(statusCode int, message string) *apitypes.HTTPHandlerError {
 func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		l := GetLogger(r.Context())
+		requestID := GetRequestID(r.Context())
 
 		err := fn(w, r)
 		if err == nil {
@@ -54,7 +55,7 @@ func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 
 		// This is an expected HTTP error, we return the actual error to the client
 		if httpErr, ok := err.(*apitypes.HTTPHandlerError); ok {
-			httpErr.RequestID = r.Header.Get(RequestIDHeader)
+			httpErr.RequestID = requestID
 			l.Warn("handler returned HTTP error", slog.Int("status", httpErr.StatusCode), slog.String("message", httpErr.Message))
 			RespondJSON(w, r, httpErr.StatusCode, httpErr)
 			return
@@ -63,7 +64,7 @@ func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 		// Internal errors get logged with full context, but we return a generic message to the client
 		l.Error("internal error", utils.ErrAttr(err))
 		RespondJSON(w, r, http.StatusInternalServerError, apitypes.ServerErrorResponse{
-			RequestID: r.Header.Get(RequestIDHeader),
+			RequestID: requestID,
 			Message:   "Internal server error",
 		})
 	}
