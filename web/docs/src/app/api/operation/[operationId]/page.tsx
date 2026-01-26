@@ -8,7 +8,7 @@ import { CollapsibleResponse } from "@/components/collapsible-response";
 import { Deprecation } from "@/components/deprecation";
 import { Group } from "@/components/group";
 import { OperationHeader } from "@/components/operation-header";
-import { getAllOperations, getTypeJson, type TypeKeys } from "@/data/api";
+import { getAllOperations, getTypeJson, type Response, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
     const operations = getAllOperations();
@@ -98,25 +98,26 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                 <CardBoxWrapper title='Responses'>
                     <div className='space-y-4'>
                         {Object.entries(operation.responses).map(([statusCode, response]) => {
-                            const responseJson = getTypeJson(response.type as TypeKeys);
+                            const resp = response as Response;
+                            const responseJson = getTypeJson(resp.type as TypeKeys);
 
                             return (
                                 <CollapsibleResponse
                                     key={statusCode}
                                     statusCode={statusCode}
-                                    description={response.description}>
+                                    description={resp.description}>
                                     <CodeWrapper
                                         label={{
-                                            text: response.type,
-                                            href: `/api/type/${response.type}` as Route,
+                                            text: resp.type,
+                                            href: `/api/type/${resp.type}` as Route,
                                         }}
                                         code={responseJson}
                                         noCodeMessage='No response body'
                                         lang='json'
                                     />
-                                    {response.examples && Object.keys(response.examples).length > 0 && (
+                                    {resp.examples && Object.keys(resp.examples).length > 0 && (
                                         <div className='mt-6 space-y-3'>
-                                            {Object.entries(response.examples).map(([exampleKey, exampleValue]) => (
+                                            {Object.entries(resp.examples).map(([exampleKey, exampleValue]) => (
                                                 <CollapsibleCard
                                                     key={exampleKey}
                                                     title={exampleKey}

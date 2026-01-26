@@ -912,6 +912,22 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		// Reference types
 		refName := e.Name.String()
 
+		// Special case: Record<K, V> types (Go maps)
+		if refName == "Record" && len(e.Arguments) == 2 {
+			// Analyze the value type (second argument)
+			valueType, err := g.analyzeFieldType(e.Arguments[1])
+			if err != nil {
+				return FieldType{}, fmt.Errorf("failed to analyze Record value type: %w", err)
+			}
+
+			// Return object type with additionalProperties
+			return FieldType{
+				Kind:                 FieldKindObject,
+				Type:                 "object",
+				AdditionalProperties: &valueType,
+			}, nil
+		}
+
 		// Reject generic types (we don't support them in Go->TS serialization)
 		if len(e.Arguments) > 0 {
 			return FieldType{}, fmt.Errorf("generic types are not supported: %s<%d type arguments>", refName, len(e.Arguments))
@@ -934,6 +950,22 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		// Check for nullable pattern FIRST: T | null or null | T or T | undefined
 		isNullable, nonNullType := g.isNullableUnion(e)
 		if !isNullable {
+			// Unwrap single-element unions and analyze the inner type
+			if len(e.Types) == 1 {
+				return g.analyzeFieldType(e.Types[0])
+			}
+
+			// Log the union types for debugging
+			var typeStrings []string
+			for _, t := range e.Types {
+				serialized, err := g.serializeExpressionType(t)
+				if err != nil {
+					typeStrings = append(typeStrings, fmt.Sprintf("%T (error: %v)", t, err))
+				} else {
+					typeStrings = append(typeStrings, serialized)
+				}
+			}
+			g.l.Error("Non-nullable union type detected", slog.String("types", strings.Join(typeStrings, " | ")))
 			// Non-nullable unions shouldn't exist in Go->TS serialization
 			// (Go enums use bindings.Enum, not union literals)
 			return FieldType{}, errors.New("unexpected non-nullable union type - Go->TS serialization should only have nullable unions (T | null)")
