@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	sqlitegen "ws-json-rpc/backend/internal/database/sqlite/gen"
 	"ws-json-rpc/backend/pkg/apitypes"
 	"ws-json-rpc/backend/pkg/router"
 	"ws-json-rpc/backend/pkg/utils"
@@ -33,13 +34,15 @@ type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 // Server represents the API server
 type Server struct {
 	l  *slog.Logger
+	q  *sqlitegen.Queries
 	db *sql.DB
 }
 
 // NewAPIServer creates a new API server
-func NewAPIServer(l *slog.Logger, db *sql.DB) *Server {
+func NewAPIServer(l *slog.Logger, db *sql.DB, queries *sqlitegen.Queries) *Server {
 	return &Server{
 		l:  l.With(slog.String("component", "http-api")),
+		q:  queries,
 		db: db,
 	}
 }
@@ -156,26 +159,30 @@ func DecodeJSON[T any](r *http.Request) (T, error) {
 
 // GenerateResponses adds standard error responses to the given responses map
 func GenerateResponses(responses map[int]router.ResponseSpec) map[int]router.ResponseSpec {
-	responses[http.StatusRequestEntityTooLarge] = router.ResponseSpec{
-		Description: "Request entity too large",
-		Type:        apitypes.ErrorResponse{},
-		Examples: map[string]any{
-			"Request Entity Too Large": apitypes.ErrorResponse{
-				RequestID: zeroUUID,
-				Message:   "Request body too large (max " + MaxBodyText + ")",
+	if _, exists := responses[http.StatusRequestEntityTooLarge]; !exists {
+		responses[http.StatusRequestEntityTooLarge] = router.ResponseSpec{
+			Description: "Request entity too large",
+			Type:        apitypes.ErrorResponse{},
+			Examples: map[string]any{
+				"Request Entity Too Large": apitypes.ErrorResponse{
+					RequestID: zeroUUID,
+					Message:   "Request body too large (max " + MaxBodyText + ")",
+				},
 			},
-		},
+		}
 	}
 
-	responses[http.StatusInternalServerError] = router.ResponseSpec{
-		Description: "Internal Server Error",
-		Type:        apitypes.ErrorResponse{},
-		Examples: map[string]any{
-			"Internal Server Error": apitypes.ErrorResponse{
-				RequestID: zeroUUID,
-				Message:   "Internal Server Error",
+	if _, exists := responses[http.StatusInternalServerError]; !exists {
+		responses[http.StatusInternalServerError] = router.ResponseSpec{
+			Description: "Internal Server Error",
+			Type:        apitypes.ErrorResponse{},
+			Examples: map[string]any{
+				"Internal Server Error": apitypes.ErrorResponse{
+					RequestID: zeroUUID,
+					Message:   "Internal Server Error",
+				},
 			},
-		},
+		}
 	}
 
 	return responses
