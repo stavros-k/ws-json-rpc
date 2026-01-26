@@ -32,13 +32,24 @@ type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
 const (
 	MaxBodySize     = 1048576 // 1MB
+	MaxBodyText     = "1MB"
 	RequestIDHeader = "X-Request-ID"
 )
 
-func NewHTTPError(statusCode int, message string) *apitypes.HTTPHandlerError {
-	return &apitypes.HTTPHandlerError{
+// NewError creates a simple error response.
+func NewError(statusCode int, message string) *apitypes.ErrorResponse {
+	return &apitypes.ErrorResponse{
 		StatusCode: statusCode,
 		Message:    message,
+	}
+}
+
+// NewValidationError creates a validation error with field-level details.
+func NewValidationError(fieldErrors map[string]string) *apitypes.ErrorResponse {
+	return &apitypes.ErrorResponse{
+		StatusCode: http.StatusBadRequest,
+		Message:    "Validation failed",
+		Errors:     fieldErrors,
 	}
 }
 
@@ -54,7 +65,7 @@ func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 		}
 
 		// This is an expected HTTP error, we return the actual error to the client
-		if httpErr, ok := err.(*apitypes.HTTPHandlerError); ok {
+		if httpErr, ok := err.(*apitypes.ErrorResponse); ok {
 			httpErr.RequestID = requestID
 			l.Warn("handler returned HTTP error", slog.Int("status", httpErr.StatusCode), slog.String("message", httpErr.Message))
 			RespondJSON(w, r, httpErr.StatusCode, httpErr)
@@ -63,9 +74,9 @@ func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 
 		// Internal errors get logged with full context, but we return a generic message to the client
 		l.Error("internal error", utils.ErrAttr(err))
-		RespondJSON(w, r, http.StatusInternalServerError, apitypes.ServerErrorResponse{
+		RespondJSON(w, r, http.StatusInternalServerError, &apitypes.ErrorResponse{
 			RequestID: requestID,
-			Message:   "Internal server error",
+			Message:   "Internal Server Error",
 		})
 	}
 }
@@ -101,29 +112,29 @@ func DecodeJSON[T any](r *http.Request) (T, error) {
 
 		switch {
 		case errors.As(err, &syntaxError):
-			return zero, NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid JSON syntax at position %d", syntaxError.Offset))
+			return zero, NewError(http.StatusBadRequest, fmt.Sprintf("Invalid JSON syntax at position %d", syntaxError.Offset))
 
 		case errors.As(err, &unmarshalTypeError):
-			return zero, NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid type for field '%s'", unmarshalTypeError.Field))
+			return zero, NewError(http.StatusBadRequest, fmt.Sprintf("Invalid type for field '%s'", unmarshalTypeError.Field))
 
 		case errors.Is(err, io.EOF):
-			return zero, NewHTTPError(http.StatusBadRequest, "Request body is empty")
+			return zero, NewError(http.StatusBadRequest, "Request body is empty")
 
 		case errors.Is(err, io.ErrUnexpectedEOF):
-			return zero, NewHTTPError(http.StatusBadRequest, "Malformed JSON")
+			return zero, NewError(http.StatusBadRequest, "Malformed JSON")
 
 		case errors.As(err, &maxBytesError):
-			return zero, NewHTTPError(http.StatusRequestEntityTooLarge, fmt.Sprintf("Request body too large (max %dMB)", MaxBodySize/(1024*1024)))
+			return zero, NewError(http.StatusRequestEntityTooLarge, "Request body too large (max "+MaxBodyText+")")
 
 		case errors.As(err, &extraDataError):
-			return zero, NewHTTPError(http.StatusBadRequest, "Request body contains multiple JSON objects")
+			return zero, NewError(http.StatusBadRequest, "Request body contains multiple JSON objects")
 
 		case strings.Contains(err.Error(), "json: unknown field"):
 			// json package formats this as: json: unknown field "fieldname"
-			return zero, NewHTTPError(http.StatusBadRequest, err.Error())
+			return zero, NewError(http.StatusBadRequest, err.Error())
 
 		default:
-			return zero, NewHTTPError(http.StatusBadRequest, "Invalid JSON payload")
+			return zero, NewError(http.StatusBadRequest, "Invalid JSON payload")
 		}
 	}
 
@@ -136,20 +147,20 @@ var zeroUUID = uuid.MustParse("00000000-0000-0000-0000-000000000000").String()
 func MakeResponses(responses map[int]router.ResponseSpec) map[int]router.ResponseSpec {
 	responses[http.StatusRequestEntityTooLarge] = router.ResponseSpec{
 		Description: "Request entity too large",
-		Type:        apitypes.ServerErrorResponse{},
+		Type:        apitypes.ErrorResponse{},
 		Examples: map[string]any{
-			"Request Entity Too Large": apitypes.ServerErrorResponse{
+			"Request Entity Too Large": apitypes.ErrorResponse{
 				RequestID: zeroUUID,
-				Message:   "Request Entity Too Large",
+				Message:   "Request body too large (max " + MaxBodyText + ")",
 			},
 		},
 	}
 
 	responses[http.StatusInternalServerError] = router.ResponseSpec{
-		Description: "Internal server error",
-		Type:        apitypes.ServerErrorResponse{},
+		Description: "Internal Server Error",
+		Type:        apitypes.ErrorResponse{},
 		Examples: map[string]any{
-			"Internal Server Error": apitypes.ServerErrorResponse{
+			"Internal Server Error": apitypes.ErrorResponse{
 				RequestID: zeroUUID,
 				Message:   "Internal Server Error",
 			},

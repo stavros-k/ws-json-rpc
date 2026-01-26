@@ -6,22 +6,30 @@ import (
 	"ws-json-rpc/backend/pkg/types"
 )
 
-type HTTPHandlerError struct {
-	StatusCode int    `json:"-"`
-	RequestID  string `json:"requestID"`
-	Message    string `json:"message"`
+// ErrorResponse is the unified error response type.
+// It supports both simple errors (just message) and validation errors (message + field errors).
+type ErrorResponse struct {
+	// HTTP status code (internal only, not sent to client)
+	StatusCode int `json:"-"`
+	// Request ID for tracking
+	RequestID string `json:"requestID"`
+	// High-level error message
+	Message string `json:"message"`
+	// Field-level validation errors (optional)
+	Errors map[string]string `json:"errors,omitempty"`
 }
 
-func (e *HTTPHandlerError) Error() string {
+func (e *ErrorResponse) Error() string {
 	return e.Message
 }
 
-// ServerErrorResponse is the response for server errors.
-type ServerErrorResponse struct {
-	// The request ID
-	RequestID string `json:"requestID"`
-	// Human-readable message
-	Message string `json:"message"`
+// AddError adds a field-level error (builder pattern).
+func (e *ErrorResponse) AddError(field, message string) *ErrorResponse {
+	if e.Errors == nil {
+		e.Errors = make(map[string]string)
+	}
+	e.Errors[field] = message
+	return e
 }
 
 // PingResponse is the response to a ping request.
