@@ -5,10 +5,10 @@ import (
 	"log/slog"
 )
 
-type contextKey string
+type contextKey struct{}
 
-const loggerKey contextKey = "logger"
-const requestIDKey contextKey = "requestID"
+var loggerKey = contextKey{}
+var requestIDKey = contextKey{}
 
 // WithLogger adds a request-scoped logger to the context
 func WithLogger(ctx context.Context, logger *slog.Logger) context.Context {

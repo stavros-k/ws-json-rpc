@@ -12,8 +12,6 @@ import (
 	"ws-json-rpc/backend/pkg/apitypes"
 	"ws-json-rpc/backend/pkg/router"
 	"ws-json-rpc/backend/pkg/utils"
-
-	"github.com/google/uuid"
 )
 
 type Server struct {
@@ -82,6 +80,9 @@ func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 }
 
 // RespondJSON sends a JSON response with given status code
+// If data is nil, only headers are sent
+// In case of JSON encoding error, it is logged but not returned to client
+// but the status code is sent already
 func RespondJSON(w http.ResponseWriter, r *http.Request, statusCode int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -92,6 +93,8 @@ func RespondJSON(w http.ResponseWriter, r *http.Request, statusCode int, data an
 
 	l := GetLogger(r.Context())
 	if err := utils.ToJSONStream(w, data); err != nil {
+		// Note that if this fails header has already been written
+		// There's not much we can do at this point
 		l.Error("failed to encode JSON response", utils.ErrAttr(err))
 	}
 }
@@ -129,7 +132,7 @@ func DecodeJSON[T any](r *http.Request) (T, error) {
 		case errors.As(err, &extraDataError):
 			return zero, NewError(http.StatusBadRequest, "Request body contains multiple JSON objects")
 
-		case strings.Contains(err.Error(), "json: unknown field"):
+		case strings.HasPrefix(err.Error(), "json: unknown field"):
 			// json package formats this as: json: unknown field "fieldname"
 			return zero, NewError(http.StatusBadRequest, err.Error())
 
@@ -141,7 +144,7 @@ func DecodeJSON[T any](r *http.Request) (T, error) {
 	return res, nil
 }
 
-var zeroUUID = uuid.MustParse("00000000-0000-0000-0000-000000000000").String()
+const zeroUUID = "00000000-0000-0000-0000-000000000000"
 
 // MakeResponses adds standard error responses to the given responses map
 func MakeResponses(responses map[int]router.ResponseSpec) map[int]router.ResponseSpec {

@@ -6,6 +6,6 @@ import (
 )
 
 func (s *Server) Ping(w http.ResponseWriter, r *http.Request) error {
-	RespondJSON(w, r, 200, apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK})
+	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK})
 	return nil
 }
