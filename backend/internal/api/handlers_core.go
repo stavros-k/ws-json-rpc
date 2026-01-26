@@ -7,7 +7,16 @@ import (
 )
 
 func (s *Server) Ping(w http.ResponseWriter, r *http.Request) error {
-	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK})
+	if err := s.db.Ping(); err != nil {
+		RespondJSON(w, r, http.StatusInternalServerError, apitypes.PingResponse{
+			Message: "Database unreachable", Status: apitypes.PingStatusError,
+		})
+		return nil
+	}
+
+	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{
+		Message: "Pong", Status: apitypes.PingStatusOK,
+	})
 	return nil
 }
 
@@ -25,6 +34,13 @@ func RegisterPing(path string, rb *router.RouteBuilder, s *Server) {
 				Type:        apitypes.PingResponse{},
 				Examples: map[string]any{
 					"Success": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
+				},
+			},
+			500: {
+				Description: "Database unreachable",
+				Type:        apitypes.PingResponse{},
+				Examples: map[string]any{
+					"Database unreachable": apitypes.PingResponse{Message: "Database unreachable", Status: apitypes.PingStatusError},
 				},
 			},
 		}),

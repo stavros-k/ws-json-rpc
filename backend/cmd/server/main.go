@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,10 +13,13 @@ import (
 	"time"
 	"ws-json-rpc/backend/internal/api"
 	"ws-json-rpc/backend/internal/app"
+	sqlitegen "ws-json-rpc/backend/internal/database/sqlite/gen"
 	"ws-json-rpc/backend/pkg/router"
 	"ws-json-rpc/backend/pkg/router/generate"
 	"ws-json-rpc/backend/pkg/utils"
 	"ws-json-rpc/web"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -42,7 +46,13 @@ func main() {
 	fatalIfErr(logger, err)
 
 	// TODO: Pass DB
-	server := api.NewAPIServer(logger, nil)
+	// open sqlite database
+	db, err := sql.Open("sqlite3", config.Database)
+	fatalIfErr(logger, err)
+	defer db.Close()
+	queries := sqlitegen.New(db)
+
+	server := api.NewAPIServer(logger, db, queries)
 
 	rb, err := router.NewRouteBuilder(logger, collector)
 	fatalIfErr(logger, err)
