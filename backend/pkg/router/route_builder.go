@@ -40,7 +40,7 @@ func (rb *RouteBuilder) Must(err error) {
 }
 
 // Route adds a new route group to the router.
-func (rb *RouteBuilder) Route(path string, fn func(rb *RouteBuilder)) *RouteBuilder {
+func (rb *RouteBuilder) Route(path string, fn func(rb *RouteBuilder)) {
 	oldPrefix := rb.prefix
 	rb.prefix += path
 
@@ -57,8 +57,6 @@ func (rb *RouteBuilder) Route(path string, fn func(rb *RouteBuilder)) *RouteBuil
 	})
 
 	rb.prefix = oldPrefix
-
-	return rb
 }
 
 // Use adds middlewares to the router.

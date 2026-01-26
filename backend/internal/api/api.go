@@ -14,25 +14,35 @@ import (
 	"ws-json-rpc/backend/pkg/utils"
 )
 
+const (
+	MaxBodySize     = 1048576 // 1MB
+	MaxBodyText     = "1MB"
+	RequestIDHeader = "X-Request-ID"
+)
+
+const (
+	CoreGroup = "Core"
+	TeamGroup = "Team"
+)
+
+const zeroUUID = "00000000-0000-0000-0000-000000000000"
+
+// HandlerFunc is a HTTP handler that can return an error
+type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
+
+// Server represents the API server
 type Server struct {
 	l  *slog.Logger
 	db *sql.DB
 }
 
+// NewAPIServer creates a new API server
 func NewAPIServer(l *slog.Logger, db *sql.DB) *Server {
 	return &Server{
 		l:  l.With(slog.String("component", "http-api")),
 		db: db,
 	}
 }
-
-type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
-
-const (
-	MaxBodySize     = 1048576 // 1MB
-	MaxBodyText     = "1MB"
-	RequestIDHeader = "X-Request-ID"
-)
 
 // NewError creates a simple error response.
 func NewError(statusCode int, message string) *apitypes.ErrorResponse {
@@ -144,10 +154,8 @@ func DecodeJSON[T any](r *http.Request) (T, error) {
 	return res, nil
 }
 
-const zeroUUID = "00000000-0000-0000-0000-000000000000"
-
-// MakeResponses adds standard error responses to the given responses map
-func MakeResponses(responses map[int]router.ResponseSpec) map[int]router.ResponseSpec {
+// GenerateResponses adds standard error responses to the given responses map
+func GenerateResponses(responses map[int]router.ResponseSpec) map[int]router.ResponseSpec {
 	responses[http.StatusRequestEntityTooLarge] = router.ResponseSpec{
 		Description: "Request entity too large",
 		Type:        apitypes.ErrorResponse{},
