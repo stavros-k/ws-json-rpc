@@ -252,9 +252,7 @@
         }
       ],
       "enumValues": null,
-      "references": [
-        "Record"
-      ],
+      "references": [],
       "referencedBy": null,
       "usedBy": [
         {

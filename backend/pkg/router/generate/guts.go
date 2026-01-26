@@ -23,6 +23,11 @@ import (
 	"golang.org/x/text/language"
 )
 
+const (
+	// tsBuiltinRecord is the TypeScript built-in utility type for representing maps/dictionaries
+	tsBuiltinRecord = "Record"
+)
+
 // OpenAPICollector handles TypeScript AST parsing and metadata extraction from Go types.
 // It walks the TypeScript AST to extract comprehensive type information in a single pass.
 type OpenAPICollector struct {
@@ -655,8 +660,19 @@ func (g *OpenAPICollector) collectExpressionTypeReferences(expr bindings.Express
 
 	switch e := expr.(type) {
 	case *bindings.ReferenceType:
+		refName := e.Name.String()
+
+		// Special case: Record<K, V> is a built-in TypeScript utility type for maps
+		// Don't add it to references, but recurse into its arguments
+		if refName == tsBuiltinRecord {
+			for _, arg := range e.Arguments {
+				g.collectExpressionTypeReferences(arg, refs)
+			}
+			return
+		}
+
 		// Direct reference to a named type
-		refs[e.Name.String()] = struct{}{}
+		refs[refName] = struct{}{}
 
 	case *bindings.UnionType:
 		// Union: A | B (used for enums and nullable types)
@@ -793,9 +809,14 @@ func (g *OpenAPICollector) isNullableUnion(union *bindings.UnionType) (bool, bin
 
 	for _, t := range union.Types {
 		serialized, err := g.serializeExpressionType(t)
-		if err == nil && (serialized == "null" || serialized == "undefined") {
-			hasNull = true
+		if err != nil {
+			// If we can't serialize a type, we can't determine if it's a valid nullable union
+			g.l.Debug("Failed to serialize union member", slog.String("type", fmt.Sprintf("%T", t)), slog.String("error", err.Error()))
+			return false, nil
+		}
 
+		if serialized == "null" || serialized == "undefined" {
+			hasNull = true
 			continue
 		}
 
@@ -913,7 +934,7 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		refName := e.Name.String()
 
 		// Special case: Record<K, V> types (Go maps)
-		if refName == "Record" && len(e.Arguments) == 2 {
+		if refName == tsBuiltinRecord && len(e.Arguments) == 2 {
 			// Analyze the value type (second argument)
 			valueType, err := g.analyzeFieldType(e.Arguments[1])
 			if err != nil {
