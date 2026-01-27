@@ -21,10 +21,6 @@ import { PubBadge } from "./pub-badge";
 import { SidebarSection } from "./sidebar-section";
 import { SubBadge } from "./sub-badge";
 
-// Icon wrappers for badges (ignore className prop)
-const PubIcon = ({ className }: { className?: string }) => <PubBadge border={false} />;
-const SubIcon = ({ className }: { className?: string }) => <SubBadge border={false} />;
-
 const SidebarLink = ({
     title,
     href,
@@ -189,13 +185,13 @@ export const Sidebar = () => {
                     title='MQTT Publications'
                     type='mqtt-publication'
                     overviewHref='/api/mqtt/publications'
-                    icon={PubIcon}
+                    icon={() => <PubBadge border={false} />}
                 />
                 <SidebarSection
                     title='MQTT Subscriptions'
                     type='mqtt-subscription'
                     overviewHref='/api/mqtt/subscriptions'
-                    icon={SubIcon}
+                    icon={() => <SubBadge border={false} />}
                 />
                 <SidebarSection
                     title='Types'
