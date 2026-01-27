@@ -1326,7 +1326,7 @@
       "summary": "Publish temperature reading",
       "description": "Publishes temperature readings from IoT devices. The device ID is part of the topic path.",
       "group": "Telemetry",
-      "deprecated": "",
+      "deprecated": "This will be removed in the feature.",
       "qos": 1,
       "retained": true,
       "type": "TemperatureReading",

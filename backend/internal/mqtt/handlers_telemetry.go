@@ -17,6 +17,7 @@ func RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
 		Summary:     "Publish temperature reading",
 		Description: "Publishes temperature readings from IoT devices. The device ID is part of the topic path.",
 		Group:       "Telemetry",
+		Deprecated:  "This will be removed in the feature.",
 		TopicParameters: []mqtt.TopicParameter{
 			{
 				Name:        "deviceID",
