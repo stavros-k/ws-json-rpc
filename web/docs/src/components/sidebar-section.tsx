@@ -45,7 +45,13 @@ type SidebarSectionProps = Readonly<{
     iconColor?: string;
 }>;
 
-export const SidebarSection = ({ title, type, overviewHref, icon: Icon, iconColor = 'text-text-secondary' }: SidebarSectionProps) => {
+export const SidebarSection = ({
+    title,
+    type,
+    overviewHref,
+    icon: Icon,
+    iconColor = "text-text-secondary",
+}: SidebarSectionProps) => {
     const items = getItems(type);
 
     // Special grouping for types based on HTTP/MQTT usage
@@ -58,9 +64,7 @@ export const SidebarSection = ({ title, type, overviewHref, icon: Icon, iconColo
                   }
 
                   const usedBy = typeData.usedBy;
-                  const usedByHTTP = usedBy.some((usage) =>
-                      ["request", "response", "parameter"].includes(usage.role)
-                  );
+                  const usedByHTTP = usedBy.some((usage) => ["request", "response", "parameter"].includes(usage.role));
                   const usedByMQTT = usedBy.some((usage) =>
                       ["mqtt_publication", "mqtt_subscription"].includes(usage.role)
                   );

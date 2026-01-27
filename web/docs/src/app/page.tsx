@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { TbApi, TbCode, TbDatabase, TbFileDescription } from "react-icons/tb";
-import { VerbBadge } from "@/components/verb-badge";
-import { docs, getAllMQTTPublications, getAllMQTTSubscriptions, getAllOperations } from "@/data/api";
 import { PubBadge } from "@/components/pub-badge";
 import { SubBadge } from "@/components/sub-badge";
+import { VerbBadge } from "@/components/verb-badge";
+import { docs, getAllMQTTPublications, getAllMQTTSubscriptions, getAllOperations } from "@/data/api";
 
 // Calculate total number of operations
 const operations = getAllOperations();

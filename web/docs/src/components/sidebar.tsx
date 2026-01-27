@@ -3,10 +3,10 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { FaDatabase } from "react-icons/fa";
 import { IoHome } from "react-icons/io5";
 import { MdChevronLeft, MdChevronRight } from "react-icons/md";
-import { TbCode, TbFileDescription, TbApi } from "react-icons/tb";
-import { FaDatabase } from "react-icons/fa";
+import { TbApi, TbCode, TbFileDescription } from "react-icons/tb";
 import {
     docs,
     getAllMQTTPublications,
@@ -17,8 +17,8 @@ import {
 } from "@/data/api";
 import { CodeThemeToggle } from "./code-theme-toggle";
 import { ConnectionIndicator } from "./connection-indicator";
-import { SidebarSection } from "./sidebar-section";
 import { PubBadge } from "./pub-badge";
+import { SidebarSection } from "./sidebar-section";
 import { SubBadge } from "./sub-badge";
 
 // Icon wrappers for badges (ignore className prop)
@@ -29,7 +29,7 @@ const SidebarLink = ({
     title,
     href,
     icon: Icon,
-    iconColor = 'text-text-secondary',
+    iconColor = "text-text-secondary",
 }: {
     title: string;
     href: Route;

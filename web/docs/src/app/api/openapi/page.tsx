@@ -22,9 +22,8 @@ export default function OpenAPISpec() {
 
                 <div className='text-text-tertiary mb-8 pb-6 border-b-2 border-border-primary'>
                     <p>
-                        This page displays the complete OpenAPI 3.0 specification for the API.
-                        You can use this specification with tools like Swagger UI, Postman, or other
-                        OpenAPI-compatible clients.
+                        This page displays the complete OpenAPI 3.0 specification for the API. You can use this
+                        specification with tools like Swagger UI, Postman, or other OpenAPI-compatible clients.
                     </p>
                 </div>
             </div>
