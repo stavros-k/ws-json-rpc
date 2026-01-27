@@ -1,21 +1,21 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
-import { docs, type EventKeys, type ItemType, type MethodKeys, type TypeKeys } from "@/data/api";
+import { docs, getAllOperations, type ItemType, type TypeKeys } from "@/data/api";
 import { groupBy } from "@/data/utils";
 import { getItemData } from "./sidebar";
 import { SidebarGroupCollapsible } from "./sidebar-group-collapsible";
 import { SidebarItem } from "./sidebar-item-client";
 
 function getItems(type: ItemType) {
-    if (type === "method") {
-        return Object.keys(docs.methods) as MethodKeys[];
-    } else if (type === "event") {
-        return Object.keys(docs.events) as EventKeys[];
-    } else if (type === "type") {
+    if (type === "type") {
         return Object.keys(docs.types) as TypeKeys[];
     }
-    throw new Error("Invalid type");
+    if (type === "operation") {
+        const operations = getAllOperations();
+        return operations.map((op) => op.operationID);
+    }
+    throw new Error(`Invalid type: ${type}`);
 }
 
 type SidebarSectionProps = Readonly<{
