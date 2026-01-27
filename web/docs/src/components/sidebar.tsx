@@ -1,7 +1,14 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { IoHome } from "react-icons/io5";
-import { docs, getAllOperations, type ItemType, type TypeKeys } from "@/data/api";
+import {
+    docs,
+    getAllMQTTPublications,
+    getAllMQTTSubscriptions,
+    getAllOperations,
+    type ItemType,
+    type TypeKeys,
+} from "@/data/api";
 import { CodeThemeToggle } from "./code-theme-toggle";
 import { ConnectionIndicator } from "./connection-indicator";
 import { SidebarSection } from "./sidebar-section";
@@ -50,9 +57,19 @@ export const Sidebar = () => {
                     scrollbarColor: "rgb(100 116 139) transparent",
                 }}>
                 <SidebarSection
-                    title='Operations'
+                    title='HTTP Operations'
                     type='operation'
                     overviewHref='/api/operations'
+                />
+                <SidebarSection
+                    title='MQTT Publications'
+                    type='mqtt-publication'
+                    overviewHref='/api/mqtt/publications'
+                />
+                <SidebarSection
+                    title='MQTT Subscriptions'
+                    type='mqtt-subscription'
+                    overviewHref='/api/mqtt/subscriptions'
                 />
                 <SidebarSection
                     title='Types'
@@ -109,6 +126,38 @@ export function getItemData({ type, itemName }: getItemProps) {
             method: operation.method,
             path: operation.path,
             group: operation.group || "",
+        } as const;
+    }
+    if (type === "mqtt-publication") {
+        const allPublications = getAllMQTTPublications();
+        const publication = allPublications.find((pub) => pub.operationID === itemName);
+        if (!publication) {
+            throw new Error(`MQTT Publication ${itemName} not found`);
+        }
+        return {
+            type: type,
+            name: itemName,
+            urlPath: `/api/mqtt/publication/${itemName}`,
+            data: publication,
+            title: publication.operationID,
+            topic: publication.topic,
+            group: publication.group || "",
+        } as const;
+    }
+    if (type === "mqtt-subscription") {
+        const allSubscriptions = getAllMQTTSubscriptions();
+        const subscription = allSubscriptions.find((sub) => sub.operationID === itemName);
+        if (!subscription) {
+            throw new Error(`MQTT Subscription ${itemName} not found`);
+        }
+        return {
+            type: type,
+            name: itemName,
+            urlPath: `/api/mqtt/subscription/${itemName}`,
+            data: subscription,
+            title: subscription.operationID,
+            topic: subscription.topic,
+            group: subscription.group || "",
         } as const;
     }
     throw new Error(`Invalid type: ${type}`);

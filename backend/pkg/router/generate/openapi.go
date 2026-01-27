@@ -197,11 +197,17 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	}, nil
 }
 
-// buildComponentSchemas builds OpenAPI component schemas from all extracted types.
+// buildComponentSchemas builds OpenAPI component schemas from HTTP-related types only.
+// Types are marked as HTTP-related during RegisterRoute.
 func buildComponentSchemas(doc *APIDocumentation) (openapi3.Schemas, error) {
 	schemas := make(openapi3.Schemas)
 
+	// Build schemas only for types marked as used by HTTP
 	for name, typeInfo := range doc.Types {
+		if !typeInfo.UsedByHTTP {
+			continue
+		}
+
 		schema, err := toOpenAPISchema(typeInfo)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build schema for %s: %w", name, err)

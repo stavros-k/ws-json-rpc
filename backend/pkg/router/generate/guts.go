@@ -35,10 +35,12 @@ type OpenAPICollector struct {
 	vm       *bindings.Bindings
 	l        *slog.Logger
 
-	types         map[string]*TypeInfo                           // Extracted type information, keyed by type name
-	httpOps       map[string]*RouteInfo                          // Registered HTTP operations, keyed by operationID
-	database      Database                                       // Database schema and stats
-	externalTypes map[*bindings.LiteralKeyword]*ExternalTypeInfo // External type metadata, keyed by keyword pointer
+	types             map[string]*TypeInfo                           // Extracted type information, keyed by type name
+	httpOps           map[string]*RouteInfo                          // Registered HTTP operations, keyed by operationID
+	mqttPublications  map[string]*MQTTPublicationInfo                // Registered MQTT publications, keyed by operationID
+	mqttSubscriptions map[string]*MQTTSubscriptionInfo               // Registered MQTT subscriptions, keyed by operationID
+	database          Database                                       // Database schema and stats
+	externalTypes     map[*bindings.LiteralKeyword]*ExternalTypeInfo // External type metadata, keyed by keyword pointer
 
 	docsFilePath        string // Path to write documentation JSON file
 	openAPISpecFilePath string // Path to write OpenAPI YAML file
@@ -86,6 +88,8 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 		l:                   l,
 		types:               make(map[string]*TypeInfo),
 		httpOps:             make(map[string]*RouteInfo),
+		mqttPublications:    make(map[string]*MQTTPublicationInfo),
+		mqttSubscriptions:   make(map[string]*MQTTSubscriptionInfo),
 		externalTypes:       make(map[*bindings.LiteralKeyword]*ExternalTypeInfo),
 		docsFilePath:        opts.DocsFileOutputPath,
 		openAPISpecFilePath: opts.OpenAPISpecOutputPath,
@@ -222,6 +226,9 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 		route.Request.TypeName = typeName
 
+		// Mark as used by HTTP (for OpenAPI spec filtering)
+		g.markTypeAsHTTP(typeName)
+
 		if err := g.RegisterJSONRepresentation(route.Request.TypeValue); err != nil {
 			return fmt.Errorf("failed to register JSON representation for request type: %w", err)
 		}
@@ -244,6 +251,9 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 		resp.TypeName = typeName
 
+		// Mark as used by HTTP (for OpenAPI spec filtering)
+		g.markTypeAsHTTP(typeName)
+
 		if err := g.RegisterJSONRepresentation(resp.TypeValue); err != nil {
 			return fmt.Errorf("failed to register JSON representation for response type: %w", err)
 		}
@@ -264,10 +274,168 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 		}
 
 		route.Parameters[i].TypeName = typeName
+
+		// Mark as used by HTTP (for OpenAPI spec filtering)
+		g.markTypeAsHTTP(typeName)
 	}
 
 	// Add operation keyed by operationID
 	g.httpOps[route.OperationID] = route
+
+	return nil
+}
+
+// markTypeAsHTTP recursively marks a type and all its referenced types as used by HTTP.
+func (g *OpenAPICollector) markTypeAsHTTP(typeName string) {
+	if typeName == "" {
+		return
+	}
+
+	typeInfo, exists := g.types[typeName]
+	if !exists {
+		return // Primitive or external type
+	}
+
+	// Skip if already marked
+	if typeInfo.UsedByHTTP {
+		return
+	}
+
+	// Mark this type
+	typeInfo.UsedByHTTP = true
+
+	// Recursively mark referenced types
+	for _, ref := range typeInfo.References {
+		g.markTypeAsHTTP(ref)
+	}
+}
+
+// markTypeAsMQTT recursively marks a type and all its referenced types as used by MQTT.
+func (g *OpenAPICollector) markTypeAsMQTT(typeName string) {
+	if typeName == "" {
+		return
+	}
+
+	typeInfo, exists := g.types[typeName]
+	if !exists {
+		return // Primitive or external type
+	}
+
+	// Skip if already marked
+	if typeInfo.UsedByMQTT {
+		return
+	}
+
+	// Mark this type
+	typeInfo.UsedByMQTT = true
+
+	// Recursively mark referenced types
+	for _, ref := range typeInfo.References {
+		g.markTypeAsMQTT(ref)
+	}
+}
+
+// stringifyMQTTExamples converts MQTT examples to stringified JSON.
+func stringifyMQTTExamples(examples map[string]any) map[string]string {
+	stringified := make(map[string]string)
+	for name, example := range examples {
+		stringified[name] = string(utils.MustToJSONIndent(example))
+	}
+	return stringified
+}
+
+func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) error {
+	// Validate operationID is unique
+	if _, exists := g.mqttPublications[pub.OperationID]; exists {
+		return fmt.Errorf("duplicate MQTT publication operationID: %s", pub.OperationID)
+	}
+	if _, exists := g.mqttSubscriptions[pub.OperationID]; exists {
+		return fmt.Errorf("duplicate operationID (MQTT subscription exists): %s", pub.OperationID)
+	}
+	if _, exists := g.httpOps[pub.OperationID]; exists {
+		return fmt.Errorf("duplicate operationID (HTTP operation exists): %s", pub.OperationID)
+	}
+
+	// Extract type name from zero value using reflection
+	if reflect.ValueOf(pub.TypeValue).IsZero() {
+		return fmt.Errorf("MessageType must not be zero value in publication [%s]", pub.OperationID)
+	}
+
+	typeName, err := extractTypeNameFromValue(pub.TypeValue)
+	if err != nil {
+		return fmt.Errorf("failed to extract message type name: %w", err)
+	}
+
+	pub.TypeName = typeName
+
+	// Mark as used by MQTT
+	g.markTypeAsMQTT(typeName)
+
+	// Register JSON representation
+	if err := g.RegisterJSONRepresentation(pub.TypeValue); err != nil {
+		return fmt.Errorf("failed to register JSON representation for message type: %w", err)
+	}
+
+	// Register examples
+	for _, ex := range pub.Examples {
+		if err := g.RegisterJSONRepresentation(ex); err != nil {
+			return fmt.Errorf("failed to register JSON representation for example: %w", err)
+		}
+	}
+
+	// Stringify examples
+	pub.ExamplesStringified = stringifyMQTTExamples(pub.Examples)
+
+	// Store publication
+	g.mqttPublications[pub.OperationID] = pub
+
+	return nil
+}
+
+func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) error {
+	// Validate operationID is unique
+	if _, exists := g.mqttSubscriptions[sub.OperationID]; exists {
+		return fmt.Errorf("duplicate MQTT subscription operationID: %s", sub.OperationID)
+	}
+	if _, exists := g.mqttPublications[sub.OperationID]; exists {
+		return fmt.Errorf("duplicate operationID (MQTT publication exists): %s", sub.OperationID)
+	}
+	if _, exists := g.httpOps[sub.OperationID]; exists {
+		return fmt.Errorf("duplicate operationID (HTTP operation exists): %s", sub.OperationID)
+	}
+
+	// Extract type name from zero value using reflection
+	if reflect.ValueOf(sub.TypeValue).IsZero() {
+		return fmt.Errorf("MessageType must not be zero value in subscription [%s]", sub.OperationID)
+	}
+
+	typeName, err := extractTypeNameFromValue(sub.TypeValue)
+	if err != nil {
+		return fmt.Errorf("failed to extract message type name: %w", err)
+	}
+
+	sub.TypeName = typeName
+
+	// Mark as used by MQTT
+	g.markTypeAsMQTT(typeName)
+
+	// Register JSON representation
+	if err := g.RegisterJSONRepresentation(sub.TypeValue); err != nil {
+		return fmt.Errorf("failed to register JSON representation for message type: %w", err)
+	}
+
+	// Register examples
+	for _, ex := range sub.Examples {
+		if err := g.RegisterJSONRepresentation(ex); err != nil {
+			return fmt.Errorf("failed to register JSON representation for example: %w", err)
+		}
+	}
+
+	// Stringify examples
+	sub.ExamplesStringified = stringifyMQTTExamples(sub.Examples)
+
+	// Store subscription
+	g.mqttSubscriptions[sub.OperationID] = sub
 
 	return nil
 }
@@ -555,11 +723,13 @@ func (g *OpenAPICollector) extractEnumType(name string, enum *bindings.Enum) (*T
 
 func (g *OpenAPICollector) getDocumentation() *APIDocumentation {
 	return &APIDocumentation{
-		Types:          g.types,
-		HTTPOperations: g.httpOps,
-		Database:       g.database,
-		Info:           g.apiInfo,
-		OpenAPISpec:    g.openapiSpec,
+		Types:             g.types,
+		HTTPOperations:    g.httpOps,
+		MQTTPublications:  g.mqttPublications,
+		MQTTSubscriptions: g.mqttSubscriptions,
+		Database:          g.database,
+		Info:              g.apiInfo,
+		OpenAPISpec:       g.openapiSpec,
 	}
 }
 
@@ -660,6 +830,7 @@ func (g *OpenAPICollector) buildReferencedBy() {
 
 // buildUsedBy tracks which operations use each type.
 func (g *OpenAPICollector) buildUsedBy() {
+	// Track HTTP operations
 	for _, route := range g.httpOps {
 		// Track request type
 		if route.Request != nil {
@@ -675,6 +846,16 @@ func (g *OpenAPICollector) buildUsedBy() {
 		for _, param := range route.Parameters {
 			g.addUsage(param.TypeName, route.OperationID, "parameter")
 		}
+	}
+
+	// Track MQTT publications
+	for _, pub := range g.mqttPublications {
+		g.addUsage(pub.TypeName, pub.OperationID, "mqtt_publication")
+	}
+
+	// Track MQTT subscriptions
+	for _, sub := range g.mqttSubscriptions {
+		g.addUsage(sub.TypeName, sub.OperationID, "mqtt_subscription")
 	}
 }
 

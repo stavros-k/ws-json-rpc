@@ -18,9 +18,10 @@ export const SidebarItem = ({ type, item }: Props) => {
     const { urlPath, data, title } = item;
     const isDeprecated = !!data?.deprecated;
     const isActive = currentName === item.name;
-    const method = "method" in item ? item.method : undefined;
-    const path = "path" in item ? item.path : undefined;
-    const kind = data && "kind" in data ? data.kind : undefined;
+    const method = item.method;
+    const path = item.path;
+    const topic = item.topic;
+    const kind = "kind" in data ? data.kind : undefined;
 
     return (
         <Link
@@ -50,6 +51,28 @@ export const SidebarItem = ({ type, item }: Props) => {
                         <RoutePath
                             path={path}
                             className='text-xs text-text-muted font-mono truncate'
+                        />
+                    </div>
+                )}
+                {type === "mqtt-publication" && topic && (
+                    <div className='flex items-center gap-1'>
+                        <span className='px-1.5 py-0.5 rounded text-[10px] font-bold bg-accent-blue-bg text-accent-blue-text border border-accent-blue-border'>
+                            PUB
+                        </span>
+                        <RoutePath
+                            path={topic}
+                            className='text-xs text-accent-blue-light font-mono truncate'
+                        />
+                    </div>
+                )}
+                {type === "mqtt-subscription" && topic && (
+                    <div className='flex items-center gap-1'>
+                        <span className='px-1.5 py-0.5 rounded text-[10px] font-bold bg-accent-green-bg text-accent-green-text border border-accent-green-border'>
+                            SUB
+                        </span>
+                        <RoutePath
+                            path={topic}
+                            className='text-xs text-accent-green-light font-mono truncate'
                         />
                     </div>
                 )}

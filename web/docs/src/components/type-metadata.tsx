@@ -2,7 +2,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
 import type { EnumValue, FieldMetadata, TypeData, UsedByItem } from "@/data/api";
-import { docs, getAllOperations } from "@/data/api";
+import { docs, getAllMQTTPublications, getAllMQTTSubscriptions, getAllOperations } from "@/data/api";
 import { RoutePath } from "./route-path";
 import { VerbBadge } from "./verb-badge";
 
@@ -31,6 +31,8 @@ function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
     if (!usedBy || usedBy.length === 0) return null;
 
     const allOperations = getAllOperations();
+    const allPublications = getAllMQTTPublications();
+    const allSubscriptions = getAllMQTTSubscriptions();
 
     // Group by operationID and collect roles
     const grouped = usedBy.reduce(
@@ -47,48 +49,136 @@ function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
     return (
         <div>
             <h2 className='text-xl font-semibold mb-4 text-text-primary'>Used By Operations</h2>
-            <p className='text-sm text-text-tertiary mb-4'>This type is used by the following API operations:</p>
+            <p className='text-sm text-text-tertiary mb-4'>This type is used by the following operations:</p>
             <div className='grid grid-cols-1 gap-3'>
                 {Object.entries(grouped).map(([operationID, roles]) => {
-                    const operation = allOperations.find((op) => op.operationID === operationID);
-                    return (
-                        <Link
-                            key={operationID}
-                            href={`/api/operation/${operationID}` as Route}
-                            className='block p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary hover:border-accent-blue transition-all duration-200 hover:shadow-md'>
-                            <div className='flex flex-col gap-2'>
-                                <div className='flex items-center justify-between gap-3'>
-                                    <div className='flex items-center gap-2 min-w-0'>
-                                        {operation && (
-                                            <>
-                                                <VerbBadge
-                                                    verb={operation.method}
-                                                    size='xs'
-                                                />
-                                                <span className='text-sm font-mono font-semibold truncate'>
-                                                    <RoutePath path={operation.path} />
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                    <div className='flex flex-wrap gap-1 shrink-0'>
-                                        {Array.from(roles).map((role) => (
-                                            <span
-                                                key={role}
-                                                className={`text-xs px-2 py-0.5 rounded font-medium ${
-                                                    role === "request"
-                                                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                                        : "bg-green-500/20 text-green-400 border border-green-500/30"
-                                                }`}>
-                                                {role}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                                <code className='text-xs text-text-muted font-mono'>{operationID}</code>
-                            </div>
-                        </Link>
+                    // Check roles to determine operation type
+                    const isHTTP = Array.from(roles).some((role) =>
+                        ["request", "response", "parameter"].includes(role)
                     );
+                    const isMQTTPublication = roles.has("mqtt_publication");
+                    const isMQTTSubscription = roles.has("mqtt_subscription");
+
+                    // HTTP Operation
+                    if (isHTTP) {
+                        const operation = allOperations.find((op) => op.operationID === operationID);
+                        return (
+                            <Link
+                                key={operationID}
+                                href={`/api/operation/${operationID}` as Route}
+                                className='block p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary hover:border-accent-green-light transition-all duration-200 hover:shadow-md'>
+                                <div className='flex flex-col gap-2'>
+                                    <div className='flex items-center justify-between gap-3'>
+                                        <div className='flex items-center gap-2 min-w-0'>
+                                            {operation && (
+                                                <>
+                                                    <VerbBadge
+                                                        verb={operation.method}
+                                                        size='xs'
+                                                    />
+                                                    <span className='text-sm font-mono font-semibold truncate'>
+                                                        <RoutePath path={operation.path} />
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className='flex flex-wrap gap-1 shrink-0'>
+                                            {Array.from(roles).map((role) => (
+                                                <span
+                                                    key={role}
+                                                    className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                                        role === "request"
+                                                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                                            : "bg-green-500/20 text-green-400 border border-green-500/30"
+                                                    }`}>
+                                                    {role}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <code className='text-xs text-text-muted font-mono'>{operationID}</code>
+                                </div>
+                            </Link>
+                        );
+                    }
+
+                    // MQTT Publication
+                    if (isMQTTPublication) {
+                        const publication = allPublications.find((pub) => pub.operationID === operationID);
+                        return (
+                            <Link
+                                key={operationID}
+                                href={`/api/mqtt/publication/${operationID}` as Route}
+                                className='block p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary hover:border-accent-blue-light transition-all duration-200 hover:shadow-md'>
+                                <div className='flex flex-col gap-2'>
+                                    <div className='flex items-center justify-between gap-3'>
+                                        <div className='flex items-center gap-2 min-w-0'>
+                                            {publication && (
+                                                <>
+                                                    <span className='px-2 py-0.5 rounded text-xs font-bold bg-accent-blue-bg text-accent-blue-text border border-accent-blue-border'>
+                                                        PUB
+                                                    </span>
+                                                    <span className='text-sm font-mono font-semibold truncate'>
+                                                        <RoutePath path={publication.topic} />
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className='flex flex-wrap gap-1 shrink-0'>
+                                            {Array.from(roles).map((role) => (
+                                                <span
+                                                    key={role}
+                                                    className='text-xs px-2 py-0.5 rounded font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30'>
+                                                    {role}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <code className='text-xs text-text-muted font-mono'>{operationID}</code>
+                                </div>
+                            </Link>
+                        );
+                    }
+
+                    // MQTT Subscription
+                    if (isMQTTSubscription) {
+                        const subscription = allSubscriptions.find((sub) => sub.operationID === operationID);
+                        return (
+                            <Link
+                                key={operationID}
+                                href={`/api/mqtt/subscription/${operationID}` as Route}
+                                className='block p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary hover:border-accent-green-light transition-all duration-200 hover:shadow-md'>
+                                <div className='flex flex-col gap-2'>
+                                    <div className='flex items-center justify-between gap-3'>
+                                        <div className='flex items-center gap-2 min-w-0'>
+                                            {subscription && (
+                                                <>
+                                                    <span className='px-2 py-0.5 rounded text-xs font-bold bg-accent-green-bg text-accent-green-text border border-accent-green-border'>
+                                                        SUB
+                                                    </span>
+                                                    <span className='text-sm font-mono font-semibold truncate'>
+                                                        <RoutePath path={subscription.topic} />
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className='flex flex-wrap gap-1 shrink-0'>
+                                            {Array.from(roles).map((role) => (
+                                                <span
+                                                    key={role}
+                                                    className='text-xs px-2 py-0.5 rounded font-medium bg-green-500/20 text-green-400 border border-green-500/30'>
+                                                    {role}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <code className='text-xs text-text-muted font-mono'>{operationID}</code>
+                                </div>
+                            </Link>
+                        );
+                    }
+
+                    return null;
                 })}
             </div>
         </div>

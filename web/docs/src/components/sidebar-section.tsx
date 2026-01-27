@@ -1,7 +1,14 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
-import { docs, getAllOperations, type ItemType, type TypeKeys } from "@/data/api";
+import {
+    docs,
+    getAllMQTTPublications,
+    getAllMQTTSubscriptions,
+    getAllOperations,
+    type ItemType,
+    type TypeKeys,
+} from "@/data/api";
 import { groupBy } from "@/data/utils";
 import { getItemData } from "./sidebar";
 import { SidebarGroupCollapsible } from "./sidebar-group-collapsible";
@@ -14,6 +21,14 @@ function getItems(type: ItemType) {
     if (type === "operation") {
         const operations = getAllOperations();
         return operations.map((op) => op.operationID);
+    }
+    if (type === "mqtt-publication") {
+        const publications = getAllMQTTPublications();
+        return publications.map((pub) => pub.operationID);
+    }
+    if (type === "mqtt-subscription") {
+        const subscriptions = getAllMQTTSubscriptions();
+        return subscriptions.map((sub) => sub.operationID);
     }
     throw new Error(`Invalid type: ${type}`);
 }

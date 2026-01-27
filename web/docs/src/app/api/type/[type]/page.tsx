@@ -7,6 +7,7 @@ import { Deprecation } from "@/components/deprecation";
 import { TabbedCardWrapper } from "@/components/tabbed-card-wrapper-client";
 import { TypeKindBadge } from "@/components/type-kind-badge";
 import { TypeMetadata } from "@/components/type-metadata";
+import { UsageBadges } from "@/components/usage-badges";
 import { docs, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
@@ -40,10 +41,16 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
             <div>
                 <div className='flex items-center justify-between gap-3 mb-3'>
                     <h1 className='text-4xl font-bold text-text-primary'>{type}</h1>
-                    <TypeKindBadge kind={data.kind} />
+                    <div className='flex items-center gap-3'>
+                        <UsageBadges usedBy={data.usedBy || undefined} />
+                        <TypeKindBadge kind={data.kind} />
+                    </div>
                 </div>
 
-                <Deprecation deprecated={data.deprecated} />
+                <Deprecation
+                    deprecated={data.deprecated}
+                    itemType='type'
+                />
 
                 <div className='text-text-tertiary mb-8 pb-6 border-b-2 border-border-primary'>
                     <p>{data.description}</p>

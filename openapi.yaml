@@ -10,20 +10,6 @@ components:
             required:
                 - name
             type: object
-        CreateUserRequest:
-            additionalProperties: false
-            description: CreateUserRequest is the request to create a new user.
-            properties:
-                password:
-                    description: Password to create
-                    type: string
-                username:
-                    description: Username to create
-                    type: string
-            required:
-                - username
-                - password
-            type: object
         CreateUserResponse:
             additionalProperties: false
             description: CreateUserResponse is the response to a create user request.

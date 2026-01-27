@@ -14,7 +14,9 @@ import (
 	"ws-json-rpc/backend/internal/api"
 	"ws-json-rpc/backend/internal/app"
 	sqlitegen "ws-json-rpc/backend/internal/database/sqlite/gen"
+	mqttapi "ws-json-rpc/backend/internal/mqtt"
 	"ws-json-rpc/backend/internal/services"
+	"ws-json-rpc/backend/pkg/mqtt"
 	"ws-json-rpc/backend/pkg/router"
 	"ws-json-rpc/backend/pkg/router/generate"
 	"ws-json-rpc/backend/pkg/utils"
@@ -75,6 +77,34 @@ func main() {
 		})
 	})
 
+	// Create MQTT builder and register MQTT operations (if enabled or in generate mode)
+	mqttServer := mqttapi.NewMQTTServer(logger, services)
+
+	mqttBuilder, err := mqtt.NewMQTTBuilder(logger, collector, mqtt.MQTTBuilderOptions{
+		BrokerURL: config.MQTTBroker,
+		ClientID:  config.MQTTClientID,
+		Username:  config.MQTTUsername,
+		Password:  config.MQTTPassword,
+	})
+	fatalIfErr(logger, err)
+
+	// Register MQTT operations
+	logger.Info("Registering MQTT operations...")
+
+	// Telemetry operations
+	mqttapi.RegisterTemperaturePublish(mqttBuilder)
+	mqttapi.RegisterTemperatureSubscribe(mqttBuilder, mqttServer)
+	mqttapi.RegisterSensorTelemetryPublish(mqttBuilder)
+	mqttapi.RegisterSensorTelemetrySubscribe(mqttBuilder, mqttServer)
+
+	// Control operations
+	mqttapi.RegisterDeviceCommandPublish(mqttBuilder)
+	mqttapi.RegisterDeviceCommandSubscribe(mqttBuilder, mqttServer)
+	mqttapi.RegisterDeviceStatusPublish(mqttBuilder)
+	mqttapi.RegisterDeviceStatusSubscribe(mqttBuilder, mqttServer)
+
+	logger.Info("MQTT operations registered successfully")
+
 	if config.Generate {
 		if err := collector.Generate(); err != nil {
 			fatalIfErr(logger, fmt.Errorf("failed to generate API documentation: %w", err))
@@ -84,6 +114,11 @@ func main() {
 
 		return
 	}
+
+	if err := mqttBuilder.Connect(); err != nil {
+		fatalIfErr(logger, fmt.Errorf("failed to connect to MQTT broker: %w", err))
+	}
+	defer mqttBuilder.Disconnect()
 
 	web.DocsApp().Register(rb.Router(), logger)
 	rb.Router().HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +162,7 @@ func main() {
 	logger.Info("http server shutdown complete")
 }
 
-func getCollector(c *app.Config, l *slog.Logger) (generate.RouteMetadataCollector, error) {
+func getCollector(c *app.Config, l *slog.Logger) (generate.MetadataCollector, error) {
 	if !c.Generate {
 		return &generate.NoopCollector{}, nil
 	}

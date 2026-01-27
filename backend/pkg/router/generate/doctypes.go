@@ -13,6 +13,8 @@ type TypeInfo struct {
 	UsedBy          []UsageInfo     `json:"usedBy"`          // Operations/routes that use this type
 	Representations Representations `json:"representations"` // JSON, JSON Schema, and TypeScript representations of the type
 	GoType          string          `json:"-"`               // Original Go type (for external types)
+	UsedByHTTP      bool            `json:"usedByHTTP"`      // Whether this type is used by HTTP operations
+	UsedByMQTT      bool            `json:"usedByMQTT"`      // Whether this type is used by MQTT operations
 }
 
 type Representations struct {
@@ -98,13 +100,56 @@ type ResponseInfo struct {
 	Examples            map[string]any    `json:"-"`        // Keyed by example name
 }
 
+// MQTTTopicParameter describes a parameter in an MQTT topic pattern.
+type MQTTTopicParameter struct {
+	Name        string `json:"name"`        // Parameter name (e.g., "deviceID")
+	Description string `json:"description"` // Parameter description
+}
+
+// MQTTPublicationInfo contains metadata about an MQTT publication.
+type MQTTPublicationInfo struct {
+	OperationID         string                `json:"operationID"`
+	Topic               string                `json:"topic"`               // Parameterized topic (e.g., devices/{deviceID}/temperature)
+	TopicMQTT           string                `json:"topicMQTT"`           // MQTT wildcard format (e.g., devices/+/temperature)
+	TopicParameters     []MQTTTopicParameter  `json:"topicParameters"`     // Topic parameter descriptions
+	Summary             string                `json:"summary"`
+	Description         string                `json:"description"`
+	Group               string                `json:"group"`
+	Deprecated          string                `json:"deprecated"`
+	QoS                 byte                  `json:"qos"`
+	Retained            bool                  `json:"retained"`
+	TypeName            string                `json:"type"`     // Extracted type name (set by generator)
+	TypeValue           any                   `json:"-"`        // Zero value of the type (set by mqtt builder)
+	ExamplesStringified map[string]string     `json:"examples"` // Keyed by example name
+	Examples            map[string]any        `json:"-"`        // Keyed by example name
+}
+
+// MQTTSubscriptionInfo contains metadata about an MQTT subscription.
+type MQTTSubscriptionInfo struct {
+	OperationID         string                `json:"operationID"`
+	Topic               string                `json:"topic"`               // Parameterized topic (e.g., devices/{deviceID}/temperature)
+	TopicMQTT           string                `json:"topicMQTT"`           // MQTT wildcard format (e.g., devices/+/temperature)
+	TopicParameters     []MQTTTopicParameter  `json:"topicParameters"`     // Topic parameter descriptions
+	Summary             string                `json:"summary"`
+	Description         string                `json:"description"`
+	Group               string                `json:"group"`
+	Deprecated          string                `json:"deprecated"`
+	QoS                 byte                  `json:"qos"`
+	TypeName            string                `json:"type"`     // Extracted type name (set by generator)
+	TypeValue           any                   `json:"-"`        // Zero value of the type (set by mqtt builder)
+	ExamplesStringified map[string]string     `json:"examples"` // Keyed by example name
+	Examples            map[string]any        `json:"-"`        // Keyed by example name
+}
+
 // APIDocumentation is the complete API documentation structure.
 type APIDocumentation struct {
-	Info           APIInfo               `json:"info"`
-	Types          map[string]*TypeInfo  `json:"types"`          // Keyed by type name
-	HTTPOperations map[string]*RouteInfo `json:"httpOperations"` // Keyed by operationID
-	Database       Database              `json:"database"`
-	OpenAPISpec    string                `json:"openapiSpec"` // Stringified OpenAPI YAML specification
+	Info              APIInfo                          `json:"info"`
+	Types             map[string]*TypeInfo             `json:"types"`             // Keyed by type name
+	HTTPOperations    map[string]*RouteInfo            `json:"httpOperations"`    // Keyed by operationID
+	MQTTPublications  map[string]*MQTTPublicationInfo  `json:"mqttPublications"`  // Keyed by operationID
+	MQTTSubscriptions map[string]*MQTTSubscriptionInfo `json:"mqttSubscriptions"` // Keyed by operationID
+	Database          Database                         `json:"database"`
+	OpenAPISpec       string                           `json:"openapiSpec"` // Stringified OpenAPI YAML specification
 }
 
 // APIInfo contains API metadata.

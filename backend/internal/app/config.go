@@ -18,6 +18,11 @@ const (
 	EnvDataDir   EnvKey = "DATA_DIR"
 	EnvLogLevel  EnvKey = "LOG_LEVEL"
 	EnvLogToFile EnvKey = "LOG_TO_FILE"
+
+	EnvMQTTBroker   EnvKey = "MQTT_BROKER"
+	EnvMQTTClientID EnvKey = "MQTT_CLIENT_ID"
+	EnvMQTTUsername EnvKey = "MQTT_USERNAME"
+	EnvMQTTPassword EnvKey = "MQTT_PASSWORD"
 )
 
 type Config struct {
@@ -27,6 +32,12 @@ type Config struct {
 	Database  string
 	LogLevel  slog.Leveler
 	LogOutput io.Writer
+
+	// MQTT configuration
+	MQTTBroker   string
+	MQTTClientID string
+	MQTTUsername string
+	MQTTPassword string
 }
 
 func NewConfig() (*Config, error) {
@@ -54,12 +65,16 @@ func NewConfig() (*Config, error) {
 	}
 
 	return &Config{
-		Port:      getIntEnv(EnvPort, 8080),
-		Generate:  getBoolEnv(EnvGenerate, false),
-		DataDir:   dataDir,
-		Database:  dbPath,
-		LogLevel:  getLogLevelEnv(EnvLogLevel, slog.LevelInfo),
-		LogOutput: logOutput,
+		Port:         getIntEnv(EnvPort, 8080),
+		Generate:     getBoolEnv(EnvGenerate, false),
+		DataDir:      dataDir,
+		Database:     dbPath,
+		LogLevel:     getLogLevelEnv(EnvLogLevel, slog.LevelInfo),
+		LogOutput:    logOutput,
+		MQTTBroker:   getStringEnv(EnvMQTTBroker, "tcp://localhost:1883"),
+		MQTTClientID: getStringEnv(EnvMQTTClientID, "ws-json-rpc-server"),
+		MQTTUsername: getStringEnv(EnvMQTTUsername, ""),
+		MQTTPassword: getStringEnv(EnvMQTTPassword, ""),
 	}, nil
 }
 
