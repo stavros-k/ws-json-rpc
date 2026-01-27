@@ -14,6 +14,7 @@ import (
 	"ws-json-rpc/backend/internal/api"
 	"ws-json-rpc/backend/internal/app"
 	sqlitegen "ws-json-rpc/backend/internal/database/sqlite/gen"
+	"ws-json-rpc/backend/internal/services"
 	"ws-json-rpc/backend/pkg/router"
 	"ws-json-rpc/backend/pkg/router/generate"
 	"ws-json-rpc/backend/pkg/utils"
@@ -52,7 +53,9 @@ func main() {
 	defer db.Close()
 	queries := sqlitegen.New(db)
 
-	server := api.NewAPIServer(logger, db, queries)
+	services := services.NewServices(logger, db, queries)
+
+	server := api.NewAPIServer(logger, services)
 
 	rb, err := router.NewRouteBuilder(logger, collector)
 	fatalIfErr(logger, err)

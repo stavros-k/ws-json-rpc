@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	sqlitegen "ws-json-rpc/backend/internal/database/sqlite/gen"
+	"ws-json-rpc/backend/internal/services"
 	"ws-json-rpc/backend/pkg/apitypes"
 	"ws-json-rpc/backend/pkg/router"
 	"ws-json-rpc/backend/pkg/utils"
@@ -33,17 +32,15 @@ type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
 // Server represents the API server
 type Server struct {
-	l  *slog.Logger
-	q  *sqlitegen.Queries
-	db *sql.DB
+	l   *slog.Logger
+	svc *services.Services
 }
 
 // NewAPIServer creates a new API server
-func NewAPIServer(l *slog.Logger, db *sql.DB, queries *sqlitegen.Queries) *Server {
+func NewAPIServer(l *slog.Logger, svc *services.Services) *Server {
 	return &Server{
-		l:  l.With(slog.String("component", "http-api")),
-		q:  queries,
-		db: db,
+		l:   l.With(slog.String("component", "http-api")),
+		svc: svc,
 	}
 }
 

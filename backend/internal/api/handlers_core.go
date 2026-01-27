@@ -7,7 +7,7 @@ import (
 )
 
 func (s *Server) Ping(w http.ResponseWriter, r *http.Request) error {
-	if err := s.db.Ping(); err != nil {
+	if !s.svc.Core.Ping() {
 		RespondJSON(w, r, http.StatusInternalServerError, apitypes.PingResponse{
 			Message: "Database unreachable", Status: apitypes.PingStatusError,
 		})
