@@ -1,6 +1,4 @@
 # TODO
 
-- [x] Design the MQTT registration process + Docs (see MQTT_DESIGN.md)
-- [ ] Implement MQTT handler (pkg/rpc/mqtt.go)
-- [ ] Create a go-ws-client package (for testing purposes)
-- [ ] Create Arduino MQTT client example
+- [ ] Have MQTT retry connection without blocking the api server
+- [ ] Ping service should also check if mqtt is connected
