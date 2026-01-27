@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TbApi, TbCode, TbDatabase } from "react-icons/tb";
+import { TbApi, TbCode, TbDatabase, TbFileDescription } from "react-icons/tb";
 import { VerbBadge } from "@/components/verb-badge";
 import { docs, getAllOperations } from "@/data/api";
 
@@ -48,7 +48,7 @@ export default function Home() {
             {/* API Overview */}
             <div className='w-full px-6 py-12 lg:px-8'>
                 <h2 className='text-3xl font-bold text-text-primary text-center mb-10'>API Overview</h2>
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto'>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto'>
                     {/* Operations Card */}
                     <Link
                         href='/api/operations'
@@ -96,6 +96,22 @@ export default function Home() {
                             </div>
                             <div className='text-4xl font-bold text-info-text mb-2'>{tableCount}</div>
                             <p className='text-xs text-text-secondary'>Table{tableCount !== 1 ? "s" : ""}</p>
+                        </div>
+                    </Link>
+
+                    {/* OpenAPI Specification Card */}
+                    <Link
+                        href='/api/openapi'
+                        className='block'>
+                        <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-warning-border cursor-pointer hover:scale-105'>
+                            <div className='flex items-center gap-3 mb-4'>
+                                <div className='w-12 h-12 bg-warning-bg rounded-xl flex items-center justify-center shadow-md'>
+                                    <TbFileDescription className='w-7 h-7 text-warning-text' />
+                                </div>
+                                <div className='text-lg font-bold text-text-primary'>OpenAPI</div>
+                            </div>
+                            <div className='text-4xl font-bold text-warning-text mb-2'>3.0</div>
+                            <p className='text-xs text-text-secondary'>Specification</p>
                         </div>
                     </Link>
                 </div>

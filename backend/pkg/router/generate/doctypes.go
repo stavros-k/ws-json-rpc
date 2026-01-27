@@ -23,12 +23,13 @@ type Representations struct {
 
 // FieldType represents the structured type information for a field.
 type FieldType struct {
-	Kind      string     `json:"kind"`      // "primitive", "array", "reference", "enum", "object", "unknown"
-	Type      string     `json:"type"`      // Base type: "string", "User", etc.
-	Format    string     `json:"format"`    // OpenAPI format (e.g., "date-time")
-	Required  bool       `json:"required"`  // Whether the field is required
-	Nullable  bool       `json:"nullable"`  // For nullable types (T | null)
-	ItemsType *FieldType `json:"itemsType"` // For arrays: type of array elements
+	Kind                 string     `json:"kind"`                 // "primitive", "array", "reference", "enum", "object", "unknown"
+	Type                 string     `json:"type"`                 // Base type: "string", "User", etc.
+	Format               string     `json:"format"`               // OpenAPI format (e.g., "date-time")
+	Required             bool       `json:"required"`             // Whether the field is required
+	Nullable             bool       `json:"nullable"`             // For nullable types (T | null)
+	ItemsType            *FieldType `json:"itemsType"`            // For arrays: type of array elements
+	AdditionalProperties *FieldType `json:"additionalProperties"` // For maps: type of map values
 }
 
 // FieldInfo describes a field in a struct (used in high-level API documentation).
@@ -103,6 +104,7 @@ type APIDocumentation struct {
 	Types          map[string]*TypeInfo  `json:"types"`          // Keyed by type name
 	HTTPOperations map[string]*RouteInfo `json:"httpOperations"` // Keyed by operationID
 	Database       Database              `json:"database"`
+	OpenAPISpec    string                `json:"openapiSpec"` // Stringified OpenAPI YAML specification
 }
 
 // APIInfo contains API metadata.

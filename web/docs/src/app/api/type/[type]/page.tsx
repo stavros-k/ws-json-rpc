@@ -79,17 +79,24 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                             ),
                     },
                     {
-                        title: "JSON (Zero Value)",
+                        title: "JSON",
                         icon: <TbFileCode className='w-8 h-8 text-lang-json' />,
                         code:
                             "representations" in data &&
                             data.representations?.json &&
                             data.representations.json.trim() ? (
-                                <CodeWrapper
-                                    code={data.representations.json}
-                                    lang='json'
-                                    label={{ text: type }}
-                                />
+                                <>
+                                    <CodeWrapper
+                                        code={data.representations.json}
+                                        lang='json'
+                                        label={{ text: type }}
+                                    />
+                                    <div className='mb-4 p-3 bg-bg-tertiary rounded-lg border border-border-secondary'>
+                                        <p className='text-xs text-text-muted'>
+                                            Example representation - actual values may vary
+                                        </p>
+                                    </div>
+                                </>
                             ) : (
                                 <p className='text-sm text-text-tertiary p-4'>No JSON available for this type.</p>
                             ),

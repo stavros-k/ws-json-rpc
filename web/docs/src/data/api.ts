@@ -7,6 +7,7 @@ type ApiDataTypes = Docs["types"];
 
 export type OperationID = keyof HTTPOperations;
 export type OperationData = HTTPOperations[OperationID];
+export type Response = OperationData["responses"][keyof OperationData["responses"]];
 
 // Get union of all HTTP methods across all operations
 export type HTTPMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";

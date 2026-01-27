@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"ws-json-rpc/backend/pkg/utils"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -32,6 +33,11 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 		Deprecated:  typeInfo.Deprecated != "",
 		Properties:  make(openapi3.Schemas),
 		Required:    []string{},
+	}
+
+	// Structured objects should not allow additional properties
+	schema.AdditionalProperties = openapi3.AdditionalProperties{
+		Has: utils.Ptr(false),
 	}
 
 	for _, field := range typeInfo.Fields {
@@ -116,6 +122,21 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 		}
 		if ft.Nullable {
 			schema.Nullable = true
+		}
+
+		// Handle additionalProperties for map types
+		if ft.AdditionalProperties != nil {
+			additionalPropsSchema, err := buildSchemaFromFieldType(*ft.AdditionalProperties, "")
+			if err != nil {
+				return nil, fmt.Errorf("failed to build additionalProperties schema: %w", err)
+			}
+			schema.AdditionalProperties = openapi3.AdditionalProperties{
+				Schema: additionalPropsSchema,
+			}
+		} else {
+			schema.AdditionalProperties = openapi3.AdditionalProperties{
+				Has: utils.Ptr(false),
+			}
 		}
 
 		return &openapi3.SchemaRef{Value: schema}, nil

@@ -40,24 +40,23 @@ func (rb *RouteBuilder) Must(err error) {
 }
 
 // Route adds a new route group to the router.
-func (rb *RouteBuilder) Route(path string, fn func(rb *RouteBuilder)) *RouteBuilder {
+func (rb *RouteBuilder) Route(path string, fn func(rb *RouteBuilder)) {
 	oldPrefix := rb.prefix
 	rb.prefix += path
 
 	// Isolate sub-router
 	rb.router.Group(func(r chi.Router) {
 		subRB := &RouteBuilder{
-			router:    r,
-			collector: rb.collector,
-			prefix:    rb.prefix,
-			l:         rb.l.With(slog.String("prefix", rb.prefix)),
+			router:       r,
+			collector:    rb.collector,
+			operationIDs: rb.operationIDs,
+			prefix:       rb.prefix,
+			l:            rb.l.With(slog.String("prefix", rb.prefix)),
 		}
 		fn(subRB)
 	})
 
 	rb.prefix = oldPrefix
-
-	return rb
 }
 
 // Use adds middlewares to the router.

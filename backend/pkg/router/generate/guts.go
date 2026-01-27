@@ -23,6 +23,11 @@ import (
 	"golang.org/x/text/language"
 )
 
+const (
+	// tsBuiltinRecord is the TypeScript built-in utility type for representing maps/dictionaries
+	tsBuiltinRecord = "Record"
+)
+
 // OpenAPICollector handles TypeScript AST parsing and metadata extraction from Go types.
 // It walks the TypeScript AST to extract comprehensive type information in a single pass.
 type OpenAPICollector struct {
@@ -38,7 +43,8 @@ type OpenAPICollector struct {
 	docsFilePath        string // Path to write documentation JSON file
 	openAPISpecFilePath string // Path to write OpenAPI YAML file
 
-	apiInfo APIInfo
+	apiInfo     APIInfo
+	openapiSpec string
 }
 
 type OpenAPICollectorOptions struct {
@@ -139,6 +145,13 @@ func (g *OpenAPICollector) Generate() error {
 		return fmt.Errorf("failed to write OpenAPI spec: %w", err)
 	}
 
+	// read the written OpenAPI spec file
+	yamlBytes, err := os.ReadFile(g.openAPISpecFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to read OpenAPI spec file: %w", err)
+	}
+	g.openapiSpec = string(yamlBytes)
+
 	g.l.Info("OpenAPI spec written", slog.String("file", g.openAPISpecFilePath))
 
 	// Write docs JSON
@@ -169,6 +182,28 @@ func stringifyRequestExamples(r *RequestInfo) *RequestInfo {
 	return r
 }
 
+// RegisterJSONRepresentation registers the JSON representation of a type value.
+// It makes sure to only store the largest representation for the type.
+func (g *OpenAPICollector) RegisterJSONRepresentation(value any) error {
+	typeName, err := extractTypeNameFromValue(value)
+	if err != nil {
+		return fmt.Errorf("failed to extract type name: %w", err)
+	}
+
+	typeInfo, ok := g.types[typeName]
+	if !ok {
+		return fmt.Errorf("type %s not found", typeName)
+	}
+	representation := string(utils.MustToJSONIndent(value))
+
+	// If stored representation is empty or shorter, update it
+	if typeInfo.Representations.JSON == "" || len(representation) > len(typeInfo.Representations.JSON) {
+		typeInfo.Representations.JSON = representation
+	}
+
+	return nil
+}
+
 func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	// Validate operationID is unique
 	if _, exists := g.httpOps[route.OperationID]; exists {
@@ -177,6 +212,9 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 	// Extract type names from zero values using reflection, and stringify examples
 	if route.Request != nil {
+		if reflect.ValueOf(route.Request.TypeValue).IsZero() {
+			return fmt.Errorf("Request Type must not be zero value in route [%s]", route.OperationID)
+		}
 		typeName, err := extractTypeNameFromValue(route.Request.TypeValue)
 		if err != nil {
 			return fmt.Errorf("failed to extract request type name: %w", err)
@@ -184,9 +222,13 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 		route.Request.TypeName = typeName
 
-		if typeInfo, ok := g.types[typeName]; ok {
-			if typeInfo.Representations.JSON == "" {
-				typeInfo.Representations.JSON = string(utils.MustToJSONIndent(route.Request.TypeValue))
+		if err := g.RegisterJSONRepresentation(route.Request.TypeValue); err != nil {
+			return fmt.Errorf("failed to register JSON representation for request type: %w", err)
+		}
+
+		for _, ex := range route.Request.Examples {
+			if err := g.RegisterJSONRepresentation(ex); err != nil {
+				return fmt.Errorf("failed to register JSON representation for request example: %w", err)
 			}
 		}
 
@@ -195,7 +237,6 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 	for statusCode, response := range route.Responses {
 		resp := response
-
 		typeName, err := extractTypeNameFromValue(resp.TypeValue)
 		if err != nil {
 			return fmt.Errorf("failed to extract response type name: %w", err)
@@ -203,9 +244,13 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 		resp.TypeName = typeName
 
-		if typeInfo, ok := g.types[typeName]; ok {
-			if typeInfo.Representations.JSON == "" {
-				typeInfo.Representations.JSON = string(utils.MustToJSONIndent(resp.TypeValue))
+		if err := g.RegisterJSONRepresentation(resp.TypeValue); err != nil {
+			return fmt.Errorf("failed to register JSON representation for response type: %w", err)
+		}
+
+		for _, ex := range resp.Examples {
+			if err := g.RegisterJSONRepresentation(ex); err != nil {
+				return fmt.Errorf("failed to register JSON representation for response example: %w", err)
 			}
 		}
 
@@ -514,6 +559,7 @@ func (g *OpenAPICollector) getDocumentation() *APIDocumentation {
 		HTTPOperations: g.httpOps,
 		Database:       g.database,
 		Info:           g.apiInfo,
+		OpenAPISpec:    g.openapiSpec,
 	}
 }
 
@@ -655,8 +701,19 @@ func (g *OpenAPICollector) collectExpressionTypeReferences(expr bindings.Express
 
 	switch e := expr.(type) {
 	case *bindings.ReferenceType:
+		refName := e.Name.String()
+
+		// Special case: Record<K, V> is a built-in TypeScript utility type for maps
+		// Don't add it to references, but recurse into its arguments
+		if refName == tsBuiltinRecord {
+			for _, arg := range e.Arguments {
+				g.collectExpressionTypeReferences(arg, refs)
+			}
+			return
+		}
+
 		// Direct reference to a named type
-		refs[e.Name.String()] = struct{}{}
+		refs[refName] = struct{}{}
 
 	case *bindings.UnionType:
 		// Union: A | B (used for enums and nullable types)
@@ -793,9 +850,14 @@ func (g *OpenAPICollector) isNullableUnion(union *bindings.UnionType) (bool, bin
 
 	for _, t := range union.Types {
 		serialized, err := g.serializeExpressionType(t)
-		if err == nil && (serialized == "null" || serialized == "undefined") {
-			hasNull = true
+		if err != nil {
+			// If we can't serialize a type, we can't determine if it's a valid nullable union
+			g.l.Debug("Failed to serialize union member", slog.String("type", fmt.Sprintf("%T", t)), slog.String("error", err.Error()))
+			return false, nil
+		}
 
+		if serialized == "null" || serialized == "undefined" {
+			hasNull = true
 			continue
 		}
 
@@ -912,6 +974,22 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		// Reference types
 		refName := e.Name.String()
 
+		// Special case: Record<K, V> types (Go maps)
+		if refName == tsBuiltinRecord && len(e.Arguments) == 2 {
+			// Analyze the value type (second argument)
+			valueType, err := g.analyzeFieldType(e.Arguments[1])
+			if err != nil {
+				return FieldType{}, fmt.Errorf("failed to analyze Record value type: %w", err)
+			}
+
+			// Return object type with additionalProperties
+			return FieldType{
+				Kind:                 FieldKindObject,
+				Type:                 "object",
+				AdditionalProperties: &valueType,
+			}, nil
+		}
+
 		// Reject generic types (we don't support them in Go->TS serialization)
 		if len(e.Arguments) > 0 {
 			return FieldType{}, fmt.Errorf("generic types are not supported: %s<%d type arguments>", refName, len(e.Arguments))
@@ -934,6 +1012,22 @@ func (g *OpenAPICollector) analyzeFieldType(expr bindings.ExpressionType) (Field
 		// Check for nullable pattern FIRST: T | null or null | T or T | undefined
 		isNullable, nonNullType := g.isNullableUnion(e)
 		if !isNullable {
+			// Unwrap single-element unions and analyze the inner type
+			if len(e.Types) == 1 {
+				return g.analyzeFieldType(e.Types[0])
+			}
+
+			// Log the union types for debugging
+			var typeStrings []string
+			for _, t := range e.Types {
+				serialized, err := g.serializeExpressionType(t)
+				if err != nil {
+					typeStrings = append(typeStrings, fmt.Sprintf("%T (error: %v)", t, err))
+				} else {
+					typeStrings = append(typeStrings, serialized)
+				}
+			}
+			g.l.Error("Non-nullable union type detected", slog.String("types", strings.Join(typeStrings, " | ")))
 			// Non-nullable unions shouldn't exist in Go->TS serialization
 			// (Go enums use bindings.Enum, not union literals)
 			return FieldType{}, errors.New("unexpected non-nullable union type - Go->TS serialization should only have nullable unions (T | null)")

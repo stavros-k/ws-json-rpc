@@ -8,7 +8,7 @@ import { CollapsibleResponse } from "@/components/collapsible-response";
 import { Deprecation } from "@/components/deprecation";
 import { Group } from "@/components/group";
 import { OperationHeader } from "@/components/operation-header";
-import { getAllOperations, getTypeJson, type TypeKeys } from "@/data/api";
+import { getAllOperations, getTypeJson, type Response, type TypeKeys } from "@/data/api";
 
 export function generateStaticParams() {
     const operations = getAllOperations();
@@ -91,6 +91,11 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                     {operation.request.description && (
                         <p className='text-sm text-text-tertiary mt-3'>{operation.request.description}</p>
                     )}
+                    {requestJson && (
+                        <div className='mb-4 p-3 bg-bg-tertiary rounded-lg border border-border-secondary'>
+                            <p className='text-xs text-text-muted'>Example representation - actual values may vary</p>
+                        </div>
+                    )}
                 </CardBoxWrapper>
             )}
 
@@ -98,29 +103,30 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                 <CardBoxWrapper title='Responses'>
                     <div className='space-y-4'>
                         {Object.entries(operation.responses).map(([statusCode, response]) => {
-                            const responseJson = getTypeJson(response.type as TypeKeys);
+                            const resp = response as Response;
 
                             return (
                                 <CollapsibleResponse
                                     key={statusCode}
                                     statusCode={statusCode}
-                                    description={response.description}>
-                                    <CodeWrapper
-                                        label={{
-                                            text: response.type,
-                                            href: `/api/type/${response.type}` as Route,
-                                        }}
-                                        code={responseJson}
-                                        noCodeMessage='No response body'
-                                        lang='json'
-                                    />
-                                    {response.examples && Object.keys(response.examples).length > 0 && (
-                                        <div className='mt-6 space-y-3'>
-                                            {Object.entries(response.examples).map(([exampleKey, exampleValue]) => (
+                                    description={resp.description}>
+                                    <div className='mb-4'>
+                                        <div className='text-sm font-semibold text-text-tertiary mb-2'>
+                                            Type:{" "}
+                                            <a
+                                                href={`/api/type/${resp.type}`}
+                                                className='text-accent-blue-hover hover:text-accent-blue-light transition-colors'>
+                                                {resp.type}
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {resp.examples && Object.keys(resp.examples).length > 0 ? (
+                                        <div className='space-y-3'>
+                                            {Object.entries(resp.examples).map(([exampleKey, exampleValue]) => (
                                                 <CollapsibleCard
                                                     key={exampleKey}
                                                     title={exampleKey}
-                                                    defaultOpen={false}>
+                                                    defaultOpen={Object.keys(resp.examples).length === 1}>
                                                     <CodeWrapper
                                                         label={{ text: "Example" }}
                                                         code={exampleValue}
@@ -129,6 +135,10 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                                                 </CollapsibleCard>
                                             ))}
                                         </div>
+                                    ) : (
+                                        <p className='text-sm text-text-tertiary p-4 bg-bg-tertiary rounded-lg border border-border-secondary'>
+                                            No examples available for this response.
+                                        </p>
                                     )}
                                 </CollapsibleResponse>
                             );

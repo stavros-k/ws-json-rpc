@@ -3,8 +3,8 @@ import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
 import type { EnumValue, FieldMetadata, TypeData, UsedByItem } from "@/data/api";
 import { docs, getAllOperations } from "@/data/api";
-import { VerbBadge } from "./verb-badge";
 import { RoutePath } from "./route-path";
+import { VerbBadge } from "./verb-badge";
 
 interface TypeMetadataProps {
     data: TypeData;
@@ -133,6 +133,9 @@ function FieldItem({ field }: { field: FieldMetadata }) {
     const actualType = "typeInfo" in field && field.typeInfo ? field.typeInfo.type : displayType;
     const isClickableType = isTypeLink(actualType);
 
+    // Check if this field has additionalProperties (map/dictionary type)
+    const additionalProps = field.typeInfo?.additionalProperties;
+
     return (
         <div className='p-4 rounded-lg bg-bg-secondary border-2 border-border-primary hover:border-accent-blue/50 transition-all duration-200'>
             <div className='flex items-start justify-between mb-2 gap-4'>
@@ -172,6 +175,31 @@ function FieldItem({ field }: { field: FieldMetadata }) {
 
             {"description" in field && field.description && (
                 <p className='text-sm text-text-tertiary mt-2'>{String(field.description)}</p>
+            )}
+
+            {additionalProps && (
+                <div className='mt-3 p-3 rounded-lg bg-bg-tertiary border border-border-primary'>
+                    <div className='flex items-center gap-2 mb-1'>
+                        <span className='text-xs font-semibold text-text-secondary uppercase tracking-wide'>
+                            Map/Dictionary Type
+                        </span>
+                    </div>
+                    <div className='flex items-center gap-2 text-sm'>
+                        <span className='text-text-tertiary'>Values:</span>
+                        {isTypeLink(additionalProps.type) ? (
+                            <Link
+                                href={`/api/type/${additionalProps.type}`}
+                                className='inline-flex items-center gap-1 px-2 py-0.5 rounded bg-type-reference/10 text-type-reference hover:bg-type-reference/20 border border-type-reference/30 hover:border-type-reference font-mono text-xs font-semibold transition-all duration-200'>
+                                {additionalProps.type}
+                                <BiLinkExternal className='w-3 h-3' />
+                            </Link>
+                        ) : (
+                            <code className='px-2 py-0.5 rounded bg-type-primitive/10 text-type-primitive border border-type-primitive/30 font-mono text-xs font-semibold'>
+                                {additionalProps.type}
+                            </code>
+                        )}
+                    </div>
+                </div>
             )}
         </div>
     );
