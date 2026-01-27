@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 	"ws-json-rpc/backend/internal/database/sqlite"
-	"ws-json-rpc/backend/pkg/database"
+	"ws-json-rpc/backend/pkg/migrator"
 	"ws-json-rpc/backend/pkg/utils"
 )
 
@@ -29,7 +29,7 @@ func (g *OpenAPICollector) GenerateDatabaseSchema(schemaOutputPath string) (stri
 	}()
 
 	// Create a migrator for the temporary database
-	mig, err := database.NewMigrator(g.l, sqlite.GetMigrationsFS(), tempDBFile.Name())
+	mig, err := migrator.New(g.l, sqlite.GetMigrationsFS(), tempDBFile.Name())
 	if err != nil {
 		return "", fmt.Errorf("failed to create migrator: %w", err)
 	}

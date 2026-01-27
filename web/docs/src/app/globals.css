@@ -147,6 +147,20 @@ html[data-theme="light"] {
     --opacity-deprecated-hover: 0.85;
 }
 
+/* Shiki Code Block Styles */
+.shiki {
+    overflow-x: auto;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 2px solid var(--color-border-primary);
+}
+
+.shiki code {
+    display: block;
+    width: fit-content;
+    min-width: 100%;
+}
+
 /* Shiki Colors - based on code theme */
 
 html[data-code-theme="light"] .shiki,

@@ -43,7 +43,8 @@ type OpenAPICollector struct {
 	docsFilePath        string // Path to write documentation JSON file
 	openAPISpecFilePath string // Path to write OpenAPI YAML file
 
-	apiInfo APIInfo
+	apiInfo     APIInfo
+	openapiSpec string
 }
 
 type OpenAPICollectorOptions struct {
@@ -143,6 +144,13 @@ func (g *OpenAPICollector) Generate() error {
 	if err := g.writeSpecYAML(g.openAPISpecFilePath); err != nil {
 		return fmt.Errorf("failed to write OpenAPI spec: %w", err)
 	}
+
+	// read the written OpenAPI spec file
+	yamlBytes, err := os.ReadFile(g.openAPISpecFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to read OpenAPI spec file: %w", err)
+	}
+	g.openapiSpec = string(yamlBytes)
 
 	g.l.Info("OpenAPI spec written", slog.String("file", g.openAPISpecFilePath))
 
@@ -519,6 +527,7 @@ func (g *OpenAPICollector) getDocumentation() *APIDocumentation {
 		HTTPOperations: g.httpOps,
 		Database:       g.database,
 		Info:           g.apiInfo,
+		OpenAPISpec:    g.openapiSpec,
 	}
 }
 

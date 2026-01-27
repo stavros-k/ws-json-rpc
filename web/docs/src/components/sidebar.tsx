@@ -64,6 +64,10 @@ export const Sidebar = () => {
                     title='Database Schema'
                     href='/api/database/schema'
                 />
+                <SidebarLink
+                    title='OpenAPI Specification'
+                    href='/api/openapi'
+                />
             </div>
         </aside>
     );

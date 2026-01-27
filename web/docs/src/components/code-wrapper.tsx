@@ -25,12 +25,14 @@ export const CodeWrapper = ({ label, code, lang, noCodeMessage }: Props) => {
                 )}
             </div>
             {code && (
-                <div className='relative'>
+                <div className='relative overflow-hidden'>
                     <CopyButton code={code} />
-                    <CodeBlock
-                        code={code}
-                        lang={lang}
-                    />
+                    <div className='overflow-x-auto'>
+                        <CodeBlock
+                            code={code}
+                            lang={lang}
+                        />
+                    </div>
                 </div>
             )}
         </div>

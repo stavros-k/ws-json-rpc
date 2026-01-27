@@ -104,6 +104,7 @@ type APIDocumentation struct {
 	Types          map[string]*TypeInfo  `json:"types"`          // Keyed by type name
 	HTTPOperations map[string]*RouteInfo `json:"httpOperations"` // Keyed by operationID
 	Database       Database              `json:"database"`
+	OpenAPISpec    string                `json:"openapiSpec"` // Stringified OpenAPI YAML specification
 }
 
 // APIInfo contains API metadata.
