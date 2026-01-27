@@ -1,4 +1,4 @@
-import { TbApi, TbTopologyRing } from "react-icons/tb";
+import { TbApi } from "react-icons/tb";
 import type { UsedByItem } from "@/data/api";
 
 interface UsageBadgesProps {
@@ -27,7 +27,6 @@ export function UsageBadges({ usedBy }: UsageBadgesProps) {
             )}
             {hasMQTT && (
                 <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-purple-bg text-accent-purple-text border-2 border-accent-purple-border font-semibold text-sm'>
-                    <TbTopologyRing className='w-4 h-4' />
                     <span>MQTT</span>
                 </div>
             )}

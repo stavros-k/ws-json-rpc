@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { TbApi, TbCode, TbDatabase, TbFileDescription, TbTopologyRing } from "react-icons/tb";
+import { TbApi, TbCode, TbDatabase, TbFileDescription } from "react-icons/tb";
 import { VerbBadge } from "@/components/verb-badge";
 import { docs, getAllMQTTPublications, getAllMQTTSubscriptions, getAllOperations } from "@/data/api";
+import { PubBadge } from "@/components/pub-badge";
+import { SubBadge } from "@/components/sub-badge";
 
 // Calculate total number of operations
 const operations = getAllOperations();
@@ -74,7 +76,7 @@ export default function Home() {
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-accent-blue cursor-pointer hover:scale-105'>
                             <div className='flex items-center gap-3 mb-4'>
                                 <div className='w-12 h-12 bg-accent-blue/20 rounded-xl flex items-center justify-center shadow-md'>
-                                    <TbApi className='w-7 h-7 text-accent-blue' />
+                                    <TbApi className='w-8 h-8 text-accent-blue' />
                                 </div>
                                 <div className='text-lg font-bold text-text-primary'>Operations</div>
                             </div>
@@ -92,7 +94,7 @@ export default function Home() {
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-success-border cursor-pointer hover:scale-105'>
                             <div className='flex items-center gap-3 mb-4'>
                                 <div className='w-12 h-12 bg-success-bg rounded-xl flex items-center justify-center shadow-md'>
-                                    <TbCode className='w-7 h-7 text-success-text' />
+                                    <TbCode className='w-8 h-8 text-success-text' />
                                 </div>
                                 <div className='text-lg font-bold text-text-primary'>Types</div>
                             </div>
@@ -108,7 +110,7 @@ export default function Home() {
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-warning-border cursor-pointer hover:scale-105'>
                             <div className='flex items-center gap-3 mb-4'>
                                 <div className='w-12 h-12 bg-warning-bg rounded-xl flex items-center justify-center shadow-md'>
-                                    <TbFileDescription className='w-7 h-7 text-warning-text' />
+                                    <TbFileDescription className='w-8 h-8 text-warning-text' />
                                 </div>
                                 <div className='text-lg font-bold text-text-primary'>OpenAPI</div>
                             </div>
@@ -152,7 +154,7 @@ export default function Home() {
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-accent-blue cursor-pointer hover:scale-105'>
                             <div className='flex items-center gap-3 mb-4'>
                                 <div className='w-12 h-12 bg-accent-blue/20 rounded-xl flex items-center justify-center shadow-md'>
-                                    <TbTopologyRing className='w-7 h-7 text-accent-blue' />
+                                    <PubBadge border={false} />
                                 </div>
                                 <div className='text-lg font-bold text-text-primary'>Publications</div>
                             </div>
@@ -168,7 +170,7 @@ export default function Home() {
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-accent-green cursor-pointer hover:scale-105'>
                             <div className='flex items-center gap-3 mb-4'>
                                 <div className='w-12 h-12 bg-accent-green/20 rounded-xl flex items-center justify-center shadow-md'>
-                                    <TbTopologyRing className='w-7 h-7 text-accent-green' />
+                                    <SubBadge border={false} />
                                 </div>
                                 <div className='text-lg font-bold text-text-primary'>Subscriptions</div>
                             </div>
@@ -184,7 +186,7 @@ export default function Home() {
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-accent-purple cursor-pointer hover:scale-105'>
                             <div className='flex items-center gap-3 mb-4'>
                                 <div className='w-12 h-12 bg-accent-purple/20 rounded-xl flex items-center justify-center shadow-md'>
-                                    <TbCode className='w-7 h-7 text-accent-purple' />
+                                    <TbCode className='w-8 h-8 text-accent-purple' />
                                 </div>
                                 <div className='text-lg font-bold text-text-primary'>Types</div>
                             </div>
@@ -206,7 +208,7 @@ export default function Home() {
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-success-border cursor-pointer hover:scale-105'>
                             <div className='flex items-center gap-3 mb-4'>
                                 <div className='w-12 h-12 bg-success-bg rounded-xl flex items-center justify-center shadow-md'>
-                                    <TbCode className='w-7 h-7 text-success-text' />
+                                    <TbCode className='w-8 h-8 text-success-text' />
                                 </div>
                                 <div className='text-lg font-bold text-text-primary'>All Types</div>
                             </div>
@@ -224,7 +226,7 @@ export default function Home() {
                         <div className='h-full bg-bg-secondary p-6 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-border-primary hover:border-info-border cursor-pointer hover:scale-105'>
                             <div className='flex items-center gap-3 mb-4'>
                                 <div className='w-12 h-12 bg-info-bg rounded-xl flex items-center justify-center shadow-md'>
-                                    <TbDatabase className='w-7 h-7 text-info-text' />
+                                    <TbDatabase className='w-8 h-8 text-info-text' />
                                 </div>
                                 <div className='text-lg font-bold text-text-primary'>Database</div>
                             </div>
@@ -234,7 +236,6 @@ export default function Home() {
                     </Link>
                 </div>
             </div>
-
         </div>
     );
 }

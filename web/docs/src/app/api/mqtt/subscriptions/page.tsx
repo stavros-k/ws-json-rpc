@@ -2,14 +2,15 @@
 
 import type { Route } from "next";
 import { useMemo, useState } from "react";
-import { TbTopologyRing } from "react-icons/tb";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CollapsibleGroup } from "@/components/collapsible-group";
 import { EmptyState } from "@/components/empty-state";
 import { ItemCard } from "@/components/item-card";
 import { type MQTTFilterState, MQTTFilters } from "@/components/mqtt-filters";
 import { PageHeader } from "@/components/page-header";
+import { RoutePath } from "@/components/route-path";
 import { StatCard } from "@/components/stat-card";
+import { SubBadge } from "@/components/sub-badge";
 import { getAllMQTTSubscriptions } from "@/data/api";
 
 export default function MQTTSubscriptionsPage() {
@@ -153,12 +154,9 @@ export default function MQTTSubscriptionsPage() {
                                         title={subscription.operationID}
                                         subtitle={
                                             <div className='flex items-center gap-2'>
-                                                <span className='px-1.5 py-0.5 rounded text-[10px] font-bold bg-accent-green-bg text-accent-green-text border border-accent-green-border'>
-                                                    SUB
-                                                </span>
-                                                <TbTopologyRing className='w-4 h-4 text-accent-green-hover' />
-                                                <span className='font-mono text-sm text-accent-green-light'>
-                                                    {subscription.topic}
+                                                <SubBadge />
+                                                <span className='font-mono text-sm'>
+                                                    <RoutePath path={subscription.topic} />
                                                 </span>
                                             </div>
                                         }
