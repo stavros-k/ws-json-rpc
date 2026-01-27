@@ -18,9 +18,9 @@ export const SidebarItem = ({ type, item }: Props) => {
     const { urlPath, data, title } = item;
     const isDeprecated = !!data?.deprecated;
     const isActive = currentName === item.name;
-    const method = item.method;
-    const path = item.path;
-    const topic = item.topic;
+    const method = "method" in item ? item.method : undefined;
+    const path = "path" in item ? item.path : undefined;
+    const topic = "topic" in item ? item.topic : undefined;
     const kind = "kind" in data ? data.kind : undefined;
 
     return (
