@@ -52,7 +52,7 @@
         }
       ],
       "representations": {
-        "json": "{\n  \"name\": \"\"\n}",
+        "json": "{\n  \"name\": \"My Team\"\n}",
         "jsonSchema": "{\n  \"additionalProperties\": false,\n  \"description\": \"CreateTeamRequest is the request to create a new team.\",\n  \"properties\": {\n    \"name\": {\n      \"description\": \"Name of the team to create\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"name\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * CreateTeamRequest is the request to create a new team.\n */\ntype CreateTeamRequest = {\n    /**\n     * Name of the team to create\n     */\n    name: string;\n};\n"
       }
@@ -183,7 +183,7 @@
         }
       ],
       "representations": {
-        "json": "{\n  \"userID\": \"\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\",\n  \"url\": null\n}",
+        "json": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\",\n  \"url\": null\n}",
         "jsonSchema": "{\n  \"additionalProperties\": false,\n  \"description\": \"CreateUserResponse is the response to a create user request.\",\n  \"properties\": {\n    \"createdAt\": {\n      \"description\": \"Creation timestamp\",\n      \"format\": \"date-time\",\n      \"type\": \"string\"\n    },\n    \"url\": {\n      \"description\": \"URL to the user\",\n      \"format\": \"uri\",\n      \"nullable\": true,\n      \"type\": \"string\"\n    },\n    \"userID\": {\n      \"description\": \"ID of the created user\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"userID\",\n    \"createdAt\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * CreateUserResponse is the response to a create user request.\n */\ntype CreateUserResponse = {\n    /**\n     * ID of the created user\n     */\n    userID: string;\n    /**\n     * Creation timestamp\n     */\n    createdAt: string;\n    /**\n     * URL to the user\n     */\n    url: string | null;\n};\n"
       }
@@ -331,7 +331,7 @@
         }
       ],
       "representations": {
-        "json": "{\n  \"teamID\": \"\"\n}",
+        "json": "{\n  \"teamID\": \"123\"\n}",
         "jsonSchema": "{\n  \"additionalProperties\": false,\n  \"description\": \"GetTeamRequest is the request to get a team.\",\n  \"properties\": {\n    \"teamID\": {\n      \"description\": \"ID of the team to get\",\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"teamID\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * GetTeamRequest is the request to get a team.\n */\ntype GetTeamRequest = {\n    /**\n     * ID of the team to get\n     */\n    teamID: string;\n};\n"
       }
@@ -395,7 +395,7 @@
         }
       ],
       "representations": {
-        "json": "{\n  \"teamID\": \"\",\n  \"users\": null\n}",
+        "json": "{\n  \"teamID\": \"123\",\n  \"users\": [\n    {\n      \"userID\": \"123\",\n      \"name\": \"John\"\n    }\n  ]\n}",
         "jsonSchema": "{\n  \"additionalProperties\": false,\n  \"deprecated\": true,\n  \"description\": \"GetTeamResponse is the response to a get team request.\",\n  \"properties\": {\n    \"teamID\": {\n      \"description\": \"ID of the team\",\n      \"type\": \"string\"\n    },\n    \"users\": {\n      \"description\": \"Users in the team\",\n      \"items\": {\n        \"$ref\": \"#/components/schemas/User\"\n      },\n      \"type\": \"array\"\n    }\n  },\n  \"required\": [\n    \"teamID\",\n    \"users\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * GetTeamResponse is the response to a get team request.\n *\n * @deprecated Use GetTeamResponseV2 instead.\n */\ntype GetTeamResponse = {\n    /**\n     * ID of the team\n     */\n    teamID: string;\n    /**\n     * Users in the team\n     */\n    users: User[];\n};\n"
       }
@@ -487,7 +487,7 @@
         }
       ],
       "representations": {
-        "json": "{\n  \"message\": \"\",\n  \"status\": \"\"\n}",
+        "json": "{\n  \"message\": \"Pong\",\n  \"status\": \"OK\"\n}",
         "jsonSchema": "{\n  \"additionalProperties\": false,\n  \"description\": \"PingResponse is the response to a ping request.\",\n  \"properties\": {\n    \"message\": {\n      \"description\": \"Human-readable message\",\n      \"type\": \"string\"\n    },\n    \"metadata\": {\n      \"nullable\": true,\n      \"type\": \"string\"\n    },\n    \"status\": {\n      \"$ref\": \"#/components/schemas/PingStatus\"\n    }\n  },\n  \"required\": [\n    \"message\",\n    \"status\"\n  ],\n  \"type\": \"object\"\n}",
         "ts": "/**\n * PingResponse is the response to a ping request.\n */\ntype PingResponse = {\n    /**\n     * Human-readable message\n     */\n    message: string;\n    /**\n     * Status of the ping\n     */\n    status: PingStatus;\n    metadata?: string | null;\n};\n"
       }
@@ -604,7 +604,7 @@
           "type": "CreateUserResponse",
           "description": "Invalid request",
           "examples": {
-            "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
+            "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
           }
         },
         "413": {
@@ -655,7 +655,7 @@
           "type": "CreateUserResponse",
           "description": "Invalid request",
           "examples": {
-            "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
+            "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
           }
         },
         "413": {
@@ -722,7 +722,7 @@
           "type": "CreateUserResponse",
           "description": "Invalid request",
           "examples": {
-            "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": null\n}"
+            "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\",\n  \"url\": null\n}"
           }
         },
         "413": {
@@ -810,7 +810,7 @@
           "type": "CreateUserResponse",
           "description": "Invalid request",
           "examples": {
-            "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"2000-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
+            "example-1": "{\n  \"userID\": \"123\",\n  \"createdAt\": \"0001-01-01T00:00:00Z\",\n  \"url\": \"https://localhost:8080/user\"\n}"
           }
         },
         "413": {

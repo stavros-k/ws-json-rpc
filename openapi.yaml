@@ -211,7 +211,7 @@ paths:
                             examples:
                                 example-1:
                                     value:
-                                        createdAt: "2000-01-01T00:00:00Z"
+                                        createdAt: "0001-01-01T00:00:00Z"
                                         url: https://localhost:8080/user
                                         userID: "123"
                             schema:
@@ -273,7 +273,7 @@ paths:
                             examples:
                                 example-1:
                                     value:
-                                        createdAt: "2000-01-01T00:00:00Z"
+                                        createdAt: "0001-01-01T00:00:00Z"
                                         url: https://localhost:8080/user
                                         userID: "123"
                             schema:
@@ -335,7 +335,7 @@ paths:
                             examples:
                                 example-1:
                                     value:
-                                        createdAt: "2000-01-01T00:00:00Z"
+                                        createdAt: "0001-01-01T00:00:00Z"
                                         url: https://localhost:8080/user
                                         userID: "123"
                             schema:
@@ -422,7 +422,7 @@ paths:
                             examples:
                                 example-1:
                                     value:
-                                        createdAt: "2000-01-01T00:00:00Z"
+                                        createdAt: "0001-01-01T00:00:00Z"
                                         url: null
                                         userID: "123"
                             schema:

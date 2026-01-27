@@ -27,7 +27,7 @@ func RegisterGetTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Deprecated:  "Use GetTeamResponseV2 instead.",
 		Handler:     ErrorHandler(s.GetTeam),
 		RequestType: &router.RequestBodySpec{
-			Type: apitypes.GetTeamRequest{},
+			Type: apitypes.GetTeamRequest{TeamID: "123"},
 			Examples: map[string]any{
 				"example-1": apitypes.GetTeamResponse{TeamID: "abxc", Users: []apitypes.User{{UserID: "Asdf"}}},
 			},
@@ -43,23 +43,23 @@ func RegisterGetTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{},
+				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				Examples: map[string]any{
 					"example-1": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
 			},
 			201: {
 				Description: "Successful ping response",
-				Type:        apitypes.GetTeamResponse{},
+				Type:        apitypes.GetTeamResponse{TeamID: "123", Users: []apitypes.User{{UserID: "123", Name: "John"}}},
 				Examples: map[string]any{
 					"example-1": apitypes.GetTeamResponse{TeamID: "123", Users: []apitypes.User{{UserID: "123", Name: "John"}}},
 				},
 			},
 			400: {
 				Description: "Invalid request",
-				Type:        apitypes.CreateUserResponse{},
+				Type:        apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
 				Examples: map[string]any{
-					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)},
+					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
 				},
 			},
 		}),
@@ -79,7 +79,7 @@ func RegisterCreateTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Group:       TeamGroup,
 		Handler:     ErrorHandler(s.CreateTeam),
 		RequestType: &router.RequestBodySpec{
-			Type: apitypes.CreateTeamRequest{},
+			Type: apitypes.CreateTeamRequest{Name: "My Team"},
 			Examples: map[string]any{
 				"example-1": apitypes.CreateTeamRequest{Name: "My Team"},
 			},
@@ -87,16 +87,16 @@ func RegisterCreateTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{},
+				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				Examples: map[string]any{
 					"example-1": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
 			},
 			400: {
 				Description: "Invalid request",
-				Type:        apitypes.CreateUserResponse{},
+				Type:        apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
 				Examples: map[string]any{
-					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
+					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}, URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
 				},
 			},
 		}),
@@ -116,7 +116,7 @@ func RegisterDeleteTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Group:       TeamGroup,
 		Handler:     ErrorHandler(s.DeleteTeam),
 		RequestType: &router.RequestBodySpec{
-			Type: apitypes.CreateTeamRequest{},
+			Type: apitypes.CreateTeamRequest{Name: "My Team"},
 			Examples: map[string]any{
 				"example-1": apitypes.CreateTeamRequest{Name: "My Team"},
 			},
@@ -124,16 +124,16 @@ func RegisterDeleteTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{},
+				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				Examples: map[string]any{
 					"example-1": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
 			},
 			400: {
 				Description: "Invalid request",
-				Type:        apitypes.CreateUserResponse{},
+				Type:        apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
 				Examples: map[string]any{
-					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
+					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}, URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
 				},
 			},
 		}),
@@ -154,7 +154,7 @@ func RegisterPutTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Group:       TeamGroup,
 		Handler:     ErrorHandler(s.PutTeam),
 		RequestType: &router.RequestBodySpec{
-			Type: apitypes.CreateTeamRequest{},
+			Type: apitypes.CreateTeamRequest{Name: "My Team"},
 			Examples: map[string]any{
 				"example-1": apitypes.CreateTeamRequest{Name: "My Team"},
 			},
@@ -162,16 +162,16 @@ func RegisterPutTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{},
+				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				Examples: map[string]any{
 					"example-1": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
 			},
 			400: {
 				Description: "Invalid request",
-				Type:        apitypes.CreateUserResponse{},
+				Type:        apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
 				Examples: map[string]any{
-					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
+					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}, URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
 				},
 			},
 		}),

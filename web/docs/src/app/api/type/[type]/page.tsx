@@ -79,7 +79,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                             ),
                     },
                     {
-                        title: "JSON (Zero Value)",
+                        title: "JSON",
                         icon: <TbFileCode className='w-8 h-8 text-lang-json' />,
                         code:
                             "representations" in data &&

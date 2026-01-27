@@ -31,7 +31,7 @@ func RegisterPing(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{},
+				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				Examples: map[string]any{
 					"Success": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
