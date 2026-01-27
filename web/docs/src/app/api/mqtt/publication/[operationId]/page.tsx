@@ -71,6 +71,13 @@ export default async function MQTTPublicationPage(props: PageProps<"/api/mqtt/pu
                         <p className='text-sm'>{publication.description}</p>
                     )}
                 </div>
+
+                <div className='mb-6 p-4 bg-green-500/10 border-2 border-green-500/30 rounded-lg'>
+                    <p className='text-sm text-green-400'>
+                        <strong>Note:</strong> The server publishes to this topic. Clients should subscribe to receive
+                        messages from this topic.
+                    </p>
+                </div>
             </div>
 
             <MQTTTopicHeader
