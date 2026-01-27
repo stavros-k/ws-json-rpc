@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BiLinkExternal } from "react-icons/bi";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import {
@@ -41,9 +41,11 @@ type SidebarSectionProps = Readonly<{
     title: string;
     type: ItemType;
     overviewHref: Route;
+    icon: React.ComponentType<{ className?: string }>;
+    iconColor?: string;
 }>;
 
-export const SidebarSection = ({ title, type, overviewHref }: SidebarSectionProps) => {
+export const SidebarSection = ({ title, type, overviewHref, icon: Icon, iconColor = 'text-text-secondary' }: SidebarSectionProps) => {
     const items = getItems(type);
 
     // Special grouping for types based on HTTP/MQTT usage
@@ -86,18 +88,20 @@ export const SidebarSection = ({ title, type, overviewHref }: SidebarSectionProp
 
     // Use type as storage key to keep state persistent
     const storageKey = `sidebar-section-${type}`;
-    const [isOpen, setIsOpen] = useState(() => {
-        if (typeof window === "undefined") return true;
+    const [isOpen, setIsOpen] = useState(true);
+
+    // Load open state from localStorage after hydration
+    useEffect(() => {
         const stored = localStorage.getItem(storageKey);
-        return stored === null ? true : stored === "true";
-    });
+        if (stored !== null) {
+            setIsOpen(stored === "true");
+        }
+    }, [storageKey]);
 
     const toggleOpen = () => {
         const newState = !isOpen;
         setIsOpen(newState);
-        if (typeof window !== "undefined") {
-            localStorage.setItem(storageKey, String(newState));
-        }
+        localStorage.setItem(storageKey, String(newState));
     };
 
     if (!items.length) return null;
@@ -107,7 +111,8 @@ export const SidebarSection = ({ title, type, overviewHref }: SidebarSectionProp
             <div className='flex items-center justify-between mb-3'>
                 <Link
                     href={overviewHref}
-                    className='inline-flex items-center gap-1.5 p-1.5 rounded-lg hover:bg-bg-hover transition-all duration-200 group flex-1'>
+                    className='inline-flex items-center gap-2 p-1.5 rounded-lg hover:bg-bg-hover transition-all duration-200 group flex-1'>
+                    <Icon className={`w-5 h-5 ${iconColor} shrink-0`} />
                     <h2 className='text-sm font-bold text-text-secondary uppercase transition-colors'>{title}</h2>
                     <BiLinkExternal className='w-3.5 h-3.5 text-text-muted transition-colors' />
                 </Link>
