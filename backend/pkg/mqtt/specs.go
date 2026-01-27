@@ -46,7 +46,6 @@ type PublicationSpec struct {
 	TopicParameters []TopicParameter
 
 	// MessageType is the Go type of the message being published.
-	// This should be a zero value of the message type (e.g., apitypes.TemperatureReading{}).
 	MessageType any
 
 	// QoS is the quality of service level for this publication.
