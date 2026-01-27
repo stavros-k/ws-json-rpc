@@ -182,6 +182,28 @@ func stringifyRequestExamples(r *RequestInfo) *RequestInfo {
 	return r
 }
 
+// RegisterJSONRepresentation registers the JSON representation of a type value.
+// It makes sure to only store the largest representation for the type.
+func (g *OpenAPICollector) RegisterJSONRepresentation(value any) error {
+	typeName, err := extractTypeNameFromValue(value)
+	if err != nil {
+		return fmt.Errorf("failed to extract type name: %w", err)
+	}
+
+	typeInfo, ok := g.types[typeName]
+	if !ok {
+		return fmt.Errorf("type %s not found", typeName)
+	}
+	representation := string(utils.MustToJSONIndent(value))
+
+	// If stored representation is empty or shorter, update it
+	if typeInfo.Representations.JSON == "" || len(representation) > len(typeInfo.Representations.JSON) {
+		typeInfo.Representations.JSON = representation
+	}
+
+	return nil
+}
+
 func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	// Validate operationID is unique
 	if _, exists := g.httpOps[route.OperationID]; exists {
@@ -190,6 +212,9 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 	// Extract type names from zero values using reflection, and stringify examples
 	if route.Request != nil {
+		if reflect.ValueOf(route.Request.TypeValue).IsZero() {
+			return fmt.Errorf("Request Type must not be zero value in route [%s]", route.OperationID)
+		}
 		typeName, err := extractTypeNameFromValue(route.Request.TypeValue)
 		if err != nil {
 			return fmt.Errorf("failed to extract request type name: %w", err)
@@ -197,9 +222,13 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 		route.Request.TypeName = typeName
 
-		if typeInfo, ok := g.types[typeName]; ok {
-			if typeInfo.Representations.JSON == "" {
-				typeInfo.Representations.JSON = string(utils.MustToJSONIndent(route.Request.TypeValue))
+		if err := g.RegisterJSONRepresentation(route.Request.TypeValue); err != nil {
+			return fmt.Errorf("failed to register JSON representation for request type: %w", err)
+		}
+
+		for _, ex := range route.Request.Examples {
+			if err := g.RegisterJSONRepresentation(ex); err != nil {
+				return fmt.Errorf("failed to register JSON representation for request example: %w", err)
 			}
 		}
 
@@ -208,7 +237,6 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 	for statusCode, response := range route.Responses {
 		resp := response
-
 		typeName, err := extractTypeNameFromValue(resp.TypeValue)
 		if err != nil {
 			return fmt.Errorf("failed to extract response type name: %w", err)
@@ -216,9 +244,13 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 		resp.TypeName = typeName
 
-		if typeInfo, ok := g.types[typeName]; ok {
-			if typeInfo.Representations.JSON == "" {
-				typeInfo.Representations.JSON = string(utils.MustToJSONIndent(resp.TypeValue))
+		if err := g.RegisterJSONRepresentation(resp.TypeValue); err != nil {
+			return fmt.Errorf("failed to register JSON representation for response type: %w", err)
+		}
+
+		for _, ex := range resp.Examples {
+			if err := g.RegisterJSONRepresentation(ex); err != nil {
+				return fmt.Errorf("failed to register JSON representation for response example: %w", err)
 			}
 		}
 

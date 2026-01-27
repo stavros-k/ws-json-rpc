@@ -27,7 +27,7 @@ func RegisterGetTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Deprecated:  "Use GetTeamResponseV2 instead.",
 		Handler:     ErrorHandler(s.GetTeam),
 		RequestType: &router.RequestBodySpec{
-			Type: apitypes.GetTeamRequest{TeamID: "123"},
+			Type: apitypes.GetTeamRequest{TeamID: "abxc"},
 			Examples: map[string]any{
 				"example-1": apitypes.GetTeamResponse{TeamID: "abxc", Users: []apitypes.User{{UserID: "Asdf"}}},
 			},
@@ -43,21 +43,21 @@ func RegisterGetTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
+				Type:        apitypes.PingResponse{},
 				Examples: map[string]any{
 					"example-1": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
 			},
 			201: {
 				Description: "Successful ping response",
-				Type:        apitypes.GetTeamResponse{TeamID: "123", Users: []apitypes.User{{UserID: "123", Name: "John"}}},
+				Type:        apitypes.GetTeamResponse{},
 				Examples: map[string]any{
 					"example-1": apitypes.GetTeamResponse{TeamID: "123", Users: []apitypes.User{{UserID: "123", Name: "John"}}},
 				},
 			},
 			400: {
 				Description: "Invalid request",
-				Type:        apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
+				Type:        apitypes.CreateUserResponse{},
 				Examples: map[string]any{
 					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
 				},
@@ -87,14 +87,14 @@ func RegisterCreateTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
+				Type:        apitypes.PingResponse{},
 				Examples: map[string]any{
 					"example-1": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
 			},
 			400: {
 				Description: "Invalid request",
-				Type:        apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
+				Type:        apitypes.CreateUserResponse{},
 				Examples: map[string]any{
 					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}, URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
 				},
@@ -124,14 +124,14 @@ func RegisterDeleteTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
+				Type:        apitypes.PingResponse{},
 				Examples: map[string]any{
 					"example-1": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
 			},
 			400: {
 				Description: "Invalid request",
-				Type:        apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
+				Type:        apitypes.CreateUserResponse{},
 				Examples: map[string]any{
 					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}, URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
 				},
@@ -162,14 +162,14 @@ func RegisterPutTeam(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
+				Type:        apitypes.PingResponse{},
 				Examples: map[string]any{
 					"example-1": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
 			},
 			400: {
 				Description: "Invalid request",
-				Type:        apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}},
+				Type:        apitypes.CreateUserResponse{},
 				Examples: map[string]any{
 					"example-1": apitypes.CreateUserResponse{UserID: "123", CreatedAt: time.Time{}, URL: utils.Ptr(types.MustNewURL("https://localhost:8080/user"))},
 				},

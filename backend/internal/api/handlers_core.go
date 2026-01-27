@@ -31,14 +31,14 @@ func RegisterPing(path string, rb *router.RouteBuilder, s *Server) {
 		Responses: GenerateResponses(map[int]router.ResponseSpec{
 			200: {
 				Description: "Successful ping response",
-				Type:        apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
+				Type:        apitypes.PingResponse{},
 				Examples: map[string]any{
 					"Success": apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK},
 				},
 			},
 			500: {
 				Description: "Internal server error",
-				Type:        apitypes.PingResponse{Message: "Database unreachable", Status: apitypes.PingStatusError},
+				Type:        apitypes.PingResponse{},
 				Examples: map[string]any{
 					"Database unreachable": apitypes.PingResponse{Message: "Database unreachable", Status: apitypes.PingStatusError},
 				},

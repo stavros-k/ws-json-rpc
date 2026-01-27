@@ -91,6 +91,11 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                     {operation.request.description && (
                         <p className='text-sm text-text-tertiary mt-3'>{operation.request.description}</p>
                     )}
+                    {requestJson && (
+                        <div className='mb-4 p-3 bg-bg-tertiary rounded-lg border border-border-secondary'>
+                            <p className='text-xs text-text-muted'>Example representation - actual values may vary</p>
+                        </div>
+                    )}
                 </CardBoxWrapper>
             )}
 
@@ -99,29 +104,29 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                     <div className='space-y-4'>
                         {Object.entries(operation.responses).map(([statusCode, response]) => {
                             const resp = response as Response;
-                            const responseJson = getTypeJson(resp.type as TypeKeys);
 
                             return (
                                 <CollapsibleResponse
                                     key={statusCode}
                                     statusCode={statusCode}
                                     description={resp.description}>
-                                    <CodeWrapper
-                                        label={{
-                                            text: resp.type,
-                                            href: `/api/type/${resp.type}` as Route,
-                                        }}
-                                        code={responseJson}
-                                        noCodeMessage='No response body'
-                                        lang='json'
-                                    />
-                                    {resp.examples && Object.keys(resp.examples).length > 0 && (
-                                        <div className='mt-6 space-y-3'>
+                                    <div className='mb-4'>
+                                        <div className='text-sm font-semibold text-text-tertiary mb-2'>
+                                            Type:{" "}
+                                            <a
+                                                href={`/api/type/${resp.type}`}
+                                                className='text-accent-blue-hover hover:text-accent-blue-light transition-colors'>
+                                                {resp.type}
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {resp.examples && Object.keys(resp.examples).length > 0 ? (
+                                        <div className='space-y-3'>
                                             {Object.entries(resp.examples).map(([exampleKey, exampleValue]) => (
                                                 <CollapsibleCard
                                                     key={exampleKey}
                                                     title={exampleKey}
-                                                    defaultOpen={false}>
+                                                    defaultOpen={Object.keys(resp.examples).length === 1}>
                                                     <CodeWrapper
                                                         label={{ text: "Example" }}
                                                         code={exampleValue}
@@ -130,6 +135,10 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                                                 </CollapsibleCard>
                                             ))}
                                         </div>
+                                    ) : (
+                                        <p className='text-sm text-text-tertiary p-4 bg-bg-tertiary rounded-lg border border-border-secondary'>
+                                            No examples available for this response.
+                                        </p>
                                     )}
                                 </CollapsibleResponse>
                             );
