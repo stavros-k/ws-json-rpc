@@ -47,20 +47,20 @@ const (
 
 // primitiveTypeMapping maps Go primitive types to OpenAPI/JSON Schema types.
 var primitiveTypeMapping = map[string]FieldType{
-	"string": {Kind: FieldKindPrimitive, Type: "string"},
-	"byte":   {Kind: FieldKindPrimitive, Type: "string"},
-	"rune":   {Kind: FieldKindPrimitive, Type: "string"},
-	"bool":   {Kind: FieldKindPrimitive, Type: "boolean"},
-	"int":    {Kind: FieldKindPrimitive, Type: "integer"},
-	"int8":   {Kind: FieldKindPrimitive, Type: "integer"},
-	"int16":  {Kind: FieldKindPrimitive, Type: "integer"},
-	"uint":   {Kind: FieldKindPrimitive, Type: "integer"},
-	"uint8":  {Kind: FieldKindPrimitive, Type: "integer"},
-	"uint16": {Kind: FieldKindPrimitive, Type: "integer"},
-	"int32":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
-	"uint32": {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
-	"int64":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
-	"uint64": {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
+	"string":  {Kind: FieldKindPrimitive, Type: "string"},
+	"byte":    {Kind: FieldKindPrimitive, Type: "string"},
+	"rune":    {Kind: FieldKindPrimitive, Type: "string"},
+	"bool":    {Kind: FieldKindPrimitive, Type: "boolean"},
+	"int":     {Kind: FieldKindPrimitive, Type: "integer"},
+	"int8":    {Kind: FieldKindPrimitive, Type: "integer"},
+	"int16":   {Kind: FieldKindPrimitive, Type: "integer"},
+	"uint":    {Kind: FieldKindPrimitive, Type: "integer"},
+	"uint8":   {Kind: FieldKindPrimitive, Type: "integer"},
+	"uint16":  {Kind: FieldKindPrimitive, Type: "integer"},
+	"int32":   {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
+	"uint32":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
+	"int64":   {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
+	"uint64":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
 	"float32": {Kind: FieldKindPrimitive, Type: "number", Format: "float"},
 	"float64": {Kind: FieldKindPrimitive, Type: "number", Format: "double"},
 }
@@ -823,9 +823,12 @@ func (g *OpenAPICollector) extractStructType(name string, structType *ast.Struct
 		}
 	}
 
+	typeInfo.References = []string{}
 	// Convert refs map to sorted slice (single pass)
-	typeInfo.References = slices.Collect(maps.Keys(refs))
-	slices.Sort(typeInfo.References)
+	if len(refs) > 0 {
+		typeInfo.References = slices.Collect(maps.Keys(refs))
+		slices.Sort(typeInfo.References)
+	}
 
 	g.l.Debug("Extracted struct type", slog.String("name", name), slog.Int("fieldCount", len(typeInfo.Fields)))
 
