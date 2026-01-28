@@ -52,7 +52,9 @@ func main() {
 	// open sqlite database
 	db, err := sql.Open("sqlite3", config.Database)
 	fatalIfErr(logger, err)
+
 	defer db.Close()
+
 	queries := sqlitegen.New(db)
 
 	services := services.NewServices(logger, db, queries)

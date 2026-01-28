@@ -13,7 +13,7 @@ var topicParamRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
 // Valid patterns:
 // - Parameters must be in {paramName} format (e.g., devices/{deviceID}/temperature)
 // - Parameter names must start with a letter and contain only alphanumeric characters and underscores
-// - Multi-level wildcards '#' are NOT supported for explicitness
+// - Multi-level wildcards '#' are NOT supported for explicitness.
 func ValidateTopicPattern(topic string) error {
 	if topic == "" {
 		return errors.New("topic cannot be empty")
@@ -60,6 +60,7 @@ func ConvertTopicToMQTT(topic string) string {
 			segments[i] = "+"
 		}
 	}
+
 	return strings.Join(segments, "/")
 }
 
@@ -67,13 +68,15 @@ func ConvertTopicToMQTT(topic string) string {
 // Returns a slice of parameter names in order (e.g., ["deviceID", "sensorType"]).
 func ExtractTopicParameters(topic string) []string {
 	var params []string
-	segments := strings.Split(topic, "/")
-	for _, segment := range segments {
+
+	segments := strings.SplitSeq(topic, "/")
+	for segment := range segments {
 		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
 			paramName := segment[1 : len(segment)-1]
 			params = append(params, paramName)
 		}
 	}
+
 	return params
 }
 
@@ -82,5 +85,6 @@ func ValidateQoS(qos QoS) error {
 	if qos != QoSAtMostOnce && qos != QoSAtLeastOnce && qos != QoSExactlyOnce {
 		return errors.New("qos must be 0, 1, or 2")
 	}
+
 	return nil
 }

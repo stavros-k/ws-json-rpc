@@ -130,6 +130,7 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 			if err != nil {
 				return nil, fmt.Errorf("failed to build additionalProperties schema: %w", err)
 			}
+
 			schema.AdditionalProperties = openapi3.AdditionalProperties{
 				Schema: additionalPropsSchema,
 			}

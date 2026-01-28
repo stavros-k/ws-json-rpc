@@ -231,6 +231,7 @@ func (mb *MQTTBuilder) Connect() error {
 	}
 
 	mb.l.Info("Connected to MQTT broker")
+
 	return nil
 }
 

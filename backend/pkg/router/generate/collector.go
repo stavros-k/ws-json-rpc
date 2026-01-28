@@ -29,7 +29,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// Sentinel errors for specific cases
+// Sentinel errors for specific cases.
 var (
 	ErrEmptyConstBlock = errors.New("empty const block")
 	ErrMixedTypes      = errors.New("mixed types in const block")
@@ -151,6 +151,7 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 	if err != nil {
 		return nil, fmt.Errorf("failed to create TypeScript parser: %w", err)
 	}
+
 	docCollector.tsParser = tsParser
 
 	// Walk the AST and extract all type information in one pass
@@ -279,6 +280,7 @@ func (g *OpenAPICollector) Generate() error {
 	if err != nil {
 		return fmt.Errorf("failed to read OpenAPI spec file: %w", err)
 	}
+
 	g.openapiSpec = string(yamlBytes)
 
 	g.l.Info("OpenAPI spec written", slog.String("file", g.openAPISpecFilePath))
@@ -311,16 +313,6 @@ func stringifyRequestExamples(r *RequestInfo) *RequestInfo {
 	return r
 }
 
-// registerExamples registers JSON representations for a slice of examples.
-func (g *OpenAPICollector) registerExamples(examples map[string]any) error {
-	for _, ex := range examples {
-		if err := g.RegisterJSONRepresentation(ex); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // RegisterJSONRepresentation registers the JSON representation of a type value.
 // It makes sure to only store the largest representation for the type.
 func (g *OpenAPICollector) RegisterJSONRepresentation(value any) error {
@@ -333,6 +325,7 @@ func (g *OpenAPICollector) RegisterJSONRepresentation(value any) error {
 	if !ok {
 		return fmt.Errorf("type %s not found", typeName)
 	}
+
 	representation := string(utils.MustToJSONIndent(value))
 
 	// If stored representation is empty or shorter, update it
@@ -354,6 +347,7 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 		if reflect.ValueOf(route.Request.TypeValue).IsZero() {
 			return fmt.Errorf("Request Type must not be zero value in route [%s]", route.OperationID)
 		}
+
 		typeName, err := extractTypeNameFromValue(route.Request.TypeValue)
 		if err != nil {
 			return fmt.Errorf("failed to extract request type name: %w", err)
@@ -377,6 +371,7 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 
 	for statusCode, response := range route.Responses {
 		resp := response
+
 		typeName, err := extractTypeNameFromValue(resp.TypeValue)
 		if err != nil {
 			return fmt.Errorf("failed to extract response type name: %w", err)
@@ -416,17 +411,129 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	return nil
 }
 
+// stringifyMQTTExamples converts MQTT examples to stringified JSON.
+func stringifyMQTTExamples(examples map[string]any) map[string]string {
+	stringified := make(map[string]string)
+	for name, example := range examples {
+		stringified[name] = string(utils.MustToJSONIndent(example))
+	}
+
+	return stringified
+}
+
+func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) error {
+	// Validate operationID is unique
+	if err := g.validateUniqueOperationID(pub.OperationID); err != nil {
+		return err
+	}
+
+	if _, exists := g.mqttPublications[pub.OperationID]; exists {
+		return fmt.Errorf("duplicate MQTT publication operationID: %s", pub.OperationID)
+	}
+
+	// Extract type name from zero value using reflection
+	if reflect.ValueOf(pub.TypeValue).IsZero() {
+		return fmt.Errorf("MessageType must not be zero value in publication [%s]", pub.OperationID)
+	}
+
+	typeName, err := extractTypeNameFromValue(pub.TypeValue)
+	if err != nil {
+		return fmt.Errorf("failed to extract message type name: %w", err)
+	}
+
+	pub.TypeName = typeName
+
+	// Mark as used by MQTT
+	g.markTypeAsMQTT(typeName)
+
+	// Register JSON representation
+	if err := g.RegisterJSONRepresentation(pub.TypeValue); err != nil {
+		return fmt.Errorf("failed to register JSON representation for message type: %w", err)
+	}
+
+	// Register examples
+	if err := g.registerExamples(pub.Examples); err != nil {
+		return fmt.Errorf("failed to register JSON representation for example: %w", err)
+	}
+
+	// Stringify examples
+	pub.ExamplesStringified = stringifyMQTTExamples(pub.Examples)
+
+	// Store publication
+	g.mqttPublications[pub.OperationID] = pub
+
+	return nil
+}
+
+func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) error {
+	// Validate operationID is unique
+	if err := g.validateUniqueOperationID(sub.OperationID); err != nil {
+		return err
+	}
+
+	if _, exists := g.mqttSubscriptions[sub.OperationID]; exists {
+		return fmt.Errorf("duplicate MQTT subscription operationID: %s", sub.OperationID)
+	}
+
+	// Extract type name from zero value using reflection
+	if reflect.ValueOf(sub.TypeValue).IsZero() {
+		return fmt.Errorf("MessageType must not be zero value in subscription [%s]", sub.OperationID)
+	}
+
+	typeName, err := extractTypeNameFromValue(sub.TypeValue)
+	if err != nil {
+		return fmt.Errorf("failed to extract message type name: %w", err)
+	}
+
+	sub.TypeName = typeName
+
+	// Mark as used by MQTT
+	g.markTypeAsMQTT(typeName)
+
+	// Register JSON representation
+	if err := g.RegisterJSONRepresentation(sub.TypeValue); err != nil {
+		return fmt.Errorf("failed to register JSON representation for message type: %w", err)
+	}
+
+	// Register examples
+	if err := g.registerExamples(sub.Examples); err != nil {
+		return fmt.Errorf("failed to register JSON representation for example: %w", err)
+	}
+
+	// Stringify examples
+	sub.ExamplesStringified = stringifyMQTTExamples(sub.Examples)
+
+	// Store subscription
+	g.mqttSubscriptions[sub.OperationID] = sub
+
+	return nil
+}
+
+// registerExamples registers JSON representations for a slice of examples.
+func (g *OpenAPICollector) registerExamples(examples map[string]any) error {
+	for _, ex := range examples {
+		if err := g.RegisterJSONRepresentation(ex); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // validateUniqueOperationID checks that an operationID is not already used.
 func (g *OpenAPICollector) validateUniqueOperationID(operationID string) error {
 	if _, exists := g.mqttPublications[operationID]; exists {
 		return fmt.Errorf("duplicate operationID (MQTT publication exists): %s", operationID)
 	}
+
 	if _, exists := g.mqttSubscriptions[operationID]; exists {
 		return fmt.Errorf("duplicate operationID (MQTT subscription exists): %s", operationID)
 	}
+
 	if _, exists := g.httpOps[operationID]; exists {
 		return fmt.Errorf("duplicate operationID (HTTP operation exists): %s", operationID)
 	}
+
 	return nil
 }
 
@@ -480,101 +587,6 @@ func (g *OpenAPICollector) markTypeAsMQTT(typeName string) {
 	}
 }
 
-// stringifyMQTTExamples converts MQTT examples to stringified JSON.
-func stringifyMQTTExamples(examples map[string]any) map[string]string {
-	stringified := make(map[string]string)
-	for name, example := range examples {
-		stringified[name] = string(utils.MustToJSONIndent(example))
-	}
-	return stringified
-}
-
-func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) error {
-	// Validate operationID is unique
-	if err := g.validateUniqueOperationID(pub.OperationID); err != nil {
-		return err
-	}
-	if _, exists := g.mqttPublications[pub.OperationID]; exists {
-		return fmt.Errorf("duplicate MQTT publication operationID: %s", pub.OperationID)
-	}
-
-	// Extract type name from zero value using reflection
-	if reflect.ValueOf(pub.TypeValue).IsZero() {
-		return fmt.Errorf("MessageType must not be zero value in publication [%s]", pub.OperationID)
-	}
-
-	typeName, err := extractTypeNameFromValue(pub.TypeValue)
-	if err != nil {
-		return fmt.Errorf("failed to extract message type name: %w", err)
-	}
-
-	pub.TypeName = typeName
-
-	// Mark as used by MQTT
-	g.markTypeAsMQTT(typeName)
-
-	// Register JSON representation
-	if err := g.RegisterJSONRepresentation(pub.TypeValue); err != nil {
-		return fmt.Errorf("failed to register JSON representation for message type: %w", err)
-	}
-
-	// Register examples
-	if err := g.registerExamples(pub.Examples); err != nil {
-		return fmt.Errorf("failed to register JSON representation for example: %w", err)
-	}
-
-	// Stringify examples
-	pub.ExamplesStringified = stringifyMQTTExamples(pub.Examples)
-
-	// Store publication
-	g.mqttPublications[pub.OperationID] = pub
-
-	return nil
-}
-
-func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) error {
-	// Validate operationID is unique
-	if err := g.validateUniqueOperationID(sub.OperationID); err != nil {
-		return err
-	}
-	if _, exists := g.mqttSubscriptions[sub.OperationID]; exists {
-		return fmt.Errorf("duplicate MQTT subscription operationID: %s", sub.OperationID)
-	}
-
-	// Extract type name from zero value using reflection
-	if reflect.ValueOf(sub.TypeValue).IsZero() {
-		return fmt.Errorf("MessageType must not be zero value in subscription [%s]", sub.OperationID)
-	}
-
-	typeName, err := extractTypeNameFromValue(sub.TypeValue)
-	if err != nil {
-		return fmt.Errorf("failed to extract message type name: %w", err)
-	}
-
-	sub.TypeName = typeName
-
-	// Mark as used by MQTT
-	g.markTypeAsMQTT(typeName)
-
-	// Register JSON representation
-	if err := g.RegisterJSONRepresentation(sub.TypeValue); err != nil {
-		return fmt.Errorf("failed to register JSON representation for message type: %w", err)
-	}
-
-	// Register examples
-	if err := g.registerExamples(sub.Examples); err != nil {
-		return fmt.Errorf("failed to register JSON representation for example: %w", err)
-	}
-
-	// Stringify examples
-	sub.ExamplesStringified = stringifyMQTTExamples(sub.Examples)
-
-	// Store subscription
-	g.mqttSubscriptions[sub.OperationID] = sub
-
-	return nil
-}
-
 // ExternalTypeInfo holds metadata about external Go types.
 type ExternalTypeInfo struct {
 	GoType        string // Original Go type (e.g., "time.Time")
@@ -613,6 +625,7 @@ func (g *OpenAPICollector) parseGoTypesDir(goTypesDirPath string) (*GoParser, er
 		for _, e := range pkg.Errors {
 			errMsgs = append(errMsgs, e.Error())
 		}
+
 		return nil, fmt.Errorf("package loading failed with errors: %s", strings.Join(errMsgs, "; "))
 	}
 
@@ -649,9 +662,11 @@ func (g *OpenAPICollector) extractAllTypesFromGo(goParser *GoParser) error {
 				}
 
 				typeName := typeSpec.Name.Name
+
 				typeInfo, err := g.extractTypeFromSpec(typeName, typeSpec, genDecl)
 				if err != nil {
 					errs = append(errs, fmt.Errorf("failed to extract type %s: %w", typeName, err))
+
 					continue
 				}
 
@@ -699,6 +714,7 @@ func (g *OpenAPICollector) extractTypeFromSpec(name string, typeSpec *ast.TypeSp
 
 	// Extract comments
 	desc := g.extractCommentsFromDoc(genDecl.Doc)
+
 	deprecated, cleanedDesc, err := g.parseDeprecation(desc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse deprecation info for type %s: %w", name, err)
@@ -717,16 +733,20 @@ func (g *OpenAPICollector) extractTypeFromSpec(name string, typeSpec *ast.TypeSp
 	case *ast.Ident:
 		// Type alias to another type (e.g., type MyString string)
 		typeInfo.Kind = TypeKindAlias
+
 		return typeInfo, nil
 	case *ast.ArrayType, *ast.MapType:
 		// Arrays and maps as top-level types are treated as aliases
 		typeInfo.Kind = TypeKindAlias
+
 		return typeInfo, nil
 	case *ast.InterfaceType:
 		if len(t.Methods.List) > 0 {
 			return nil, fmt.Errorf("interface type %s with methods is not supported - use structs for API types", name)
 		}
+
 		typeInfo.Kind = TypeKindAlias
+
 		return typeInfo, nil
 	case *ast.FuncType:
 		return nil, fmt.Errorf("function type %s is not supported for API types", name)
@@ -762,6 +782,7 @@ func (g *OpenAPICollector) extractStructType(name string, structType *ast.Struct
 				if errors.Is(err, ErrFieldSkipped) {
 					continue
 				}
+
 				return nil, err
 			}
 
@@ -778,6 +799,7 @@ func (g *OpenAPICollector) extractStructType(name string, structType *ast.Struct
 	for ref := range refs {
 		typeInfo.References = append(typeInfo.References, ref)
 	}
+
 	sort.Strings(typeInfo.References)
 
 	g.l.Debug("Extracted struct type", slog.String("name", name), slog.Int("fieldCount", len(typeInfo.Fields)))
@@ -799,12 +821,14 @@ func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field 
 			parts := strings.Split(tag, "json:")
 			if len(parts) > 1 {
 				jsonTag := strings.Split(parts[1], "\"")[1]
+
 				jsonParts := strings.Split(jsonTag, ",")
 				if jsonParts[0] == "-" {
 					jsonSkip = true
 				} else if jsonParts[0] != "" {
 					jsonName = jsonParts[0]
 				}
+
 				for _, part := range jsonParts[1:] {
 					if part == "omitempty" {
 						omitempty = true
@@ -831,6 +855,7 @@ func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field 
 
 	// Extract field documentation
 	fieldDesc := g.extractCommentsFromDoc(field.Doc)
+
 	fieldDeprecated, cleanedFieldDesc, err := g.parseDeprecation(fieldDesc)
 	if err != nil {
 		return FieldInfo{}, nil, fmt.Errorf("failed to parse deprecation info for field %s.%s: %w", parentName, fieldName, err)
@@ -854,8 +879,11 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 	}
 
 	// Check if this looks like an enum (all values are of the same type)
-	var enumTypeName string
-	var enumValues []EnumValue
+	var (
+		enumTypeName string
+		enumValues   []EnumValue
+	)
+
 	hasExportedConsts := false
 
 	for _, spec := range constDecl.Specs {
@@ -892,6 +920,7 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 					if enumTypeName != "" {
 						return fmt.Errorf("enum constant %s.%s must have a string literal value, got %T", enumTypeName, name.Name, valueSpec.Values[i])
 					}
+
 					continue
 				}
 
@@ -900,6 +929,7 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 					if enumTypeName != "" {
 						return fmt.Errorf("enum constant %s.%s must be a string, got %v", enumTypeName, name.Name, basicLit.Kind)
 					}
+
 					continue
 				}
 
@@ -982,6 +1012,7 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 			}, refs, nil
 		case "any", "interface{}":
 			g.l.Warn("Using 'any' or 'interface{} is discouraged", slog.String("type", typeName))
+
 			return FieldType{
 				Kind: FieldKindObject,
 				Type: "object",
@@ -991,6 +1022,7 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 		// Check if it's a defined type in our types map (will be populated after first pass)
 		// For now, treat as reference
 		refs = append(refs, typeName)
+
 		return FieldType{
 			Kind: FieldKindReference,
 			Type: typeName,
@@ -1002,7 +1034,9 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 		if err != nil {
 			return FieldType{}, nil, err
 		}
+
 		inner.Nullable = true
+
 		return inner, innerRefs, nil
 
 	case *ast.ArrayType:
@@ -1061,8 +1095,9 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 	case *ast.InterfaceType:
 		// Interface type (interface{} or any)
 		if len(t.Methods.List) > 0 {
-			return FieldType{}, nil, fmt.Errorf("interface types with methods are not supported - please use concrete types or any/interface{}")
+			return FieldType{}, nil, errors.New("interface types with methods are not supported - please use concrete types or any/interface{}")
 		}
+
 		return FieldType{
 			Kind: FieldKindObject,
 			Type: "object",
@@ -1080,6 +1115,7 @@ func (g *OpenAPICollector) extractCommentsFromDoc(doc *ast.CommentGroup) string 
 	}
 
 	var builder strings.Builder
+
 	for i, comment := range doc.List {
 		if i > 0 {
 			builder.WriteString(" ")
@@ -1165,9 +1201,11 @@ func (g *OpenAPICollector) printASTNode(buf *bytes.Buffer, node *ast.GenDecl, ty
 	if node == nil {
 		return nil
 	}
+
 	if err := printer.Fprint(buf, g.goParser.fset, node); err != nil {
 		return fmt.Errorf("failed to print %s for %s: %w", nodeType, typeName, err)
 	}
+
 	return nil
 }
 
@@ -1184,6 +1222,7 @@ func (g *OpenAPICollector) generateGoSource(typeInfo *TypeInfo) (string, error) 
 	if err := g.printASTNode(&buf, typeDecl, typeInfo.Name, "type declaration"); err != nil {
 		return "", err
 	}
+
 	buf.WriteString("\n")
 
 	if typeInfo.Kind == TypeKindStringEnum {
@@ -1195,6 +1234,7 @@ func (g *OpenAPICollector) generateGoSource(typeInfo *TypeInfo) (string, error) 
 		if err := g.printASTNode(&buf, constDecl, typeInfo.Name, "const declaration"); err != nil {
 			return "", err
 		}
+
 		buf.WriteString("\n")
 	}
 

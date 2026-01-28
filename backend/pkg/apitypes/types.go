@@ -28,7 +28,9 @@ func (e *ErrorResponse) AddError(field, message string) *ErrorResponse {
 	if e.Errors == nil {
 		e.Errors = make(map[string]string)
 	}
+
 	e.Errors[field] = message
+
 	return e
 }
 

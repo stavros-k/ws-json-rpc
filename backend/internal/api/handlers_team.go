@@ -15,6 +15,7 @@ func (s *Server) GetTeam(w http.ResponseWriter, r *http.Request) error {
 	teamID := chi.URLParam(r, "teamID")
 
 	RespondJSON(w, r, http.StatusOK, apitypes.GetTeamResponse{TeamID: teamID, Users: []apitypes.User{{UserID: "Asdf"}}})
+
 	return nil
 }
 
@@ -68,6 +69,7 @@ func RegisterGetTeam(path string, rb *router.RouteBuilder, s *Server) {
 
 func (s *Server) CreateTeam(w http.ResponseWriter, r *http.Request) error {
 	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK})
+
 	return nil
 }
 
@@ -105,6 +107,7 @@ func RegisterCreateTeam(path string, rb *router.RouteBuilder, s *Server) {
 
 func (s *Server) DeleteTeam(w http.ResponseWriter, r *http.Request) error {
 	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK})
+
 	return nil
 }
 
@@ -138,11 +141,11 @@ func RegisterDeleteTeam(path string, rb *router.RouteBuilder, s *Server) {
 			},
 		}),
 	})
-
 }
 
 func (s *Server) PutTeam(w http.ResponseWriter, r *http.Request) error {
 	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK})
+
 	return nil
 }
 
@@ -176,5 +179,4 @@ func RegisterPutTeam(path string, rb *router.RouteBuilder, s *Server) {
 			},
 		}),
 	})
-
 }

@@ -88,6 +88,7 @@ func (s *Server) handleTemperature(client pahomqtt.Client, msg pahomqtt.Message)
 		s.l.Error("Failed to unmarshal temperature reading",
 			slog.String("topic", msg.Topic()),
 			slog.Any("error", err))
+
 		return
 	}
 
@@ -196,6 +197,7 @@ func (s *Server) handleSensorTelemetry(client pahomqtt.Client, msg pahomqtt.Mess
 		s.l.Error("Failed to unmarshal sensor telemetry",
 			slog.String("topic", msg.Topic()),
 			slog.Any("error", err))
+
 		return
 	}
 

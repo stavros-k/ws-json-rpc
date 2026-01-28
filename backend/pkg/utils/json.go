@@ -36,6 +36,7 @@ func FromJSONStream[T any](r io.Reader) (T, error) {
 
 	decoder := json.NewDecoder(r)
 	decoder.DisallowUnknownFields()
+
 	err := decoder.Decode(&result)
 	if err != nil {
 		return result, err
