@@ -998,47 +998,10 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 		return ErrEmptyConstBlock
 	}
 
-	// Find the first exported constant and require it to have a type declaration
-	var enumTypeName string
-	for _, spec := range constDecl.Specs {
-		valueSpec, ok := spec.(*ast.ValueSpec)
-		if !ok {
-			continue
-		}
-
-		// Check if this spec has any exported names
-		hasExported := false
-		for _, name := range valueSpec.Names {
-			if name.IsExported() {
-				hasExported = true
-				break
-			}
-		}
-
-		if !hasExported {
-			continue
-		}
-
-		// If first exported const has no type, this is not an enum block
-		if valueSpec.Type == nil {
-			return ErrNoEnumType
-		}
-
-		ident, ok := valueSpec.Type.(*ast.Ident)
-		if !ok {
-			return fmt.Errorf("first exported constant type must be a simple identifier, got %T", valueSpec.Type)
-		}
-
-		enumTypeName = ident.Name
-		break
-	}
-
-	if enumTypeName == "" {
-		return ErrNoEnumType
-	}
-
-	// Now process all values, requiring explicit type on every exported constant
-	var enumValues []EnumValue
+	var (
+		enumTypeName string
+		enumValues   []EnumValue
+	)
 
 	for _, spec := range constDecl.Specs {
 		valueSpec, ok := spec.(*ast.ValueSpec)
@@ -1046,22 +1009,31 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 			continue
 		}
 
-		// Check if this spec has any exported names
-		hasExported := false
+		// Check if all names in this spec are exported
+		allExported := true
 		for _, name := range valueSpec.Names {
-			if name.IsExported() {
-				hasExported = true
+			if !name.IsExported() {
+				allExported = false
 				break
 			}
 		}
 
-		// Skip unexported constants
-		if !hasExported {
+		// If we've identified this as an enum block, all constants must be exported
+		if enumTypeName != "" && !allExported {
+			return fmt.Errorf("enum const blocks must not contain unexported constants")
+		}
+
+		// Skip const specs with no exported names (only before enum type is established)
+		if !allExported {
 			continue
 		}
 
 		// All exported constants must have explicit type declaration
 		if valueSpec.Type == nil {
+			if enumTypeName == "" {
+				// First exported const without type = not an enum block
+				return ErrNoEnumType
+			}
 			return fmt.Errorf("all exported constants in enum const block must have explicit type declaration")
 		}
 
@@ -1069,7 +1041,12 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 		if !ok {
 			return fmt.Errorf("const type must be a simple identifier, got %T", valueSpec.Type)
 		}
-		if ident.Name != enumTypeName {
+
+		// First exported const establishes the enum type
+		if enumTypeName == "" {
+			enumTypeName = ident.Name
+		} else if ident.Name != enumTypeName {
+			// Subsequent consts must match the established type
 			return fmt.Errorf("mixed enum types in const block: expected %s, got %s", enumTypeName, ident.Name)
 		}
 
@@ -1082,7 +1059,8 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 		enumValues = append(enumValues, values...)
 	}
 
-	if len(enumValues) == 0 {
+	// Validate we found an enum type with at least one value
+	if enumTypeName == "" || len(enumValues) == 0 {
 		return ErrNoEnumType
 	}
 
