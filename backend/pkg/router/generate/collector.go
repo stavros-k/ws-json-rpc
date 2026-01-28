@@ -290,28 +290,9 @@ func (g *OpenAPICollector) SerializeTSNode(name string) (string, error) {
 		return "", fmt.Errorf("failed to serialize TypeScript node: %w", err)
 	}
 
-	var str strings.Builder
-
-	for line := range strings.SplitSeq(serialized, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || line == "//" || line == "*" {
-			continue
-		}
-		if strings.HasPrefix(line, "// From") {
-			continue
-		}
-
-		if strings.Contains(line, "nolint") {
-			fmt.Printf("Found nolint line in TS serialization: %s\n", line)
-		}
-		if strings.HasPrefix(line, "*nolint:") {
-			continue
-		}
-
-		str.WriteString(line + "\n")
-	}
-
-	return strings.TrimSpace(str.String()) + "\n", nil
+	// Filter unwanted lines while preserving spacing
+	skipPrefixes := []string{"// From", "*nolint:"}
+	return cleanupSourceLines(serialized, skipPrefixes), nil
 }
 
 // Generate generates both the OpenAPI spec YAML and the docs JSON file.
@@ -1249,6 +1230,39 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 	}
 }
 
+// cleanupSourceLines filters out unwanted lines from generated source code.
+// Assumes input spacing is already correct and preserves it.
+func cleanupSourceLines(input string, skipPrefixes []string) string {
+	var result strings.Builder
+
+	for line := range strings.SplitSeq(input, "\n") {
+		trimmed := strings.TrimSpace(line)
+
+		// Skip empty lines and empty comment lines
+		if trimmed == "" || trimmed == "//" || trimmed == "*" {
+			continue
+		}
+
+		// Skip lines matching any of the specified prefixes (check on trimmed)
+		shouldSkip := false
+		for _, prefix := range skipPrefixes {
+			if strings.HasPrefix(trimmed, prefix) {
+				shouldSkip = true
+				break
+			}
+		}
+
+		if shouldSkip {
+			continue
+		}
+
+		// Output original line with spacing intact
+		result.WriteString(line + "\n")
+	}
+
+	return strings.TrimSpace(result.String()) + "\n"
+}
+
 // extractCommentsFromDoc extracts text from a comment group.
 func (g *OpenAPICollector) extractCommentsFromDoc(doc *ast.CommentGroup) string {
 	if doc == nil {
@@ -1389,20 +1403,11 @@ func (g *OpenAPICollector) generateGoSource(typeInfo *TypeInfo) (string, error) 
 		buf.WriteString("\n")
 	}
 
-	var str bytes.Buffer
-	for line := range strings.SplitSeq(buf.String(), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || line == "//" {
-			continue
-		}
-		if strings.HasPrefix(line, "//nolint:") {
-			continue
-		}
+	// Filter unwanted lines
+	skipPrefixes := []string{"//nolint:"}
+	cleaned := cleanupSourceLines(buf.String(), skipPrefixes)
 
-		str.WriteString(line + "\n")
-	}
-
-	formatted, err := format.Source(str.Bytes())
+	formatted, err := format.Source([]byte(cleaned))
 	if err != nil {
 		return "", fmt.Errorf("failed to format Go source: %w", err)
 	}
