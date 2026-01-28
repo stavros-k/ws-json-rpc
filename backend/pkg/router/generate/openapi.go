@@ -168,10 +168,7 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 		switch {
 		case ev.Deprecated != "":
 			enumDesc.WriteString(fmt.Sprintf("- `%s`: **[DEPRECATED]** ", ev.Value))
-
-			if ev.Deprecated != "" {
-				enumDesc.WriteString(ev.Deprecated)
-			}
+			enumDesc.WriteString(ev.Deprecated)
 
 			if ev.Description != "" {
 				enumDesc.WriteString(" - " + ev.Description)

@@ -13,6 +13,7 @@ import (
 	"go/printer"
 	"go/token"
 	"log/slog"
+	"maps"
 	"os"
 	"reflect"
 	"slices"
@@ -791,12 +792,9 @@ func (g *OpenAPICollector) extractStructType(name string, structType *ast.Struct
 		}
 	}
 
-	// Convert refs to sorted slice
-	for ref := range refs {
-		typeInfo.References = append(typeInfo.References, ref)
-	}
-
-	sort.Strings(typeInfo.References)
+	// Convert refs map to sorted slice (single pass)
+	typeInfo.References = slices.Collect(maps.Keys(refs))
+	slices.Sort(typeInfo.References)
 
 	g.l.Debug("Extracted struct type", slog.String("name", name), slog.Int("fieldCount", len(typeInfo.Fields)))
 
@@ -1350,17 +1348,21 @@ func (g *OpenAPICollector) generateGoSource(typeInfo *TypeInfo) (string, error) 
 
 // buildReferencedBy builds the inverse of References for all types.
 func (g *OpenAPICollector) buildReferencedBy() {
+	// Track which types were modified so we only sort those
+	modifiedTypes := make(map[string]struct{})
+
 	for typeName, typeInfo := range g.types {
 		for _, ref := range typeInfo.References {
 			if refType, exists := g.types[ref]; exists {
 				refType.ReferencedBy = append(refType.ReferencedBy, typeName)
+				modifiedTypes[ref] = struct{}{}
 			}
 		}
 	}
 
-	// Sort for deterministic output
-	for _, typeInfo := range g.types {
-		sort.Strings(typeInfo.ReferencedBy)
+	// Sort only the types that received new references
+	for typeName := range modifiedTypes {
+		sort.Strings(g.types[typeName].ReferencedBy)
 	}
 }
 
