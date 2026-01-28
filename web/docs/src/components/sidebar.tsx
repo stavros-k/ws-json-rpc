@@ -2,10 +2,10 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { FaDatabase } from "react-icons/fa";
 import { IoHome } from "react-icons/io5";
-import { MdPushPin, MdOutlinePushPin } from "react-icons/md";
+import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import { TbApi, TbCode, TbFileDescription } from "react-icons/tb";
 import {
     docs,
@@ -45,51 +45,10 @@ const SidebarLink = ({
 };
 
 export const Sidebar = () => {
-    const [isPinned, setIsPinned] = useState(false);
-    const [isHovered, setIsHovered] = useState(false);
-    const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [isExpanded, setIsExpanded] = useState(false);
 
-    useEffect(() => {
-        const stored = localStorage.getItem("sidebar-pinned");
-        const pinnedState = stored === "true";
-        setIsPinned(pinnedState);
-
-        // Update body attribute for layout adjustments
-        if (pinnedState) {
-            document.body.setAttribute("data-sidebar-pinned", "true");
-        } else {
-            document.body.removeAttribute("data-sidebar-pinned");
-        }
-    }, []);
-
-    useEffect(() => {
-        // Update body attribute when pin state changes
-        if (isPinned) {
-            document.body.setAttribute("data-sidebar-pinned", "true");
-        } else {
-            document.body.removeAttribute("data-sidebar-pinned");
-        }
-    }, [isPinned]);
-
-    const togglePin = () => {
-        const newState = !isPinned;
-        setIsPinned(newState);
-        localStorage.setItem("sidebar-pinned", String(newState));
-    };
-
-    const isExpanded = isPinned || isHovered;
-
-    const handleMouseEnter = () => {
-        // Clear any pending collapse
-        if (leaveTimeoutRef.current) {
-            clearTimeout(leaveTimeoutRef.current);
-        }
-        setIsHovered(true);
-    };
-
-    const handleMouseLeave = () => {
-        // Small delay before collapsing to prevent accidental closes
-        leaveTimeoutRef.current = setTimeout(() => setIsHovered(false), 150);
+    const toggleExpanded = () => {
+        setIsExpanded(!isExpanded);
     };
 
     return (
@@ -97,12 +56,9 @@ export const Sidebar = () => {
             className={`
                 text-sm bg-bg-sidebar text-text-primary border-r-2 border-border-sidebar flex flex-col
                 transition-[width,min-width,max-width] duration-250 ease-in-out
-                shrink-0 top-0 h-screen
-                ${isPinned ? "sticky" : "fixed z-40 left-0"}
+                shrink-0 sticky top-0 h-screen
                 ${isExpanded ? "min-w-80 max-w-md w-fit" : "w-16 min-w-16 max-w-16"}
-            `}
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}>
+            `}>
             {/* Expanded Header */}
             <div className={`p-6 pb-4 border-b-2 border-border-sidebar ${isExpanded ? "block" : "hidden"}`}>
                 <div className='flex items-center justify-between mb-4'>
@@ -121,15 +77,11 @@ export const Sidebar = () => {
                         <ConnectionIndicator />
                         <button
                             type='button'
-                            onClick={togglePin}
+                            onClick={toggleExpanded}
                             className='p-2.5 rounded-lg bg-bg-tertiary hover:bg-bg-hover active:scale-95 transition-all duration-200 border-2 border-border-primary hover:border-accent-blue-border shadow-sm hover:shadow-md'
-                            aria-label={isPinned ? "Unpin sidebar" : "Pin sidebar"}
-                            title={isPinned ? "Unpin sidebar" : "Pin sidebar"}>
-                            {isPinned ? (
-                                <MdPushPin className='w-6 h-6 text-accent-blue-text' />
-                            ) : (
-                                <MdOutlinePushPin className='w-6 h-6 text-text-primary' />
-                            )}
+                            aria-label='Collapse sidebar'
+                            title='Collapse sidebar'>
+                            <MdChevronLeft className='w-6 h-6 text-text-primary' />
                         </button>
                     </div>
                 </div>
@@ -140,6 +92,17 @@ export const Sidebar = () => {
 
             {/* Collapsed Icon Navigation */}
             <div className={`flex-1 overflow-y-auto p-2 pt-4 flex flex-col gap-2 ${isExpanded ? "hidden" : "flex"}`}>
+                <button
+                    type='button'
+                    onClick={toggleExpanded}
+                    className='p-2.5 rounded-lg bg-bg-tertiary hover:bg-bg-hover active:scale-95 transition-all duration-200 border-2 border-border-primary hover:border-accent-blue-border shadow-sm hover:shadow-md flex items-center justify-center'
+                    aria-label='Expand sidebar'
+                    title='Expand sidebar'>
+                    <MdChevronRight className='w-6 h-6 text-text-primary' />
+                </button>
+
+                <div className='border-t-2 border-border-sidebar my-2' />
+
                 <Link
                     href='/'
                     className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'

@@ -4,11 +4,6 @@
     scrollbar-width: none;
 }
 
-/* Add left padding to main when sidebar is in overlay mode (not pinned) */
-body:not([data-sidebar-pinned]) main {
-    padding-left: 4rem;
-}
-
 /* Animations */
 @keyframes slideDownFadeIn {
     0% {
