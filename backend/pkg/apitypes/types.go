@@ -124,7 +124,7 @@ type DeviceCommand struct {
 	// Command is the command to execute (e.g., "restart", "shutdown", "update_config")
 	Command string `json:"command"`
 	// Parameters contains optional command parameters
-	Parameters map[string]any `json:"parameters,omitempty"`
+	Parameters map[string]string `json:"parameters,omitempty"`
 }
 
 // DeviceStatus represents the status of an IoT device.

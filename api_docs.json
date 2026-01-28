@@ -246,8 +246,8 @@
             "nullable": false,
             "itemsType": null,
             "additionalProperties": {
-              "kind": "object",
-              "type": "object",
+              "kind": "primitive",
+              "type": "string",
               "format": "",
               "required": false,
               "nullable": false,
@@ -274,10 +274,10 @@
         }
       ],
       "representations": {
-        "json": "{\n  \"deviceID\": \"device-001\",\n  \"command\": \"update_config\",\n  \"parameters\": {\n    \"enabled\": true,\n    \"interval\": 60\n  }\n}",
-        "jsonSchema": "{\n  \"additionalProperties\": false,\n  \"description\": \"DeviceCommand represents a command sent to an IoT device.\",\n  \"properties\": {\n    \"command\": {\n      \"description\": \"Command is the command to execute (e.g., \\\"restart\\\", \\\"shutdown\\\", \\\"update_config\\\")\",\n      \"type\": \"string\"\n    },\n    \"deviceID\": {\n      \"description\": \"DeviceID is the unique identifier of the target device\",\n      \"type\": \"string\"\n    },\n    \"parameters\": {\n      \"additionalProperties\": {\n        \"additionalProperties\": false,\n        \"type\": \"object\"\n      },\n      \"description\": \"Parameters contains optional command parameters\",\n      \"type\": \"object\"\n    }\n  },\n  \"required\": [\n    \"deviceID\",\n    \"command\"\n  ],\n  \"type\": \"object\"\n}",
-        "go": "// DeviceCommand represents a command sent to an IoT device.\ntype DeviceCommand struct {\n\t// DeviceID is the unique identifier of the target device\n\tDeviceID string `json:\"deviceID\"`\n\t// Command is the command to execute (e.g., \"restart\", \"shutdown\", \"update_config\")\n\tCommand string `json:\"command\"`\n\t// Parameters contains optional command parameters\n\tParameters map[string]any `json:\"parameters,omitempty\"`\n}\n",
-        "ts": "/**\n * DeviceCommand represents a command sent to an IoT device.\n */\ntype DeviceCommand = {\n    /**\n     * DeviceID is the unique identifier of the target device\n     */\n    deviceID: string;\n    /**\n     * Command is the command to execute (e.g., \"restart\", \"shutdown\", \"update_config\")\n     */\n    command: string;\n    /**\n     * Parameters contains optional command parameters\n     */\n    // empty interface{} type, falling back to unknown\n    parameters?: Record<string, unknown>;\n};\n"
+        "json": "{\n  \"deviceID\": \"device-001\",\n  \"command\": \"update_config\",\n  \"parameters\": {\n    \"enabled\": \"true\",\n    \"interval\": \"60\"\n  }\n}",
+        "jsonSchema": "{\n  \"additionalProperties\": false,\n  \"description\": \"DeviceCommand represents a command sent to an IoT device.\",\n  \"properties\": {\n    \"command\": {\n      \"description\": \"Command is the command to execute (e.g., \\\"restart\\\", \\\"shutdown\\\", \\\"update_config\\\")\",\n      \"type\": \"string\"\n    },\n    \"deviceID\": {\n      \"description\": \"DeviceID is the unique identifier of the target device\",\n      \"type\": \"string\"\n    },\n    \"parameters\": {\n      \"additionalProperties\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Parameters contains optional command parameters\",\n      \"type\": \"object\"\n    }\n  },\n  \"required\": [\n    \"deviceID\",\n    \"command\"\n  ],\n  \"type\": \"object\"\n}",
+        "go": "// DeviceCommand represents a command sent to an IoT device.\ntype DeviceCommand struct {\n\t// DeviceID is the unique identifier of the target device\n\tDeviceID string `json:\"deviceID\"`\n\t// Command is the command to execute (e.g., \"restart\", \"shutdown\", \"update_config\")\n\tCommand string `json:\"command\"`\n\t// Parameters contains optional command parameters\n\tParameters map[string]string `json:\"parameters,omitempty\"`\n}\n",
+        "ts": "/**\n * DeviceCommand represents a command sent to an IoT device.\n */\ntype DeviceCommand = {\n    /**\n     * DeviceID is the unique identifier of the target device\n     */\n    deviceID: string;\n    /**\n     * Command is the command to execute (e.g., \"restart\", \"shutdown\", \"update_config\")\n     */\n    command: string;\n    /**\n     * Parameters contains optional command parameters\n     */\n    parameters?: Record<string, string>;\n};\n"
       },
       "usedByHTTP": false,
       "usedByMQTT": true
@@ -1275,7 +1275,7 @@
       "type": "DeviceCommand",
       "examples": {
         "restart": "{\n  \"deviceID\": \"device-001\",\n  \"command\": \"restart\"\n}",
-        "updateConfig": "{\n  \"deviceID\": \"device-001\",\n  \"command\": \"update_config\",\n  \"parameters\": {\n    \"enabled\": true,\n    \"interval\": 60\n  }\n}"
+        "updateConfig": "{\n  \"deviceID\": \"device-001\",\n  \"command\": \"update_config\",\n  \"parameters\": {\n    \"enabled\": \"true\",\n    \"interval\": \"60\"\n  }\n}"
       }
     },
     "publishDeviceStatus": {

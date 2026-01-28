@@ -37,9 +37,9 @@ func RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
 			"updateConfig": apitypes.DeviceCommand{
 				DeviceID: "device-001",
 				Command:  "update_config",
-				Parameters: map[string]any{
-					"interval": 60,
-					"enabled":  true,
+				Parameters: map[string]string{
+					"interval": "60",
+					"enabled":  "true",
 				},
 			},
 		},
