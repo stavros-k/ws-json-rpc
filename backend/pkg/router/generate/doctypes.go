@@ -41,7 +41,6 @@ type FieldInfo struct {
 	TypeInfo    FieldType `json:"typeInfo"`    // Structured type information
 	Description string    `json:"description"` // Field documentation
 	Deprecated  string    `json:"deprecated"`  // Deprecation information
-	GoType      string    `json:"goType"`      // Original Go type (for external types like time.Time)
 }
 
 // EnumValue represents an enum constant with its documentation.

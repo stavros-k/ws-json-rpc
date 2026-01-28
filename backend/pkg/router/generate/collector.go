@@ -570,12 +570,6 @@ func (g *OpenAPICollector) markTypeAsMQTT(typeName string) {
 	g.markTypeAsUsedBy(typeName, ProtocolMQTT)
 }
 
-// ExternalTypeInfo holds metadata about external Go types.
-type ExternalTypeInfo struct {
-	GoType        string // Original Go type (e.g., "time.Time")
-	OpenAPIFormat string // OpenAPI format (e.g., "date-time")
-}
-
 // parseGoTypesDir parses Go type definitions from a directory using go/packages.
 func (g *OpenAPICollector) parseGoTypesDir(goTypesDirPath string) (*GoParser, error) {
 	g.l.Debug("Parsing Go types directory", slog.String("path", goTypesDirPath))

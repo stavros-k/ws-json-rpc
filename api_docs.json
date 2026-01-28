@@ -30,8 +30,7 @@
             "additionalProperties": null
           },
           "description": "Name of the team to create",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -79,8 +78,7 @@
             "additionalProperties": null
           },
           "description": "Username to create",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "password",
@@ -95,8 +93,7 @@
             "additionalProperties": null
           },
           "description": "Password to create",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -131,8 +128,7 @@
             "additionalProperties": null
           },
           "description": "ID of the created user",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "createdAt",
@@ -147,8 +143,7 @@
             "additionalProperties": null
           },
           "description": "Creation timestamp",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "url",
@@ -163,8 +158,7 @@
             "additionalProperties": null
           },
           "description": "URL to the user",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -216,8 +210,7 @@
             "additionalProperties": null
           },
           "description": "DeviceID is the unique identifier of the target device",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "command",
@@ -232,8 +225,7 @@
             "additionalProperties": null
           },
           "description": "Command is the command to execute (e.g., \"restart\", \"shutdown\", \"update_config\")",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "parameters",
@@ -256,8 +248,7 @@
             }
           },
           "description": "Parameters contains optional command parameters",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -301,8 +292,7 @@
             "additionalProperties": null
           },
           "description": "DeviceID is the unique identifier of the device",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "status",
@@ -317,8 +307,7 @@
             "additionalProperties": null
           },
           "description": "Status is the current status (e.g., \"online\", \"offline\", \"error\")",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "uptime",
@@ -333,8 +322,7 @@
             "additionalProperties": null
           },
           "description": "Uptime is how long the device has been running in seconds",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "timestamp",
@@ -349,8 +337,7 @@
             "additionalProperties": null
           },
           "description": "Timestamp is when the status was reported",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -394,8 +381,7 @@
             "additionalProperties": null
           },
           "description": "Request ID for tracking",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "message",
@@ -410,8 +396,7 @@
             "additionalProperties": null
           },
           "description": "High-level error message",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "errors",
@@ -434,8 +419,7 @@
             }
           },
           "description": "Field-level validation errors",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -507,8 +491,7 @@
             "additionalProperties": null
           },
           "description": "ID of the team to get",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -548,8 +531,7 @@
             "additionalProperties": null
           },
           "description": "ID of the team",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "users",
@@ -572,8 +554,7 @@
             "additionalProperties": null
           },
           "description": "Users in the team",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -615,8 +596,7 @@
             "additionalProperties": null
           },
           "description": "Human-readable message",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "status",
@@ -631,8 +611,7 @@
             "additionalProperties": null
           },
           "description": "Status of the ping",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "metadata",
@@ -647,8 +626,7 @@
             "additionalProperties": null
           },
           "description": "",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -742,8 +720,7 @@
             "additionalProperties": null
           },
           "description": "DeviceID is the unique identifier of the device",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "sensorType",
@@ -758,8 +735,7 @@
             "additionalProperties": null
           },
           "description": "SensorType is the type of sensor (e.g., \"temperature\", \"humidity\", \"pressure\")",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "value",
@@ -774,8 +750,7 @@
             "additionalProperties": null
           },
           "description": "Value is the sensor reading value",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "unit",
@@ -790,8 +765,7 @@
             "additionalProperties": null
           },
           "description": "Unit is the unit of measurement",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "timestamp",
@@ -806,8 +780,7 @@
             "additionalProperties": null
           },
           "description": "Timestamp is when the reading was taken",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "quality",
@@ -822,8 +795,7 @@
             "additionalProperties": null
           },
           "description": "Quality is the quality of the reading (0-100)",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -867,8 +839,7 @@
             "additionalProperties": null
           },
           "description": "DeviceID is the unique identifier of the device sending the reading",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "temperature",
@@ -883,8 +854,7 @@
             "additionalProperties": null
           },
           "description": "Temperature is the measured temperature value",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "unit",
@@ -899,8 +869,7 @@
             "additionalProperties": null
           },
           "description": "Unit is the temperature unit (e.g., \"celsius\", \"fahrenheit\")",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "timestamp",
@@ -915,8 +884,7 @@
             "additionalProperties": null
           },
           "description": "Timestamp is when the reading was taken",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         }
       ],
       "enumValues": null,
@@ -960,8 +928,7 @@
             "additionalProperties": null
           },
           "description": "ID of the user",
-          "deprecated": "",
-          "goType": ""
+          "deprecated": ""
         },
         {
           "name": "name",
@@ -976,8 +943,7 @@
             "additionalProperties": null
           },
           "description": "Name of the user",
-          "deprecated": "Use UserNameV2 instead.",
-          "goType": ""
+          "deprecated": "Use UserNameV2 instead."
         }
       ],
       "enumValues": null,
