@@ -171,6 +171,25 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 	}
 }
 
+// formatEnumValueDescription formats a single enum value for documentation.
+func formatEnumValueDescription(ev EnumValue) string {
+	switch {
+	case ev.Deprecated != "":
+		result := fmt.Sprintf("- `%s`: **[DEPRECATED]** ", ev.Value)
+		result += ev.Deprecated
+
+		if ev.Description != "" {
+			result += " - " + ev.Description
+		}
+
+		return result + "\n"
+	case ev.Description != "":
+		return fmt.Sprintf("- `%s`: %s\n", ev.Value, ev.Description)
+	default:
+		return fmt.Sprintf("- `%s`\n", ev.Value)
+	}
+}
+
 // buildEnumSchema creates an OpenAPI enum schema.
 // FIXME: Once upstream supports OpenAPI 3.1, switch to using oneOf with const.
 func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
@@ -187,23 +206,7 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 
 	for i, ev := range typeInfo.EnumValues {
 		values[i] = ev.Value
-
-		// Build enum value description with deprecation info
-		switch {
-		case ev.Deprecated != "":
-			enumDesc.WriteString(fmt.Sprintf("- `%s`: **[DEPRECATED]** ", ev.Value))
-			enumDesc.WriteString(ev.Deprecated)
-
-			if ev.Description != "" {
-				enumDesc.WriteString(" - " + ev.Description)
-			}
-
-			enumDesc.WriteString("\n")
-		case ev.Description != "":
-			enumDesc.WriteString(fmt.Sprintf("- `%s`: %s\n", ev.Value, ev.Description))
-		default:
-			enumDesc.WriteString(fmt.Sprintf("- `%s`\n", ev.Value))
-		}
+		enumDesc.WriteString(formatEnumValueDescription(ev))
 	}
 
 	// Determine OpenAPI type based on enum kind

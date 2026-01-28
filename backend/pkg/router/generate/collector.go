@@ -45,6 +45,26 @@ const (
 	FormatURI      = "uri"
 )
 
+// primitiveTypeMapping maps Go primitive types to OpenAPI/JSON Schema types.
+var primitiveTypeMapping = map[string]FieldType{
+	"string": {Kind: FieldKindPrimitive, Type: "string"},
+	"byte":   {Kind: FieldKindPrimitive, Type: "string"},
+	"rune":   {Kind: FieldKindPrimitive, Type: "string"},
+	"bool":   {Kind: FieldKindPrimitive, Type: "boolean"},
+	"int":    {Kind: FieldKindPrimitive, Type: "integer"},
+	"int8":   {Kind: FieldKindPrimitive, Type: "integer"},
+	"int16":  {Kind: FieldKindPrimitive, Type: "integer"},
+	"uint":   {Kind: FieldKindPrimitive, Type: "integer"},
+	"uint8":  {Kind: FieldKindPrimitive, Type: "integer"},
+	"uint16": {Kind: FieldKindPrimitive, Type: "integer"},
+	"int32":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
+	"uint32": {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
+	"int64":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
+	"uint64": {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
+	"float32": {Kind: FieldKindPrimitive, Type: "number", Format: "float"},
+	"float64": {Kind: FieldKindPrimitive, Type: "number", Format: "double"},
+}
+
 // GoParser holds the parsed Go AST and type information.
 type GoParser struct {
 	fset  *token.FileSet
@@ -322,6 +342,11 @@ func (g *OpenAPICollector) RegisterJSONRepresentation(value any) error {
 	typeName, err := extractTypeNameFromValue(value)
 	if err != nil {
 		return fmt.Errorf("failed to extract type name: %w", err)
+	}
+
+	// Skip primitive types - they don't need JSON representations
+	if _, isPrimitive := primitiveTypeMapping[typeName]; isPrimitive {
+		return nil
 	}
 
 	typeInfo, ok := g.types[typeName]
@@ -1073,6 +1098,74 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 	return nil
 }
 
+// analyzePointerType handles pointer types (*T) which become nullable.
+func (g *OpenAPICollector) analyzePointerType(t *ast.StarExpr) (FieldType, []string, error) {
+	inner, innerRefs, err := g.analyzeGoType(t.X)
+	if err != nil {
+		return FieldType{}, nil, err
+	}
+
+	inner.Nullable = true
+
+	return inner, innerRefs, nil
+}
+
+// analyzeArrayType handles array/slice types ([]T).
+func (g *OpenAPICollector) analyzeArrayType(t *ast.ArrayType) (FieldType, []string, error) {
+	elemType, elemRefs, err := g.analyzeGoType(t.Elt)
+	if err != nil {
+		return FieldType{}, nil, err
+	}
+
+	return FieldType{
+		Kind:      FieldKindArray,
+		Type:      "array",
+		ItemsType: &elemType,
+	}, elemRefs, nil
+}
+
+// analyzeMapType handles map types (map[K]V).
+func (g *OpenAPICollector) analyzeMapType(t *ast.MapType) (FieldType, []string, error) {
+	valueType, valueRefs, err := g.analyzeGoType(t.Value)
+	if err != nil {
+		return FieldType{}, nil, err
+	}
+
+	return FieldType{
+		Kind:                 FieldKindObject,
+		Type:                 "object",
+		AdditionalProperties: &valueType,
+	}, valueRefs, nil
+}
+
+// analyzeSelectorType handles external types (e.g., time.Time, types.URL).
+func (g *OpenAPICollector) analyzeSelectorType(t *ast.SelectorExpr) (FieldType, []string, error) {
+	pkgIdent, ok := t.X.(*ast.Ident)
+	if !ok {
+		return FieldType{}, nil, fmt.Errorf("unsupported selector expression with base type %T - expected package.Type format", t.X)
+	}
+
+	fullType := pkgIdent.Name + "." + t.Sel.Name
+
+	// Check for known external types
+	format, exists := g.externalTypeFormats[fullType]
+	if !exists {
+		// Try with full package path
+		fullTypePath := "ws-json-rpc/backend/pkg/" + pkgIdent.Name + "." + t.Sel.Name
+		format, exists = g.externalTypeFormats[fullTypePath]
+
+		if !exists {
+			return FieldType{}, nil, fmt.Errorf("unknown external type %s - please add it to externalTypeFormats map in NewOpenAPICollector", fullType)
+		}
+	}
+
+	return FieldType{
+		Kind:   FieldKindPrimitive,
+		Type:   "string",
+		Format: format,
+	}, nil, nil
+}
+
 // analyzeGoType analyzes a Go type expression and returns FieldType and referenced types.
 func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, error) {
 	refs := []string{}
@@ -1083,47 +1176,12 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 		typeName := t.Name
 
 		// Check for primitives - map Go types to OpenAPI/JSON Schema types
-		switch typeName {
-		case "string", "byte", "rune":
-			return FieldType{
-				Kind: FieldKindPrimitive,
-				Type: "string",
-			}, refs, nil
-		case "bool":
-			return FieldType{
-				Kind: FieldKindPrimitive,
-				Type: "boolean",
-			}, refs, nil
-		case "int", "int8", "int16", "uint", "uint8", "uint16":
-			return FieldType{
-				Kind: FieldKindPrimitive,
-				Type: "integer",
-			}, refs, nil
-		case "int32", "uint32":
-			return FieldType{
-				Kind:   FieldKindPrimitive,
-				Type:   "integer",
-				Format: "int32",
-			}, refs, nil
-		case "int64", "uint64":
-			return FieldType{
-				Kind:   FieldKindPrimitive,
-				Type:   "integer",
-				Format: "int64",
-			}, refs, nil
-		case "float32":
-			return FieldType{
-				Kind:   FieldKindPrimitive,
-				Type:   "number",
-				Format: "float",
-			}, refs, nil
-		case "float64":
-			return FieldType{
-				Kind:   FieldKindPrimitive,
-				Type:   "number",
-				Format: "double",
-			}, refs, nil
-		case "any", "interface{}":
+		if primitiveType, ok := primitiveTypeMapping[typeName]; ok {
+			return primitiveType, refs, nil
+		}
+
+		// Reject any/interface{} explicitly
+		if typeName == "any" || typeName == "interface{}" {
 			return FieldType{}, nil, fmt.Errorf("type 'any' or 'interface{}' is not allowed in API types - use concrete types instead")
 		}
 
@@ -1137,68 +1195,16 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 		}, refs, nil
 
 	case *ast.StarExpr:
-		// Pointer type (*T) - nullable
-		inner, innerRefs, err := g.analyzeGoType(t.X)
-		if err != nil {
-			return FieldType{}, nil, err
-		}
-
-		inner.Nullable = true
-
-		return inner, innerRefs, nil
+		return g.analyzePointerType(t)
 
 	case *ast.ArrayType:
-		// Array or slice ([]T)
-		elemType, elemRefs, err := g.analyzeGoType(t.Elt)
-		if err != nil {
-			return FieldType{}, nil, err
-		}
-
-		return FieldType{
-			Kind:      FieldKindArray,
-			Type:      "array",
-			ItemsType: &elemType,
-		}, elemRefs, nil
+		return g.analyzeArrayType(t)
 
 	case *ast.MapType:
-		// Map type (map[K]V)
-		valueType, valueRefs, err := g.analyzeGoType(t.Value)
-		if err != nil {
-			return FieldType{}, nil, err
-		}
-
-		return FieldType{
-			Kind:                 FieldKindObject,
-			Type:                 "object",
-			AdditionalProperties: &valueType,
-		}, valueRefs, nil
+		return g.analyzeMapType(t)
 
 	case *ast.SelectorExpr:
-		// External type (e.g., time.Time, types.URL)
-		pkgIdent, ok := t.X.(*ast.Ident)
-		if !ok {
-			return FieldType{}, nil, fmt.Errorf("unsupported selector expression with base type %T - expected package.Type format", t.X)
-		}
-
-		fullType := pkgIdent.Name + "." + t.Sel.Name
-
-		// Check for known external types
-		format, exists := g.externalTypeFormats[fullType]
-		if !exists {
-			// Try with full package path
-			fullTypePath := "ws-json-rpc/backend/pkg/" + pkgIdent.Name + "." + t.Sel.Name
-			format, exists = g.externalTypeFormats[fullTypePath]
-
-			if !exists {
-				return FieldType{}, nil, fmt.Errorf("unknown external type %s - please add it to externalTypeFormats map in NewOpenAPICollector", fullType)
-			}
-		}
-
-		return FieldType{
-			Kind:   FieldKindPrimitive,
-			Type:   "string",
-			Format: format,
-		}, refs, nil
+		return g.analyzeSelectorType(t)
 
 	case *ast.InterfaceType:
 		// Interface type (interface{} or any)
