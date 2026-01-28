@@ -446,10 +446,6 @@ func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) err
 		return err
 	}
 
-	if _, exists := g.mqttPublications[pub.OperationID]; exists {
-		return fmt.Errorf("duplicate MQTT publication operationID: %s", pub.OperationID)
-	}
-
 	// Process message type and examples
 	typeName, stringifiedExamples, err := g.processMQTTMessageType(pub.OperationID, pub.TypeValue, pub.Examples, "publication")
 	if err != nil {
@@ -469,10 +465,6 @@ func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) e
 	// Validate operationID is unique
 	if err := g.validateUniqueOperationID(sub.OperationID); err != nil {
 		return err
-	}
-
-	if _, exists := g.mqttSubscriptions[sub.OperationID]; exists {
-		return fmt.Errorf("duplicate MQTT subscription operationID: %s", sub.OperationID)
 	}
 
 	// Process message type and examples
@@ -992,19 +984,27 @@ func (g *OpenAPICollector) processValueSpec(valueSpec *ast.ValueSpec, enumTypeNa
 }
 
 // storeEnumType stores or updates an enum type in the types map.
-func (g *OpenAPICollector) storeEnumType(enumTypeName string, enumValues []EnumValue, constDecl *ast.GenDecl) {
+func (g *OpenAPICollector) storeEnumType(enumTypeName string, enumValues []EnumValue, constDecl *ast.GenDecl) error {
+	// Validate we have at least one enum value
+	if len(enumValues) == 0 {
+		return fmt.Errorf("enum %s: cannot store enum type with no values", enumTypeName)
+	}
+
 	// Store the const block AST node for later Go source generation
 	g.constASTs[enumTypeName] = constDecl
 
-	// Determine if this is a string enum or number enum by checking the first value
-	enumKind := TypeKindStringEnum
-	if len(enumValues) > 0 {
-		switch enumValues[0].Value.(type) {
-		case int64:
-			enumKind = TypeKindNumberEnum
-		case string:
-			enumKind = TypeKindStringEnum
-		}
+	// Determine enum kind from first value
+	// Note: All values are guaranteed to have the same type because:
+	// 1. extractEnumsFromConstBlock ensures all consts have the same type name
+	// 2. Go's type system enforces type compatibility
+	var enumKind string
+	switch enumValues[0].Value.(type) {
+	case int64:
+		enumKind = TypeKindNumberEnum
+	case string:
+		enumKind = TypeKindStringEnum
+	default:
+		return fmt.Errorf("enum %s: unsupported enum value type %T", enumTypeName, enumValues[0].Value)
 	}
 
 	existingType, exists := g.types[enumTypeName]
@@ -1022,6 +1022,8 @@ func (g *OpenAPICollector) storeEnumType(enumTypeName string, enumValues []EnumV
 		}
 		g.l.Debug("Created new enum type", slog.String("name", enumTypeName), slog.String("kind", enumKind), slog.Int("valueCount", len(enumValues)))
 	}
+
+	return nil
 }
 
 // extractEnumsFromConstBlock extracts enum values from a const block.
@@ -1096,7 +1098,9 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 		return ErrNoEnumType
 	}
 
-	g.storeEnumType(enumTypeName, enumValues, constDecl)
+	if err := g.storeEnumType(enumTypeName, enumValues, constDecl); err != nil {
+		return err
+	}
 
 	return nil
 }

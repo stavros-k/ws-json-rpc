@@ -22,7 +22,7 @@ func toOpenAPISchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	switch typeInfo.Kind {
 	case TypeKindObject:
 		return buildObjectSchema(typeInfo)
-	case TypeKindStringEnum:
+	case TypeKindStringEnum, TypeKindNumberEnum:
 		return buildEnumSchema(typeInfo)
 	default:
 		return nil, fmt.Errorf("unsupported type kind: %s", typeInfo.Kind)
