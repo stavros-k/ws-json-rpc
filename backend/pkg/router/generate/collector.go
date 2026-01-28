@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"ws-json-rpc/backend/pkg/utils"
@@ -789,38 +790,52 @@ func (g *OpenAPICollector) extractStructType(name string, structType *ast.Struct
 	return typeInfo, nil
 }
 
-// extractFieldInfo extracts field information from a struct field.
-func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field *ast.Field) (FieldInfo, []string, error) {
-	// Extract JSON tag
-	jsonName := fieldName
-	omitempty := false
-	jsonSkip := false
+// jsonTagInfo holds parsed JSON struct tag information.
+type jsonTagInfo struct {
+	name      string
+	omitempty bool
+	skip      bool
+}
 
-	if field.Tag != nil {
-		tag := strings.Trim(field.Tag.Value, "`")
-		// Simple JSON tag parsing
-		if strings.Contains(tag, "json:") {
-			parts := strings.Split(tag, "json:")
-			if len(parts) > 1 {
-				jsonTag := strings.Split(parts[1], "\"")[1]
-
-				jsonParts := strings.Split(jsonTag, ",")
-				if jsonParts[0] == "-" {
-					jsonSkip = true
-				} else if jsonParts[0] != "" {
-					jsonName = jsonParts[0]
-				}
-
-				for _, part := range jsonParts[1:] {
-					if part == "omitempty" {
-						omitempty = true
-					}
-				}
-			}
-		}
+// parseJSONTag parses a JSON struct tag and returns the field name, omitempty flag, and skip flag.
+func parseJSONTag(field *ast.Field, defaultName string) jsonTagInfo {
+	info := jsonTagInfo{
+		name: defaultName,
 	}
 
-	if jsonSkip {
+	if field.Tag == nil {
+		return info
+	}
+
+	// Use reflect.StructTag to properly parse struct tags
+	tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+	jsonTag, ok := tag.Lookup("json")
+	if !ok {
+		return info
+	}
+
+	parts := strings.Split(jsonTag, ",")
+	if parts[0] == "-" {
+		info.skip = true
+		return info
+	}
+
+	if parts[0] != "" {
+		info.name = parts[0]
+	}
+
+	if slices.Contains(parts[1:], "omitempty") {
+		info.omitempty = true
+	}
+
+	return info
+}
+
+// extractFieldInfo extracts field information from a struct field.
+func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field *ast.Field) (FieldInfo, []string, error) {
+	// Parse JSON tag
+	tagInfo := parseJSONTag(field, fieldName)
+	if tagInfo.skip {
 		return FieldInfo{}, nil, ErrFieldSkipped
 	}
 
@@ -832,7 +847,7 @@ func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field 
 
 	// Determine if field is required
 	// In Go: pointer types (*T) are optional, non-pointer types are required unless omitempty is set
-	required := !fieldType.Nullable && !omitempty
+	required := !fieldType.Nullable && !tagInfo.omitempty
 	fieldType.Required = required
 
 	// Extract field documentation
@@ -844,7 +859,7 @@ func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field 
 	}
 
 	fieldInfo := FieldInfo{
-		Name:        jsonName,
+		Name:        tagInfo.name,
 		DisplayType: generateDisplayType(fieldType),
 		TypeInfo:    fieldType,
 		Description: cleanedFieldDesc,
