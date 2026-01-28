@@ -184,9 +184,9 @@ func formatEnumValueDescription(ev EnumValue) string {
 
 		return result + "\n"
 	case ev.Description != "":
-		return fmt.Sprintf("- `%s`: %s\n", ev.Value, ev.Description)
+		return fmt.Sprintf("- `%v`: %s\n", ev.Value, ev.Description)
 	default:
-		return fmt.Sprintf("- `%s`\n", ev.Value)
+		return fmt.Sprintf("- `%v`\n", ev.Value)
 	}
 }
 
