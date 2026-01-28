@@ -408,39 +408,6 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	return nil
 }
 
-// processMQTTMessageType extracts type information and registers representations for an MQTT message.
-// Returns the type name and stringified examples.
-func (g *OpenAPICollector) processMQTTMessageType(operationID string, typeValue any, examples map[string]any, messageKind string) (typeName string, stringifiedExamples map[string]string, err error) {
-	// Validate type value is not zero
-	if reflect.ValueOf(typeValue).IsZero() {
-		return "", nil, fmt.Errorf("MessageType must not be zero value in %s [%s]", messageKind, operationID)
-	}
-
-	// Extract type name from zero value using reflection
-	typeName, err = extractTypeNameFromValue(typeValue)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to extract message type name: %w", err)
-	}
-
-	// Mark as used by MQTT
-	g.markTypeAsMQTT(typeName)
-
-	// Register JSON representation
-	if err := g.RegisterJSONRepresentation(typeValue); err != nil {
-		return "", nil, fmt.Errorf("failed to register JSON representation for message type: %w", err)
-	}
-
-	// Register examples
-	if err := g.registerExamples(examples); err != nil {
-		return "", nil, fmt.Errorf("failed to register JSON representation for example: %w", err)
-	}
-
-	// Stringify examples
-	stringifiedExamples = stringifyExamples(examples)
-
-	return typeName, stringifiedExamples, nil
-}
-
 func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) error {
 	// Validate operationID is unique
 	if err := g.validateUniqueOperationID(pub.OperationID); err != nil {
@@ -489,6 +456,39 @@ func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) e
 	g.mqttSubscriptions[sub.OperationID] = sub
 
 	return nil
+}
+
+// processMQTTMessageType extracts type information and registers representations for an MQTT message.
+// Returns the type name and stringified examples.
+func (g *OpenAPICollector) processMQTTMessageType(operationID string, typeValue any, examples map[string]any, messageKind string) (typeName string, stringifiedExamples map[string]string, err error) {
+	// Validate type value is not zero
+	if reflect.ValueOf(typeValue).IsZero() {
+		return "", nil, fmt.Errorf("MessageType must not be zero value in %s [%s]", messageKind, operationID)
+	}
+
+	// Extract type name from zero value using reflection
+	typeName, err = extractTypeNameFromValue(typeValue)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to extract message type name: %w", err)
+	}
+
+	// Mark as used by MQTT
+	g.markTypeAsMQTT(typeName)
+
+	// Register JSON representation
+	if err := g.RegisterJSONRepresentation(typeValue); err != nil {
+		return "", nil, fmt.Errorf("failed to register JSON representation for message type: %w", err)
+	}
+
+	// Register examples
+	if err := g.registerExamples(examples); err != nil {
+		return "", nil, fmt.Errorf("failed to register JSON representation for example: %w", err)
+	}
+
+	// Stringify examples
+	stringifiedExamples = stringifyExamples(examples)
+
+	return typeName, stringifiedExamples, nil
 }
 
 // registerExamples registers JSON representations for a slice of examples.
@@ -809,6 +809,7 @@ func parseJSONTag(field *ast.Field, defaultName string) jsonTagInfo {
 
 	// Use reflect.StructTag to properly parse struct tags
 	tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+
 	jsonTag, ok := tag.Lookup("json")
 	if !ok {
 		return info
@@ -817,6 +818,7 @@ func parseJSONTag(field *ast.Field, defaultName string) jsonTagInfo {
 	parts := strings.Split(jsonTag, ",")
 	if parts[0] == "-" {
 		info.skip = true
+
 		return info
 	}
 

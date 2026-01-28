@@ -53,7 +53,11 @@ func main() {
 	db, err := sql.Open("sqlite3", config.Database)
 	fatalIfErr(logger, err)
 
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("failed to close database", slog.String("error", err.Error()))
+		}
+	}()
 
 	queries := sqlitegen.New(db)
 
