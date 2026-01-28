@@ -1,6 +1,6 @@
 package generate
 
-// This file (guts.go) handles Go AST parsing and metadata extraction
+// This file (collector.go) handles Go AST parsing and metadata extraction
 // using native Go AST parser to extract type information and generate
 // Go source representations with full metadata.
 
