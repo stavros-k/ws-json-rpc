@@ -113,7 +113,7 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 	// Normalize path to be recognized as a local package
 	goTypesDirPath := normalizeLocalPackagePath(opts.GoTypesDirPath)
 
-	l.Debug("Creating guts generator", slog.String("goTypesDirPath", goTypesDirPath))
+	l.Debug("Creating doc collector", slog.String("goTypesDirPath", goTypesDirPath))
 
 	docCollector := &OpenAPICollector{
 		l:                 l,
