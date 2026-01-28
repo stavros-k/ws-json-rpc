@@ -16,7 +16,7 @@ func (e *ExtraDataAfterJSONError) Error() string {
 
 // FromJSON decodes JSON from byte slice (wrapper around streaming version).
 //
-//nolint:ireturn // we want to return the generic type T
+//nolint:ireturn // Generic functions must return type parameter T
 func FromJSON[T any](data []byte) (T, error) {
 	var result T
 	if len(data) == 0 {
@@ -30,7 +30,7 @@ func FromJSON[T any](data []byte) (T, error) {
 
 // FromJSONStream decodes JSON from io.Reader (streaming version).
 //
-//nolint:ireturn // we want to return the generic type T
+//nolint:ireturn // Generic functions must return type parameter T
 func FromJSONStream[T any](r io.Reader) (T, error) {
 	var result T
 
@@ -51,7 +51,7 @@ func FromJSONStream[T any](r io.Reader) (T, error) {
 
 // MustFromJSON decodes JSON from byte slice (wrapper around streaming version).
 //
-//nolint:ireturn // we want to return the generic type T
+//nolint:ireturn // Generic functions must return type parameter T
 func MustFromJSON[T any](data []byte) T {
 	result, err := FromJSON[T](data)
 	if err != nil {

@@ -8,6 +8,8 @@ import (
 
 // ErrorResponse is the unified error response type.
 // It supports both simple errors (just message) and validation errors (message + field errors).
+//
+//nolint:errname // ErrorResponse is an API response type, not a traditional error
 type ErrorResponse struct {
 	// HTTP status code (internal only, not sent to client)
 	StatusCode int `json:"-"`

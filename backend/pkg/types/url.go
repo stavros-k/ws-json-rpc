@@ -32,8 +32,8 @@ func MustNewURL(s string) URL {
 }
 
 // MarshalJSON marshals the URL as a JSON string.
-func (u URL) MarshalJSON() ([]byte, error) {
-	if u.URL == nil {
+func (u *URL) MarshalJSON() ([]byte, error) {
+	if u == nil || u.URL == nil {
 		return utils.ToJSON("")
 	}
 
@@ -64,8 +64,8 @@ func (u *URL) UnmarshalJSON(data []byte) error {
 }
 
 // String returns the string representation of the URL.
-func (u URL) String() string {
-	if u.URL == nil {
+func (u *URL) String() string {
+	if u == nil || u.URL == nil {
 		return ""
 	}
 

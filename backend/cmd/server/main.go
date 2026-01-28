@@ -168,7 +168,7 @@ func main() {
 	logger.Info("http server shutdown complete")
 }
 
-//nolint:ireturn // we want to return the MetadataCollector
+//nolint:ireturn // Returns MetadataCollector interface (OpenAPICollector or NoopCollector)
 func getCollector(c *app.Config, l *slog.Logger) (generate.MetadataCollector, error) {
 	if !c.Generate {
 		return &generate.NoopCollector{}, nil
