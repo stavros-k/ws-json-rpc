@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	// OpenAPIVersion is the OpenAPI specification version used for generated specs
+	// OpenAPIVersion is the OpenAPI specification version used for generated specs.
 	OpenAPIVersion = "3.0.3"
 )
 
@@ -211,6 +211,7 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 
 	// Determine OpenAPI type based on enum kind
 	var schemaType string
+
 	switch typeInfo.Kind {
 	case TypeKindStringEnum:
 		schemaType = "string"

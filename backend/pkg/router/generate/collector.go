@@ -50,26 +50,6 @@ const (
 	FormatURI      = "uri"
 )
 
-// primitiveTypeMapping maps Go primitive types to OpenAPI/JSON Schema types.
-var primitiveTypeMapping = map[string]FieldType{
-	"string":  {Kind: FieldKindPrimitive, Type: "string"},
-	"byte":    {Kind: FieldKindPrimitive, Type: "string"},
-	"rune":    {Kind: FieldKindPrimitive, Type: "string"},
-	"bool":    {Kind: FieldKindPrimitive, Type: "boolean"},
-	"int":     {Kind: FieldKindPrimitive, Type: "integer"},
-	"int8":    {Kind: FieldKindPrimitive, Type: "integer"},
-	"int16":   {Kind: FieldKindPrimitive, Type: "integer"},
-	"uint":    {Kind: FieldKindPrimitive, Type: "integer"},
-	"uint8":   {Kind: FieldKindPrimitive, Type: "integer"},
-	"uint16":  {Kind: FieldKindPrimitive, Type: "integer"},
-	"int32":   {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
-	"uint32":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
-	"int64":   {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
-	"uint64":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
-	"float32": {Kind: FieldKindPrimitive, Type: "number", Format: "float"},
-	"float64": {Kind: FieldKindPrimitive, Type: "number", Format: "double"},
-}
-
 // GoParser holds the parsed Go AST and type information.
 type GoParser struct {
 	fset  *token.FileSet
@@ -105,6 +85,8 @@ type OpenAPICollector struct {
 
 	apiInfo     APIInfo
 	openapiSpec string
+
+	primitiveTypeMapping map[string]FieldType
 }
 
 // normalizeLocalPackagePath normalizes a path to be recognized as a local package.
@@ -114,6 +96,27 @@ func normalizeLocalPackagePath(path string) string {
 	path = strings.TrimPrefix(path, "/")
 
 	return "./" + path
+}
+
+func getPrimitiveTypeMappings() map[string]FieldType {
+	return map[string]FieldType{
+		"string":  {Kind: FieldKindPrimitive, Type: "string"},
+		"byte":    {Kind: FieldKindPrimitive, Type: "string"},
+		"rune":    {Kind: FieldKindPrimitive, Type: "string"},
+		"bool":    {Kind: FieldKindPrimitive, Type: "boolean"},
+		"int":     {Kind: FieldKindPrimitive, Type: "integer"},
+		"int8":    {Kind: FieldKindPrimitive, Type: "integer"},
+		"int16":   {Kind: FieldKindPrimitive, Type: "integer"},
+		"uint":    {Kind: FieldKindPrimitive, Type: "integer"},
+		"uint8":   {Kind: FieldKindPrimitive, Type: "integer"},
+		"uint16":  {Kind: FieldKindPrimitive, Type: "integer"},
+		"int32":   {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
+		"uint32":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int32"},
+		"int64":   {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
+		"uint64":  {Kind: FieldKindPrimitive, Type: "integer", Format: "int64"},
+		"float32": {Kind: FieldKindPrimitive, Type: "number", Format: "float"},
+		"float64": {Kind: FieldKindPrimitive, Type: "number", Format: "double"},
+	}
 }
 
 type OpenAPICollectorOptions struct {
@@ -162,6 +165,8 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 		docsFilePath:        opts.DocsFileOutputPath,
 		openAPISpecFilePath: opts.OpenAPISpecOutputPath,
 		apiInfo:             opts.APIInfo,
+
+		primitiveTypeMapping: getPrimitiveTypeMappings(),
 	}
 
 	dbSchema, err := docCollector.GenerateDatabaseSchema(opts.DatabaseSchemaFileOutputPath)
@@ -291,6 +296,7 @@ func (g *OpenAPICollector) SerializeNode(name string) (string, error) {
 		if strings.HasPrefix(line, "// From") {
 			continue
 		}
+
 		if strings.HasPrefix(line, "//nolint:") {
 			continue
 		}
@@ -353,7 +359,7 @@ func (g *OpenAPICollector) RegisterJSONRepresentation(value any) error {
 	}
 
 	// Skip primitive types - they don't need JSON representations
-	if _, isPrimitive := primitiveTypeMapping[typeName]; isPrimitive {
+	if _, isPrimitive := g.primitiveTypeMapping[typeName]; isPrimitive {
 		return nil
 	}
 
@@ -370,33 +376,6 @@ func (g *OpenAPICollector) RegisterJSONRepresentation(value any) error {
 	}
 
 	return nil
-}
-
-// processHTTPType extracts type name, marks it as HTTP, and registers JSON representations.
-// Returns the extracted type name.
-func (g *OpenAPICollector) processHTTPType(typeValue any, examples map[string]any, contextMsg string) (string, map[string]string, error) {
-	typeName, err := extractTypeNameFromValue(typeValue)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to extract %s type name: %w", contextMsg, err)
-	}
-
-	// Mark as used by HTTP (for OpenAPI spec filtering)
-	g.markTypeAsHTTP(typeName)
-
-	if err := g.RegisterJSONRepresentation(typeValue); err != nil {
-		return "", nil, fmt.Errorf("failed to register JSON representation for %s type: %w", contextMsg, err)
-	}
-
-	// Register and stringify examples if provided
-	var stringifiedExamples map[string]string
-	if examples != nil {
-		if err := g.registerExamples(examples); err != nil {
-			return "", nil, fmt.Errorf("failed to register JSON representation for %s example: %w", contextMsg, err)
-		}
-		stringifiedExamples = stringifyExamples(examples)
-	}
-
-	return typeName, stringifiedExamples, nil
 }
 
 func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
@@ -488,6 +467,35 @@ func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) e
 	g.mqttSubscriptions[sub.OperationID] = sub
 
 	return nil
+}
+
+// processHTTPType extracts type name, marks it as HTTP, and registers JSON representations.
+// Returns the extracted type name.
+func (g *OpenAPICollector) processHTTPType(typeValue any, examples map[string]any, contextMsg string) (string, map[string]string, error) {
+	typeName, err := extractTypeNameFromValue(typeValue)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to extract %s type name: %w", contextMsg, err)
+	}
+
+	// Mark as used by HTTP (for OpenAPI spec filtering)
+	g.markTypeAsHTTP(typeName)
+
+	if err := g.RegisterJSONRepresentation(typeValue); err != nil {
+		return "", nil, fmt.Errorf("failed to register JSON representation for %s type: %w", contextMsg, err)
+	}
+
+	// Register and stringify examples if provided
+	var stringifiedExamples map[string]string
+
+	if examples != nil {
+		if err := g.registerExamples(examples); err != nil {
+			return "", nil, fmt.Errorf("failed to register JSON representation for %s example: %w", contextMsg, err)
+		}
+
+		stringifiedExamples = stringifyExamples(examples)
+	}
+
+	return typeName, stringifiedExamples, nil
 }
 
 // processMQTTMessageType extracts type information and registers representations for an MQTT message.
@@ -942,6 +950,7 @@ func (g *OpenAPICollector) processEnumValue(valueSpec *ast.ValueSpec, index int,
 		if err != nil {
 			return EnumValue{}, fmt.Errorf("enum constant %s.%s has invalid integer value %s: %w", enumTypeName, name.Name, basicLit.Value, err)
 		}
+
 		value = intVal
 
 	default:
@@ -1003,6 +1012,7 @@ func (g *OpenAPICollector) storeEnumType(enumTypeName string, enumValues []EnumV
 	// 1. extractEnumsFromConstBlock ensures all consts have the same type name
 	// 2. Go's type system enforces type compatibility
 	var enumKind string
+
 	switch enumValues[0].Value.(type) {
 	case int64:
 		enumKind = TypeKindNumberEnum
@@ -1050,16 +1060,18 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 
 		// Check if all names in this spec are exported
 		allExported := true
+
 		for _, name := range valueSpec.Names {
 			if !name.IsExported() {
 				allExported = false
+
 				break
 			}
 		}
 
 		// If we've identified this as an enum block, all constants must be exported
 		if enumTypeName != "" && !allExported {
-			return fmt.Errorf("enum const blocks must not contain unexported constants")
+			return errors.New("enum const blocks must not contain unexported constants")
 		}
 
 		// Skip const specs with no exported names (only before enum type is established)
@@ -1073,7 +1085,8 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 				// First exported const without type = not an enum block
 				return ErrNoEnumType
 			}
-			return fmt.Errorf("all exported constants in enum const block must have explicit type declaration")
+
+			return errors.New("all exported constants in enum const block must have explicit type declaration")
 		}
 
 		ident, ok := valueSpec.Type.(*ast.Ident)
@@ -1180,13 +1193,13 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 		typeName := t.Name
 
 		// Check for primitives - map Go types to OpenAPI/JSON Schema types
-		if primitiveType, ok := primitiveTypeMapping[typeName]; ok {
+		if primitiveType, ok := g.primitiveTypeMapping[typeName]; ok {
 			return primitiveType, refs, nil
 		}
 
 		// Reject any/interface{} explicitly
 		if typeName == "any" || typeName == "interface{}" {
-			return FieldType{}, nil, fmt.Errorf("type 'any' or 'interface{}' is not allowed in API types - use concrete types instead")
+			return FieldType{}, nil, errors.New("type 'any' or 'interface{}' is not allowed in API types - use concrete types instead")
 		}
 
 		// Check if it's a defined type in our types map (will be populated after first pass)
