@@ -19,10 +19,10 @@ const (
 
 // toOpenAPISchema converts extracted type metadata to an OpenAPI schema.
 func toOpenAPISchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
-	switch typeInfo.Kind {
-	case TypeKindObject:
+	switch {
+	case typeInfo.Kind == TypeKindObject:
 		return buildObjectSchema(typeInfo)
-	case TypeKindStringEnum, TypeKindNumberEnum:
+	case isEnumKind(typeInfo.Kind):
 		return buildEnumSchema(typeInfo)
 	default:
 		return nil, fmt.Errorf("unsupported type kind: %s", typeInfo.Kind)

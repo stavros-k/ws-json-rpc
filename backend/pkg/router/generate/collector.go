@@ -39,6 +39,11 @@ var (
 	ErrFieldSkipped    = errors.New("field skipped")
 )
 
+// isEnumKind checks if the given kind represents an enum type.
+func isEnumKind(kind string) bool {
+	return kind == TypeKindStringEnum || kind == TypeKindNumberEnum
+}
+
 // External type format constants for OpenAPI schema generation.
 const (
 	FormatDateTime = "date-time"
@@ -1348,7 +1353,7 @@ func (g *OpenAPICollector) generateGoSource(typeInfo *TypeInfo) (string, error) 
 
 	buf.WriteString("\n")
 
-	if typeInfo.Kind == TypeKindStringEnum {
+	if isEnumKind(typeInfo.Kind) {
 		constDecl, exists := g.constASTs[typeInfo.Name]
 		if !exists {
 			return "", fmt.Errorf("no const declaration AST found for enum type %s", typeInfo.Name)
