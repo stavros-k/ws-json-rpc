@@ -286,11 +286,14 @@ func (g *OpenAPICollector) SerializeNode(name string) (string, error) {
 		if strings.HasPrefix(line, "// From") {
 			continue
 		}
+		if strings.HasPrefix(line, "//nolint:") {
+			continue
+		}
 
 		str.WriteString(line + "\n")
 	}
 
-	return str.String(), nil
+	return strings.TrimSpace(str.String()) + "\n", nil
 }
 
 // Generate generates both the OpenAPI spec YAML and the docs JSON file.
@@ -1242,11 +1245,23 @@ func (g *OpenAPICollector) extractCommentsFromDoc(doc *ast.CommentGroup) string 
 			builder.WriteString(" ")
 		}
 
+		// Trim leading slashes and whitespace
 		text := strings.TrimPrefix(comment.Text, "//")
+		text = strings.TrimSpace(text)
+
+		if text == "" {
+			continue
+		}
+
+		// Skip nolint comments
+		if strings.HasPrefix(text, "nolint:") {
+			continue
+		}
+
 		builder.WriteString(strings.TrimSpace(text))
 	}
 
-	return builder.String()
+	return strings.TrimSpace(builder.String())
 }
 
 func (g *OpenAPICollector) getDocumentation() *APIDocumentation {

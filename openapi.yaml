@@ -32,7 +32,7 @@ components:
             type: object
         ErrorResponse:
             additionalProperties: false
-            description: ErrorResponse is the unified error response type. It supports both simple errors (just message) and validation errors (message + field errors).  nolint:errname // ErrorResponse is an API response type, not a traditional error
+            description: ErrorResponse is the unified error response type. It supports both simple errors (just message) and validation errors (message + field errors).
             properties:
                 errors:
                     additionalProperties:
