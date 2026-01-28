@@ -71,80 +71,99 @@ func buildFieldSchema(field FieldInfo) (*openapi3.SchemaRef, error) {
 	return buildSchemaFromFieldType(field.TypeInfo, field.Description)
 }
 
+// applyNullable sets the Nullable field on a schema if needed.
+func applyNullable(schema *openapi3.Schema, nullable bool) {
+	if nullable {
+		schema.Nullable = true
+	}
+}
+
+// buildPrimitiveSchemaFromFieldType builds a schema for primitive types.
+func buildPrimitiveSchemaFromFieldType(ft FieldType, description string) (*openapi3.SchemaRef, error) {
+	schema := &openapi3.Schema{
+		Type:        &openapi3.Types{ft.Type},
+		Description: description,
+	}
+	if ft.Format != "" {
+		schema.Format = ft.Format
+	}
+
+	applyNullable(schema, ft.Nullable)
+
+	return &openapi3.SchemaRef{Value: schema}, nil
+}
+
+// buildArraySchemaFromFieldType builds a schema for array types.
+func buildArraySchemaFromFieldType(ft FieldType, description string) (*openapi3.SchemaRef, error) {
+	var itemSchema *openapi3.SchemaRef
+
+	if ft.ItemsType != nil {
+		var err error
+
+		itemSchema, err = buildSchemaFromFieldType(*ft.ItemsType, "")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	schema := &openapi3.Schema{
+		Type:        &openapi3.Types{"array"},
+		Items:       itemSchema,
+		Description: description,
+	}
+	applyNullable(schema, ft.Nullable)
+
+	return &openapi3.SchemaRef{Value: schema}, nil
+}
+
+// buildReferenceSchemaFromFieldType builds a schema reference for type references and enums.
+func buildReferenceSchemaFromFieldType(ft FieldType) (*openapi3.SchemaRef, error) {
+	// Return a $ref to the type in components/schemas
+	ref := createSchemaRef(ft.Type)
+	// Note: nullable on $ref requires wrapping in allOf or oneOf in OpenAPI 3.0
+	// For now, we'll handle this at a higher level if needed
+	return ref, nil
+}
+
+// buildObjectSchemaFromFieldType builds a schema for object/map types.
+func buildObjectSchemaFromFieldType(ft FieldType, description string) (*openapi3.SchemaRef, error) {
+	schema := &openapi3.Schema{
+		Type:        &openapi3.Types{"object"},
+		Description: description,
+	}
+	applyNullable(schema, ft.Nullable)
+
+	schema.AdditionalProperties = openapi3.AdditionalProperties{Has: utils.Ptr(false)}
+
+	// Handle additionalProperties for map types
+	if ft.AdditionalProperties != nil {
+		additionalPropsSchema, err := buildSchemaFromFieldType(*ft.AdditionalProperties, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to build additionalProperties schema: %w", err)
+		}
+
+		schema.AdditionalProperties = openapi3.AdditionalProperties{
+			Schema: additionalPropsSchema,
+		}
+	}
+
+	return &openapi3.SchemaRef{Value: schema}, nil
+}
+
 // buildSchemaFromFieldType converts a FieldType to an OpenAPI schema.
 func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.SchemaRef, error) {
 	switch ft.Kind {
 	case FieldKindPrimitive:
-		schema := &openapi3.Schema{
-			Type:        &openapi3.Types{ft.Type},
-			Description: description,
-		}
-		if ft.Format != "" {
-			schema.Format = ft.Format
-		}
-
-		if ft.Nullable {
-			schema.Nullable = true
-		}
-
-		return &openapi3.SchemaRef{Value: schema}, nil
+		return buildPrimitiveSchemaFromFieldType(ft, description)
 
 	case FieldKindArray:
-		var itemSchema *openapi3.SchemaRef
-
-		if ft.ItemsType != nil {
-			var err error
-
-			itemSchema, err = buildSchemaFromFieldType(*ft.ItemsType, "")
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		schema := &openapi3.Schema{
-			Type:        &openapi3.Types{"array"},
-			Items:       itemSchema,
-			Description: description,
-		}
-		if ft.Nullable {
-			schema.Nullable = true
-		}
-
-		return &openapi3.SchemaRef{Value: schema}, nil
+		return buildArraySchemaFromFieldType(ft, description)
 
 	case FieldKindReference, FieldKindEnum:
-		// Return a $ref to the type in components/schemas
-		ref := createSchemaRef(ft.Type)
-		// Note: nullable on $ref requires wrapping in allOf or oneOf in OpenAPI 3.0
-		// For now, we'll handle this at a higher level if needed
-		return ref, nil
+		return buildReferenceSchemaFromFieldType(ft)
 
 	case FieldKindObject:
-		schema := &openapi3.Schema{
-			Type:        &openapi3.Types{"object"},
-			Description: description,
-		}
-		if ft.Nullable {
-			schema.Nullable = true
-		}
-
-		// Handle additionalProperties for map types
-		if ft.AdditionalProperties != nil {
-			additionalPropsSchema, err := buildSchemaFromFieldType(*ft.AdditionalProperties, "")
-			if err != nil {
-				return nil, fmt.Errorf("failed to build additionalProperties schema: %w", err)
-			}
-
-			schema.AdditionalProperties = openapi3.AdditionalProperties{
-				Schema: additionalPropsSchema,
-			}
-		} else {
-			schema.AdditionalProperties = openapi3.AdditionalProperties{
-				Has: utils.Ptr(false),
-			}
-		}
-
-		return &openapi3.SchemaRef{Value: schema}, nil
+		return buildObjectSchemaFromFieldType(ft, description)
 
 	default:
 		// Unhandled type kind - fail with error
