@@ -292,6 +292,7 @@ func (g *OpenAPICollector) SerializeTSNode(name string) (string, error) {
 
 	// Filter unwanted lines while preserving spacing
 	skipPrefixes := []string{"// From", "*nolint:"}
+
 	return cleanupSourceLines(serialized, skipPrefixes), nil
 }
 
@@ -764,18 +765,6 @@ func (g *OpenAPICollector) extractTypeFromSpec(name string, typeSpec *ast.TypeSp
 		typeInfo.Kind = TypeKindAlias
 
 		return typeInfo, nil
-	case *ast.InterfaceType:
-		if len(t.Methods.List) > 0 {
-			return nil, fmt.Errorf("interface type %s with methods is not supported - use structs for API types", name)
-		}
-
-		typeInfo.Kind = TypeKindAlias
-
-		return typeInfo, nil
-	case *ast.FuncType:
-		return nil, fmt.Errorf("function type %s is not supported for API types", name)
-	case *ast.ChanType:
-		return nil, fmt.Errorf("channel type %s is not supported for API types", name)
 	default:
 		return nil, fmt.Errorf("unsupported type %s: %T (please use struct, type alias, or basic types)", name, typeSpec.Type)
 	}
@@ -934,6 +923,7 @@ func (g *OpenAPICollector) processEnumValue(valueSpec *ast.ValueSpec, index int,
 		if err != nil {
 			return EnumValue{}, fmt.Errorf("enum constant %s.%s has invalid string value %s: %w", enumTypeName, name.Name, basicLit.Value, err)
 		}
+
 		value = strVal
 
 	case token.INT:
@@ -1214,17 +1204,6 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 	case *ast.SelectorExpr:
 		return g.analyzeSelectorType(t)
 
-	case *ast.InterfaceType:
-		// Interface type (interface{} or any)
-		if len(t.Methods.List) > 0 {
-			return FieldType{}, nil, errors.New("interface types with methods are not supported - please use concrete types or any/interface{}")
-		}
-
-		return FieldType{
-			Kind: FieldKindObject,
-			Type: "object",
-		}, refs, nil
-
 	default:
 		return FieldType{}, nil, fmt.Errorf("unsupported type expression: %T", expr)
 	}
@@ -1245,9 +1224,11 @@ func cleanupSourceLines(input string, skipPrefixes []string) string {
 
 		// Skip lines matching any of the specified prefixes (check on trimmed)
 		shouldSkip := false
+
 		for _, prefix := range skipPrefixes {
 			if strings.HasPrefix(trimmed, prefix) {
 				shouldSkip = true
+
 				break
 			}
 		}
