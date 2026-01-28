@@ -3,7 +3,6 @@ package generate
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -141,10 +140,6 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 		}
 
 		return &openapi3.SchemaRef{Value: schema}, nil
-
-	case FieldKindUnknown:
-		// Unknown type - fail with error
-		return nil, errors.New("cannot generate OpenAPI schema for unknown field type")
 
 	default:
 		// Unhandled type kind - fail with error

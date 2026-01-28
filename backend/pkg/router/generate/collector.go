@@ -1117,12 +1117,7 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 				Format: "double",
 			}, refs, nil
 		case "any", "interface{}":
-			g.l.Warn("Using 'any' or 'interface{} is discouraged", slog.String("type", typeName))
-
-			return FieldType{
-				Kind: FieldKindObject,
-				Type: "object",
-			}, refs, nil
+			return FieldType{}, nil, fmt.Errorf("type 'any' or 'interface{}' is not allowed in API types - use concrete types instead")
 		}
 
 		// Check if it's a defined type in our types map (will be populated after first pass)
