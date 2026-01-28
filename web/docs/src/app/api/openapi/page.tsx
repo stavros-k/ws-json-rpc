@@ -13,7 +13,7 @@ export default function OpenAPISpec() {
     const hasSpec = docs.openapiSpec && docs.openapiSpec.trim() !== "";
 
     return (
-        <main className='flex-1 overflow-y-auto p-10'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs items={[{ label: "OpenAPI Specification" }]} />
 
             <div>
@@ -41,6 +41,6 @@ export default function OpenAPISpec() {
                     No OpenAPI specification available.
                 </div>
             )}
-        </main>
+        </div>
     );
 }

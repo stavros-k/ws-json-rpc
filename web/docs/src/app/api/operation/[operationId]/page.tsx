@@ -39,7 +39,7 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
     const requestJson = operation.request ? getTypeJson(operation.request.type as TypeKeys) : null;
 
     return (
-        <main className='flex-1 overflow-y-auto p-10'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs
                 items={[{ label: "Operations", href: "/api/operations" as Route }, { label: operation.operationID }]}
             />
@@ -146,6 +146,6 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                     </div>
                 </CardBoxWrapper>
             )}
-        </main>
+        </div>
     );
 }

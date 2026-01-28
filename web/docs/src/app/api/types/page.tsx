@@ -86,7 +86,7 @@ export default function TypesPage() {
     }, [allTypes]);
 
     return (
-        <main className='flex-1 overflow-y-auto p-10'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs items={[{ label: "Types" }]} />
 
             <PageHeader
@@ -180,6 +180,6 @@ export default function TypesPage() {
                     ))}
                 </div>
             )}
-        </main>
+        </div>
     );
 }

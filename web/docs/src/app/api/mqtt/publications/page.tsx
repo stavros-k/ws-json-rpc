@@ -98,7 +98,7 @@ export default function MQTTPublicationsPage() {
     }, [allPublications]);
 
     return (
-        <main className='flex-1 overflow-y-auto p-10'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs items={[{ label: "MQTT Publications" }]} />
 
             <PageHeader
@@ -181,6 +181,6 @@ export default function MQTTPublicationsPage() {
                     ))}
                 </div>
             )}
-        </main>
+        </div>
     );
 }

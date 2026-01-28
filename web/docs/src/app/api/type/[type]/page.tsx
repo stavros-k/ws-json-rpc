@@ -30,7 +30,7 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
     const data = docs.types[type];
 
     return (
-        <main className='flex-1 overflow-y-auto p-10'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs items={[{ label: "Types", href: "/api/types" as Route }, { label: type }]} />
 
             <BackButton
@@ -134,6 +134,6 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                     },
                 ]}
             />
-        </main>
+        </div>
     );
 }

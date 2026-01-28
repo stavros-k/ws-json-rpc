@@ -106,7 +106,7 @@ export default function OperationsPage() {
     }, [allOperations]);
 
     return (
-        <main className='flex-1 overflow-y-auto p-10'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs items={[{ label: "Operations" }]} />
 
             <PageHeader
@@ -196,6 +196,6 @@ export default function OperationsPage() {
                     ))}
                 </div>
             )}
-        </main>
+        </div>
     );
 }

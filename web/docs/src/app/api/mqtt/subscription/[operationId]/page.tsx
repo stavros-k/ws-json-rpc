@@ -38,7 +38,7 @@ export default async function MQTTSubscriptionPage(props: PageProps<"/api/mqtt/s
     const messageJson = subscription.type ? getTypeJson(subscription.type as TypeKeys) : null;
 
     return (
-        <main className='flex-1 overflow-y-auto p-10'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs
                 items={[
                     { label: "MQTT Subscriptions", href: "/api/mqtt/subscriptions" as Route },
@@ -132,6 +132,6 @@ export default async function MQTTSubscriptionPage(props: PageProps<"/api/mqtt/s
                     </div>
                 </CardBoxWrapper>
             )}
-        </main>
+        </div>
     );
 }

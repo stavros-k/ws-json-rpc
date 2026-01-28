@@ -38,7 +38,7 @@ export default async function MQTTPublicationPage(props: PageProps<"/api/mqtt/pu
     const messageJson = publication.type ? getTypeJson(publication.type as TypeKeys) : null;
 
     return (
-        <main className='flex-1 overflow-y-auto p-10'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs
                 items={[
                     { label: "MQTT Publications", href: "/api/mqtt/publications" as Route },
@@ -140,6 +140,6 @@ export default async function MQTTPublicationPage(props: PageProps<"/api/mqtt/pu
                     </div>
                 </CardBoxWrapper>
             )}
-        </main>
+        </div>
     );
 }

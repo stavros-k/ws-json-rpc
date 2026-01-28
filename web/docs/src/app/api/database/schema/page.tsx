@@ -12,7 +12,7 @@ export default function DatabaseSchema() {
     const tableCount = docs.database.tableCount || 0;
 
     return (
-        <main className='flex-1 overflow-y-auto p-10'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs items={[{ label: "Database Schema" }]} />
 
             <div>
@@ -44,6 +44,6 @@ export default function DatabaseSchema() {
                     lang='sql'
                 />
             </CardBoxWrapper>
-        </main>
+        </div>
     );
 }
