@@ -274,7 +274,7 @@ func newTSParser(l *slog.Logger, goTypesDirPath string) (*TSParser, error) {
 	return tsParser, nil
 }
 
-func (g *OpenAPICollector) SerializeNode(name string) (string, error) {
+func (g *OpenAPICollector) SerializeTSNode(name string) (string, error) {
 	node, exists := g.tsParser.ts.Node(name)
 	if !exists {
 		return "", fmt.Errorf("type %s not found in TypeScript AST", name)
@@ -293,11 +293,18 @@ func (g *OpenAPICollector) SerializeNode(name string) (string, error) {
 	var str strings.Builder
 
 	for line := range strings.SplitSeq(serialized, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || line == "//" || line == "*" {
+			continue
+		}
 		if strings.HasPrefix(line, "// From") {
 			continue
 		}
 
-		if strings.HasPrefix(line, "//nolint:") {
+		if strings.Contains(line, "nolint") {
+			fmt.Printf("Found nolint line in TS serialization: %s\n", line)
+		}
+		if strings.HasPrefix(line, "*nolint:") {
 			continue
 		}
 
@@ -942,11 +949,13 @@ func (g *OpenAPICollector) processEnumValue(valueSpec *ast.ValueSpec, index int,
 	//nolint:exhaustive // Only STRING and INT literals are valid for enum constants
 	switch basicLit.Kind {
 	case token.STRING:
-		// String enum value
-		value = strings.Trim(basicLit.Value, "\"")
+		strVal, err := strconv.Unquote(basicLit.Value)
+		if err != nil {
+			return EnumValue{}, fmt.Errorf("enum constant %s.%s has invalid string value %s: %w", enumTypeName, name.Name, basicLit.Value, err)
+		}
+		value = strVal
 
 	case token.INT:
-		// Number enum value
 		intVal, err := strconv.ParseInt(basicLit.Value, 10, 64)
 		if err != nil {
 			return EnumValue{}, fmt.Errorf("enum constant %s.%s has invalid integer value %s: %w", enumTypeName, name.Name, basicLit.Value, err)
@@ -1312,7 +1321,7 @@ func (g *OpenAPICollector) generateTypesRepresentations() error {
 		typeInfo.Representations.Go = goSource
 
 		// TypeScript Representation
-		tsSource, err := g.SerializeNode(name)
+		tsSource, err := g.SerializeTSNode(name)
 		if err != nil {
 			return fmt.Errorf("failed to serialize TS representation for %s: %w", name, err)
 		}
@@ -1380,7 +1389,20 @@ func (g *OpenAPICollector) generateGoSource(typeInfo *TypeInfo) (string, error) 
 		buf.WriteString("\n")
 	}
 
-	formatted, err := format.Source(buf.Bytes())
+	var str bytes.Buffer
+	for line := range strings.SplitSeq(buf.String(), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || line == "//" {
+			continue
+		}
+		if strings.HasPrefix(line, "//nolint:") {
+			continue
+		}
+
+		str.WriteString(line + "\n")
+	}
+
+	formatted, err := format.Source(str.Bytes())
 	if err != nil {
 		return "", fmt.Errorf("failed to format Go source: %w", err)
 	}

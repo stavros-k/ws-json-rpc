@@ -175,7 +175,7 @@ func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.Schem
 func formatEnumValueDescription(ev EnumValue) string {
 	switch {
 	case ev.Deprecated != "":
-		result := fmt.Sprintf("- `%s`: **[DEPRECATED]** ", ev.Value)
+		result := fmt.Sprintf("- `%v`: **[DEPRECATED]** ", ev.Value)
 		result += ev.Deprecated
 
 		if ev.Description != "" {
