@@ -1075,14 +1075,46 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 		// Simple type reference (string, int, MyType, etc.)
 		typeName := t.Name
 
-		// Check for primitives
+		// Check for primitives - map Go types to OpenAPI/JSON Schema types
 		switch typeName {
-		case "string", "bool", "int", "int8", "int16", "int32", "int64",
-			"uint", "uint8", "uint16", "uint32", "uint64",
-			"float32", "float64", "byte", "rune":
+		case "string", "byte", "rune":
 			return FieldType{
 				Kind: FieldKindPrimitive,
-				Type: typeName,
+				Type: "string",
+			}, refs, nil
+		case "bool":
+			return FieldType{
+				Kind: FieldKindPrimitive,
+				Type: "boolean",
+			}, refs, nil
+		case "int", "int8", "int16", "uint", "uint8", "uint16":
+			return FieldType{
+				Kind: FieldKindPrimitive,
+				Type: "integer",
+			}, refs, nil
+		case "int32", "uint32":
+			return FieldType{
+				Kind:   FieldKindPrimitive,
+				Type:   "integer",
+				Format: "int32",
+			}, refs, nil
+		case "int64", "uint64":
+			return FieldType{
+				Kind:   FieldKindPrimitive,
+				Type:   "integer",
+				Format: "int64",
+			}, refs, nil
+		case "float32":
+			return FieldType{
+				Kind:   FieldKindPrimitive,
+				Type:   "number",
+				Format: "float",
+			}, refs, nil
+		case "float64":
+			return FieldType{
+				Kind:   FieldKindPrimitive,
+				Type:   "number",
+				Format: "double",
 			}, refs, nil
 		case "any", "interface{}":
 			g.l.Warn("Using 'any' or 'interface{} is discouraged", slog.String("type", typeName))
