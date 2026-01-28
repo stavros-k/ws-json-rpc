@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/printer"
 	"go/token"
 	"log/slog"
@@ -26,6 +27,14 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"golang.org/x/tools/go/packages"
+)
+
+// Sentinel errors for specific cases
+var (
+	ErrEmptyConstBlock = errors.New("empty const block")
+	ErrMixedTypes      = errors.New("mixed types in const block")
+	ErrNoEnumType      = errors.New("no enum type found in const block")
+	ErrFieldSkipped    = errors.New("field skipped")
 )
 
 // GoParser holds the parsed Go AST and type information.
@@ -302,6 +311,16 @@ func stringifyRequestExamples(r *RequestInfo) *RequestInfo {
 	return r
 }
 
+// registerExamples registers JSON representations for a slice of examples.
+func (g *OpenAPICollector) registerExamples(examples map[string]any) error {
+	for _, ex := range examples {
+		if err := g.RegisterJSONRepresentation(ex); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // RegisterJSONRepresentation registers the JSON representation of a type value.
 // It makes sure to only store the largest representation for the type.
 func (g *OpenAPICollector) RegisterJSONRepresentation(value any) error {
@@ -349,10 +368,8 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 			return fmt.Errorf("failed to register JSON representation for request type: %w", err)
 		}
 
-		for _, ex := range route.Request.Examples {
-			if err := g.RegisterJSONRepresentation(ex); err != nil {
-				return fmt.Errorf("failed to register JSON representation for request example: %w", err)
-			}
+		if err := g.registerExamples(route.Request.Examples); err != nil {
+			return fmt.Errorf("failed to register JSON representation for request example: %w", err)
 		}
 
 		route.Request = stringifyRequestExamples(route.Request)
@@ -374,10 +391,8 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 			return fmt.Errorf("failed to register JSON representation for response type: %w", err)
 		}
 
-		for _, ex := range resp.Examples {
-			if err := g.RegisterJSONRepresentation(ex); err != nil {
-				return fmt.Errorf("failed to register JSON representation for response example: %w", err)
-			}
+		if err := g.registerExamples(resp.Examples); err != nil {
+			return fmt.Errorf("failed to register JSON representation for response example: %w", err)
 		}
 
 		route.Responses[statusCode] = stringifyResponseExamples(resp)
@@ -398,6 +413,20 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	// Add operation keyed by operationID
 	g.httpOps[route.OperationID] = route
 
+	return nil
+}
+
+// validateUniqueOperationID checks that an operationID is not already used.
+func (g *OpenAPICollector) validateUniqueOperationID(operationID string) error {
+	if _, exists := g.mqttPublications[operationID]; exists {
+		return fmt.Errorf("duplicate operationID (MQTT publication exists): %s", operationID)
+	}
+	if _, exists := g.mqttSubscriptions[operationID]; exists {
+		return fmt.Errorf("duplicate operationID (MQTT subscription exists): %s", operationID)
+	}
+	if _, exists := g.httpOps[operationID]; exists {
+		return fmt.Errorf("duplicate operationID (HTTP operation exists): %s", operationID)
+	}
 	return nil
 }
 
@@ -462,14 +491,11 @@ func stringifyMQTTExamples(examples map[string]any) map[string]string {
 
 func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) error {
 	// Validate operationID is unique
+	if err := g.validateUniqueOperationID(pub.OperationID); err != nil {
+		return err
+	}
 	if _, exists := g.mqttPublications[pub.OperationID]; exists {
 		return fmt.Errorf("duplicate MQTT publication operationID: %s", pub.OperationID)
-	}
-	if _, exists := g.mqttSubscriptions[pub.OperationID]; exists {
-		return fmt.Errorf("duplicate operationID (MQTT subscription exists): %s", pub.OperationID)
-	}
-	if _, exists := g.httpOps[pub.OperationID]; exists {
-		return fmt.Errorf("duplicate operationID (HTTP operation exists): %s", pub.OperationID)
 	}
 
 	// Extract type name from zero value using reflection
@@ -493,10 +519,8 @@ func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) err
 	}
 
 	// Register examples
-	for _, ex := range pub.Examples {
-		if err := g.RegisterJSONRepresentation(ex); err != nil {
-			return fmt.Errorf("failed to register JSON representation for example: %w", err)
-		}
+	if err := g.registerExamples(pub.Examples); err != nil {
+		return fmt.Errorf("failed to register JSON representation for example: %w", err)
 	}
 
 	// Stringify examples
@@ -510,14 +534,11 @@ func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) err
 
 func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) error {
 	// Validate operationID is unique
+	if err := g.validateUniqueOperationID(sub.OperationID); err != nil {
+		return err
+	}
 	if _, exists := g.mqttSubscriptions[sub.OperationID]; exists {
 		return fmt.Errorf("duplicate MQTT subscription operationID: %s", sub.OperationID)
-	}
-	if _, exists := g.mqttPublications[sub.OperationID]; exists {
-		return fmt.Errorf("duplicate operationID (MQTT publication exists): %s", sub.OperationID)
-	}
-	if _, exists := g.httpOps[sub.OperationID]; exists {
-		return fmt.Errorf("duplicate operationID (HTTP operation exists): %s", sub.OperationID)
 	}
 
 	// Extract type name from zero value using reflection
@@ -541,10 +562,8 @@ func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) e
 	}
 
 	// Register examples
-	for _, ex := range sub.Examples {
-		if err := g.RegisterJSONRepresentation(ex); err != nil {
-			return fmt.Errorf("failed to register JSON representation for example: %w", err)
-		}
+	if err := g.registerExamples(sub.Examples); err != nil {
+		return fmt.Errorf("failed to register JSON representation for example: %w", err)
 	}
 
 	// Stringify examples
@@ -651,9 +670,9 @@ func (g *OpenAPICollector) extractAllTypesFromGo(goParser *GoParser) error {
 			// Skip non-enum const blocks silently (they return specific errors we can ignore)
 			if err := g.extractEnumsFromConstBlock(genDecl); err != nil {
 				// Only skip if it's a known non-enum pattern
-				if err.Error() == "empty const block" ||
-					err.Error() == "mixed types in const block" ||
-					err.Error() == "no enum type found in const block" {
+				if errors.Is(err, ErrEmptyConstBlock) ||
+					errors.Is(err, ErrMixedTypes) ||
+					errors.Is(err, ErrNoEnumType) {
 					continue
 				}
 				// All other errors are real problems
@@ -740,7 +759,7 @@ func (g *OpenAPICollector) extractStructType(name string, structType *ast.Struct
 			fieldInfo, fieldRefs, err := g.extractFieldInfo(name, fieldName.Name, field)
 			if err != nil {
 				// Skip fields that should be ignored (e.g., json:"-" tags)
-				if err.Error() == "field skipped" {
+				if errors.Is(err, ErrFieldSkipped) {
 					continue
 				}
 				return nil, err
@@ -796,7 +815,7 @@ func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field 
 	}
 
 	if jsonSkip {
-		return FieldInfo{}, nil, errors.New("field skipped")
+		return FieldInfo{}, nil, ErrFieldSkipped
 	}
 
 	// Analyze field type
@@ -831,7 +850,7 @@ func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field 
 // extractEnumsFromConstBlock extracts enum values from a const block.
 func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) error {
 	if len(constDecl.Specs) == 0 {
-		return errors.New("empty const block")
+		return ErrEmptyConstBlock
 	}
 
 	// Check if this looks like an enum (all values are of the same type)
@@ -852,7 +871,7 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 					enumTypeName = ident.Name
 				} else if enumTypeName != ident.Name {
 					// Mixed types - not an enum
-					return errors.New("mixed types in const block")
+					return ErrMixedTypes
 				}
 			}
 		}
@@ -912,7 +931,7 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 	}
 
 	if enumTypeName == "" || len(enumValues) == 0 {
-		return errors.New("no enum type found in const block")
+		return ErrNoEnumType
 	}
 
 	// Verify we have at least one enum value if we identified an enum type
@@ -1014,29 +1033,30 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 
 	case *ast.SelectorExpr:
 		// External type (e.g., time.Time, types.URL)
-		if pkgIdent, ok := t.X.(*ast.Ident); ok {
-			fullType := pkgIdent.Name + "." + t.Sel.Name
-
-			// Check for known external types
-			format, exists := g.externalTypeFormats[fullType]
-			if !exists {
-				// Try with full package path
-				fullTypePath := "ws-json-rpc/backend/pkg/" + pkgIdent.Name + "." + t.Sel.Name
-				format, exists = g.externalTypeFormats[fullTypePath]
-
-				if !exists {
-					return FieldType{}, nil, fmt.Errorf("unknown external type %s - please add it to externalTypeFormats map in NewOpenAPICollector", fullType)
-				}
-			}
-
-			return FieldType{
-				Kind:   FieldKindPrimitive,
-				Type:   "string",
-				Format: format,
-			}, refs, nil
+		pkgIdent, ok := t.X.(*ast.Ident)
+		if !ok {
+			return FieldType{}, nil, fmt.Errorf("unsupported selector expression with base type %T - expected package.Type format", t.X)
 		}
 
-		return FieldType{}, nil, fmt.Errorf("unsupported selector expression with base type %T - expected package.Type format", t.X)
+		fullType := pkgIdent.Name + "." + t.Sel.Name
+
+		// Check for known external types
+		format, exists := g.externalTypeFormats[fullType]
+		if !exists {
+			// Try with full package path
+			fullTypePath := "ws-json-rpc/backend/pkg/" + pkgIdent.Name + "." + t.Sel.Name
+			format, exists = g.externalTypeFormats[fullTypePath]
+
+			if !exists {
+				return FieldType{}, nil, fmt.Errorf("unknown external type %s - please add it to externalTypeFormats map in NewOpenAPICollector", fullType)
+			}
+		}
+
+		return FieldType{
+			Kind:   FieldKindPrimitive,
+			Type:   "string",
+			Format: format,
+		}, refs, nil
 
 	case *ast.InterfaceType:
 		// Interface type (interface{} or any)
@@ -1140,47 +1160,50 @@ func (g *OpenAPICollector) generateTypesRepresentations() error {
 	return nil
 }
 
+// printASTNode prints an AST node to a buffer using go/printer.
+func (g *OpenAPICollector) printASTNode(buf *bytes.Buffer, node *ast.GenDecl, typeName, nodeType string) error {
+	if node == nil {
+		return nil
+	}
+	if err := printer.Fprint(buf, g.goParser.fset, node); err != nil {
+		return fmt.Errorf("failed to print %s for %s: %w", nodeType, typeName, err)
+	}
+	return nil
+}
+
 // generateGoSource generates Go source code for a type using the parsed AST.
 func (g *OpenAPICollector) generateGoSource(typeInfo *TypeInfo) (string, error) {
 	var buf bytes.Buffer
 
 	// Look up the AST nodes by type name
-	typeDecl := g.typeASTs[typeInfo.Name]
-	constDecl := g.constASTs[typeInfo.Name]
+	typeDecl, exists := g.typeASTs[typeInfo.Name]
+	if !exists {
+		return "", fmt.Errorf("no type declaration AST found for type %s", typeInfo.Name)
+	}
 
-	// For enums, print both type declaration and const block
+	if err := g.printASTNode(&buf, typeDecl, typeInfo.Name, "type declaration"); err != nil {
+		return "", err
+	}
+	buf.WriteString("\n")
+
 	if typeInfo.Kind == TypeKindStringEnum {
-		// Print type declaration if available
-		if typeDecl != nil {
-			if err := printer.Fprint(&buf, g.goParser.fset, typeDecl); err != nil {
-				return "", fmt.Errorf("failed to print type declaration for %s: %w", typeInfo.Name, err)
-			}
-			buf.WriteString("\n\n")
+		constDecl, exists := g.constASTs[typeInfo.Name]
+		if !exists {
+			return "", fmt.Errorf("no const declaration AST found for enum type %s", typeInfo.Name)
 		}
 
-		// Print const block if available
-		if constDecl != nil {
-			if err := printer.Fprint(&buf, g.goParser.fset, constDecl); err != nil {
-				return "", fmt.Errorf("failed to print const declaration for %s: %w", typeInfo.Name, err)
-			}
-			buf.WriteString("\n")
+		if err := g.printASTNode(&buf, constDecl, typeInfo.Name, "const declaration"); err != nil {
+			return "", err
 		}
-	} else {
-		// For other types, just print the type declaration
-		if typeDecl != nil {
-			if err := printer.Fprint(&buf, g.goParser.fset, typeDecl); err != nil {
-				return "", fmt.Errorf("failed to print type declaration for %s: %w", typeInfo.Name, err)
-			}
-			buf.WriteString("\n")
-		}
+		buf.WriteString("\n")
 	}
 
-	// If we didn't print anything from the AST, return an error
-	if buf.Len() == 0 {
-		return "", fmt.Errorf("no AST node available for type %s (kind: %s)", typeInfo.Name, typeInfo.Kind)
+	formatted, err := format.Source(buf.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("failed to format Go source: %w", err)
 	}
 
-	return buf.String(), nil
+	return string(formatted), nil
 }
 
 // buildReferencedBy builds the inverse of References for all types.
