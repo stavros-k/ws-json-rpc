@@ -17,7 +17,7 @@ export function CollapsibleResponse({ statusCode, description, children }: Colla
         <div className='border-2 border-border-secondary rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow'>
             <button
                 type='button'
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsOpen(prev => !prev)}
                 className='w-full bg-bg-tertiary p-5 font-bold cursor-pointer flex justify-between items-center hover:bg-bg-hover text-text-primary transition-colors duration-200 group'>
                 <div className='flex items-center gap-3'>
                     <span

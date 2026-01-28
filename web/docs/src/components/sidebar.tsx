@@ -48,7 +48,7 @@ export const Sidebar = () => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const toggleExpanded = () => {
-        setIsExpanded(!isExpanded);
+        setIsExpanded(prev => !prev);
     };
 
     return (

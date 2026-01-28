@@ -15,7 +15,7 @@ export const SidebarGroupCollapsible = ({ groupName, children }: SidebarGroupCol
         <div className='mb-3'>
             <button
                 type='button'
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsOpen(prev => !prev)}
                 className='w-full flex items-center justify-between px-1 py-1 rounded hover:bg-bg-hover transition-colors group'>
                 <h3 className='text-xs font-semibold text-text-dim group-hover:text-text-primary uppercase transition-colors'>
                     {groupName}

@@ -96,7 +96,7 @@ export const CodeThemeToggle = () => {
                 <span className='text-sm font-medium text-text-primary text-center'>Code Theme</span>
                 <button
                     type='button'
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={() => setIsOpen(prev => !prev)}
                     className='px-2 py-1 text-xs border border-border-primary rounded bg-bg-primary text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-blue flex items-center gap-1 w-full justify-between hover:bg-bg-tertiary transition-colors'>
                     <span className='truncate'>{THEMES[codeTheme].label}</span>
                     <IoChevronDown className={`w-3 h-3 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />

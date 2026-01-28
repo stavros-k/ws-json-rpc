@@ -16,7 +16,7 @@ export function CollapsibleGroup({ title, children, defaultOpen = true }: Collap
         <div className='mb-12'>
             <button
                 type='button'
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsOpen(prev => !prev)}
                 className='w-full flex items-center justify-between text-2xl font-bold text-text-primary mb-6 pb-3 border-b-2 border-border-primary hover:text-accent-blue hover:border-accent-blue transition-all duration-200 group'>
                 <h2 className='group-hover:scale-105 transition-transform'>{title}</h2>
                 <span className='text-text-muted group-hover:text-accent-blue transition-colors'>
@@ -42,7 +42,7 @@ export function CollapsibleCard({ title, subtitle, children, defaultOpen = false
         <div className='border-2 border-border-secondary rounded-xl mb-6 overflow-hidden shadow-sm hover:shadow-md transition-shadow'>
             <button
                 type='button'
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsOpen(prev => !prev)}
                 className='w-full bg-bg-tertiary p-5 font-bold cursor-pointer flex justify-between items-center hover:bg-bg-hover text-text-primary transition-colors duration-200 group'>
                 <div className='text-left'>
                     <div className='group-hover:text-accent-blue transition-colors'>{title}</div>
