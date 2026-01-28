@@ -38,7 +38,7 @@ export default async function MQTTPublicationPage(props: PageProps<"/api/mqtt/pu
     const messageJson = publication.type ? getTypeJson(publication.type as TypeKeys) : null;
 
     return (
-        <main className='flex-1 p-10 overflow-y-auto'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs
                 items={[
                     { label: "MQTT Publications", href: "/api/mqtt/publications" as Route },
@@ -52,8 +52,8 @@ export default async function MQTTPublicationPage(props: PageProps<"/api/mqtt/pu
             />
 
             <div>
-                <div className='flex items-center justify-between gap-3 mb-3'>
-                    <h1 className='text-4xl font-bold text-text-primary'>{publication.operationID}</h1>
+                <div className='mb-3 flex items-center justify-between gap-3'>
+                    <h1 className='font-bold text-4xl text-text-primary'>{publication.operationID}</h1>
                     <Group
                         group={publication.group || ""}
                         size='md'
@@ -65,15 +65,15 @@ export default async function MQTTPublicationPage(props: PageProps<"/api/mqtt/pu
                     itemType='mqtt publication'
                 />
 
-                <div className='text-text-tertiary mb-8 pb-6 border-b-2 border-border-primary'>
+                <div className='mb-8 border-border-primary border-b-2 pb-6 text-text-tertiary'>
                     <p className='mb-2'>{publication.summary}</p>
                     {publication.description && publication.description !== publication.summary && (
                         <p className='text-sm'>{publication.description}</p>
                     )}
                 </div>
 
-                <div className='mb-6 p-4 bg-accent-green-bg border-2 border-accent-green-border rounded-lg'>
-                    <p className='text-sm text-accent-green-text'>
+                <div className='mb-6 rounded-lg border-2 border-accent-green-border bg-accent-green-bg p-4'>
+                    <p className='text-accent-green-text text-sm'>
                         <strong>Note:</strong> The server publishes to this topic. Clients should subscribe to receive
                         messages from this topic.
                     </p>
@@ -90,13 +90,13 @@ export default async function MQTTPublicationPage(props: PageProps<"/api/mqtt/pu
             {/* MQTT Settings */}
             <CardBoxWrapper title='MQTT Settings'>
                 <div className='grid grid-cols-2 gap-4'>
-                    <div className='bg-bg-tertiary p-3 rounded-lg border border-border-secondary'>
-                        <div className='text-xs text-text-muted mb-1'>QoS</div>
-                        <div className='text-sm font-semibold text-text-primary'>{publication.qos}</div>
+                    <div className='rounded-lg border border-border-secondary bg-bg-tertiary p-3'>
+                        <div className='mb-1 text-text-muted text-xs'>QoS</div>
+                        <div className='font-semibold text-sm text-text-primary'>{publication.qos}</div>
                     </div>
-                    <div className='bg-bg-tertiary p-3 rounded-lg border border-border-secondary'>
-                        <div className='text-xs text-text-muted mb-1'>Retained</div>
-                        <div className='text-sm font-semibold text-text-primary'>
+                    <div className='rounded-lg border border-border-secondary bg-bg-tertiary p-3'>
+                        <div className='mb-1 text-text-muted text-xs'>Retained</div>
+                        <div className='font-semibold text-sm text-text-primary'>
                             {publication.retained ? "Yes" : "No"}
                         </div>
                     </div>
@@ -115,8 +115,8 @@ export default async function MQTTPublicationPage(props: PageProps<"/api/mqtt/pu
                     lang='json'
                 />
                 {messageJson && (
-                    <div className='mb-4 p-3 bg-bg-tertiary rounded-lg border border-border-secondary'>
-                        <p className='text-xs text-text-muted'>Example representation - actual values may vary</p>
+                    <div className='mb-4 rounded-lg border border-border-secondary bg-bg-tertiary p-3'>
+                        <p className='text-text-muted text-xs'>Example representation - actual values may vary</p>
                     </div>
                 )}
             </CardBoxWrapper>
@@ -140,6 +140,6 @@ export default async function MQTTPublicationPage(props: PageProps<"/api/mqtt/pu
                     </div>
                 </CardBoxWrapper>
             )}
-        </main>
+        </div>
     );
 }

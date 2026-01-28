@@ -8,6 +8,8 @@ import (
 
 // ErrorResponse is the unified error response type.
 // It supports both simple errors (just message) and validation errors (message + field errors).
+//
+//nolint:errname // ErrorResponse is an API response type, not a traditional error
 type ErrorResponse struct {
 	// HTTP status code (internal only, not sent to client)
 	StatusCode int `json:"-"`
@@ -28,7 +30,9 @@ func (e *ErrorResponse) AddError(field, message string) *ErrorResponse {
 	if e.Errors == nil {
 		e.Errors = make(map[string]string)
 	}
+
 	e.Errors[field] = message
+
 	return e
 }
 
@@ -120,7 +124,7 @@ type DeviceCommand struct {
 	// Command is the command to execute (e.g., "restart", "shutdown", "update_config")
 	Command string `json:"command"`
 	// Parameters contains optional command parameters
-	Parameters map[string]any `json:"parameters,omitempty"`
+	Parameters map[string]string `json:"parameters,omitempty"`
 }
 
 // DeviceStatus represents the status of an IoT device.

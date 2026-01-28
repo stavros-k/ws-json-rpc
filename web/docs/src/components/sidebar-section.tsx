@@ -112,23 +112,23 @@ export const SidebarSection = ({
 
     return (
         <div className='mb-8'>
-            <div className='flex items-center justify-between mb-3'>
+            <div className='mb-3 flex items-center justify-between'>
                 <Link
                     href={overviewHref}
-                    className='inline-flex items-center gap-2 p-1.5 rounded-lg hover:bg-bg-hover transition-all duration-200 group flex-1'>
-                    <Icon className={`w-5 h-5 ${iconColor} shrink-0`} />
-                    <h2 className='text-sm font-bold text-text-secondary uppercase transition-colors'>{title}</h2>
-                    <BiLinkExternal className='w-3.5 h-3.5 text-text-muted transition-colors' />
+                    className='group inline-flex flex-1 items-center gap-2 rounded-lg p-1.5 transition-all duration-200 hover:bg-bg-hover'>
+                    <Icon className={`h-5 w-5 ${iconColor} shrink-0`} />
+                    <h2 className='font-bold text-sm text-text-secondary uppercase transition-colors'>{title}</h2>
+                    <BiLinkExternal className='h-3.5 w-3.5 text-text-muted transition-colors' />
                 </Link>
                 <button
                     type='button'
                     onClick={toggleOpen}
-                    className='p-1.5 rounded hover:bg-bg-hover transition-colors'
+                    className='rounded p-1.5 transition-colors hover:bg-bg-hover'
                     aria-label={isOpen ? "Collapse section" : "Expand section"}>
                     {isOpen ? (
-                        <MdExpandLess className='w-4 h-4 text-text-secondary' />
+                        <MdExpandLess className='h-4 w-4 text-text-secondary' />
                     ) : (
-                        <MdExpandMore className='w-4 h-4 text-text-secondary' />
+                        <MdExpandMore className='h-4 w-4 text-text-secondary' />
                     )}
                 </button>
             </div>

@@ -97,11 +97,11 @@ components:
                 PingStatus represents the status of a ping request.
 
                 Possible values:
-                - `ERROR`: PingStatusError means there was an error with the ping.
                 - `OK`: PingStatusOK means the ping was successful.
+                - `ERROR`: PingStatusError means there was an error with the ping.
             enum:
-                - ERROR
                 - OK
+                - ERROR
             type: string
         User:
             additionalProperties: false

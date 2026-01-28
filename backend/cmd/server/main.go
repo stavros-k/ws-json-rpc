@@ -52,7 +52,13 @@ func main() {
 	// open sqlite database
 	db, err := sql.Open("sqlite3", config.Database)
 	fatalIfErr(logger, err)
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("failed to close database", slog.String("error", err.Error()))
+		}
+	}()
+
 	queries := sqlitegen.New(db)
 
 	services := services.NewServices(logger, db, queries)
@@ -162,6 +168,7 @@ func main() {
 	logger.Info("http server shutdown complete")
 }
 
+//nolint:ireturn // Returns MetadataCollector interface (OpenAPICollector or NoopCollector)
 func getCollector(c *app.Config, l *slog.Logger) (generate.MetadataCollector, error) {
 	if !c.Generate {
 		return &generate.NoopCollector{}, nil

@@ -37,9 +37,9 @@ func RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
 			"updateConfig": apitypes.DeviceCommand{
 				DeviceID: "device-001",
 				Command:  "update_config",
-				Parameters: map[string]any{
-					"interval": 60,
-					"enabled":  true,
+				Parameters: map[string]string{
+					"interval": "60",
+					"enabled":  "true",
 				},
 			},
 		},
@@ -81,6 +81,7 @@ func (s *Server) handleDeviceCommand(client pahomqtt.Client, msg pahomqtt.Messag
 		s.l.Error("Failed to unmarshal device command",
 			slog.String("topic", msg.Topic()),
 			slog.Any("error", err))
+
 		return
 	}
 
@@ -170,6 +171,7 @@ func (s *Server) handleDeviceStatus(client pahomqtt.Client, msg pahomqtt.Message
 		s.l.Error("Failed to unmarshal device status",
 			slog.String("topic", msg.Topic()),
 			slog.Any("error", err))
+
 		return
 	}
 

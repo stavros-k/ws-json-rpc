@@ -32,7 +32,7 @@ func ErrAttr(err error) slog.Attr {
 func SlogReplacer(groups []string, a slog.Attr) slog.Attr {
 	timeFormat := "2006-01-02 15:04:05"
 
-	//nolint:exhaustive
+	//nolint:exhaustive // Only formatting specific types; other types pass through unchanged
 	switch a.Value.Kind() {
 	case slog.KindTime:
 		a.Value = slog.StringValue(a.Value.Time().Format(timeFormat))

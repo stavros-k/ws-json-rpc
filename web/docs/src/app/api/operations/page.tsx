@@ -106,7 +106,7 @@ export default function OperationsPage() {
     }, [allOperations]);
 
     return (
-        <main className='flex-1 p-10 overflow-y-auto'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs items={[{ label: "Operations" }]} />
 
             <PageHeader
@@ -115,7 +115,7 @@ export default function OperationsPage() {
             />
 
             {/* Statistics */}
-            <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8'>
+            <div className='mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6'>
                 <StatCard
                     label='Total'
                     value={allOperations.length}
@@ -196,6 +196,6 @@ export default function OperationsPage() {
                     ))}
                 </div>
             )}
-        </main>
+        </div>
     );
 }

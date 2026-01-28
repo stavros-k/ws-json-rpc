@@ -7,7 +7,7 @@ import (
 
 // Version information that can be set at build time using ldflags
 //
-//nolint:gochecknoglobals
+//nolint:gochecknoglobals // Build-time variables set via -ldflags during compilation
 var (
 	// Version is the semantic version of the build.
 	Version = "dev"

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"database/sql"
 	"log/slog"
 )
@@ -17,10 +18,12 @@ func NewCoreService(l *slog.Logger, db *sql.DB) *CoreService {
 	}
 }
 
-func (s *CoreService) Ping() bool {
-	if err := s.db.Ping(); err != nil {
+func (s *CoreService) Ping(ctx context.Context) bool {
+	if err := s.db.PingContext(ctx); err != nil {
 		s.l.Error("database unreachable", slog.String("error", err.Error()))
+
 		return false
 	}
+
 	return true
 }

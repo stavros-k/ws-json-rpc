@@ -44,16 +44,16 @@ export function MQTTFilters({ groups, onFilterChange }: MQTTFiltersProps) {
     };
 
     return (
-        <div className='flex flex-col gap-4 mb-8 p-4 bg-bg-secondary rounded-xl border-2 border-border-primary'>
-            <div className='flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap'>
+        <div className='mb-8 flex flex-col gap-4 rounded-xl border-2 border-border-primary bg-bg-secondary p-4'>
+            <div className='flex flex-col flex-wrap gap-4 sm:flex-row sm:items-center'>
                 {/* Group Filter */}
                 {groups.length > 0 && (
                     <div className='flex items-center gap-3'>
-                        <span className='text-sm text-text-primary font-bold'>Group:</span>
+                        <span className='font-bold text-sm text-text-primary'>Group:</span>
                         <select
                             value={selectedGroup}
                             onChange={(e) => handleGroupChange(e.target.value)}
-                            className='px-3 py-1.5 rounded-lg text-sm font-bold bg-bg-tertiary text-text-primary border-2 border-border-primary hover:border-accent-blue focus:border-accent-blue focus:ring-2 focus:ring-accent-blue cursor-pointer'>
+                            className='cursor-pointer rounded-lg border-2 border-border-primary bg-bg-tertiary px-3 py-1.5 font-bold text-sm text-text-primary hover:border-accent-blue focus:border-accent-blue focus:ring-2 focus:ring-accent-blue'>
                             <option value='all'>All</option>
                             {groups.map((group) => (
                                 <option
@@ -67,14 +67,14 @@ export function MQTTFilters({ groups, onFilterChange }: MQTTFiltersProps) {
                 )}
 
                 {/* Hide Deprecated */}
-                <label className='flex items-center gap-2.5 cursor-pointer group'>
+                <label className='group flex cursor-pointer items-center gap-2.5'>
                     <input
                         type='checkbox'
                         checked={hideDeprecated}
                         onChange={handleDeprecatedToggle}
-                        className='w-5 h-5 rounded-md border-2 border-border-primary bg-bg-tertiary text-accent-blue focus:ring-accent-blue focus:ring-2 cursor-pointer'
+                        className='h-5 w-5 cursor-pointer rounded-md border-2 border-border-primary bg-bg-tertiary text-accent-blue focus:ring-2 focus:ring-accent-blue'
                     />
-                    <span className='text-sm text-text-primary font-bold group-hover:text-accent-blue transition-colors'>
+                    <span className='font-bold text-sm text-text-primary transition-colors group-hover:text-accent-blue'>
                         Hide deprecated
                     </span>
                 </label>
@@ -82,13 +82,13 @@ export function MQTTFilters({ groups, onFilterChange }: MQTTFiltersProps) {
 
             {/* Search */}
             <div className='flex items-center gap-3'>
-                <span className='text-sm text-text-primary font-bold'>Search:</span>
+                <span className='font-bold text-sm text-text-primary'>Search:</span>
                 <input
                     type='text'
                     value={search}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     placeholder='Search by operation name, topic, or description...'
-                    className='flex-1 px-3 py-2 rounded-lg text-sm bg-bg-tertiary text-text-primary border-2 border-border-primary hover:border-accent-blue focus:border-accent-blue focus:ring-2 focus:ring-accent-blue placeholder-text-muted'
+                    className='flex-1 rounded-lg border-2 border-border-primary bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder-text-muted hover:border-accent-blue focus:border-accent-blue focus:ring-2 focus:ring-accent-blue'
                 />
             </div>
         </div>

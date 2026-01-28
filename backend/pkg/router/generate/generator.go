@@ -21,17 +21,16 @@ type MetadataCollector interface {
 // NoopCollector is a no-op implementation of MetadataCollector.
 type NoopCollector struct{}
 
-func (n *NoopCollector) RegisterRoute(route *RouteInfo) error                       { return nil }
-func (n *NoopCollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) error     { return nil }
-func (n *NoopCollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) error   { return nil }
-func (n *NoopCollector) Generate() error                                            { return nil }
+func (n *NoopCollector) RegisterRoute(route *RouteInfo) error                     { return nil }
+func (n *NoopCollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) error   { return nil }
+func (n *NoopCollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) error { return nil }
+func (n *NoopCollector) Generate() error                                          { return nil }
 
 // Type kind constants for TypeInfo.
 const (
 	TypeKindObject     = "object"
 	TypeKindStringEnum = "string_enum"
 	TypeKindNumberEnum = "number_enum"
-	TypeKindUnion      = "union"
 	TypeKindAlias      = "alias"
 )
 
@@ -42,5 +41,4 @@ const (
 	FieldKindReference = "reference"
 	FieldKindEnum      = "enum"
 	FieldKindObject    = "object"
-	FieldKindUnknown   = "unknown"
 )

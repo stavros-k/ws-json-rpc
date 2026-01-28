@@ -7,16 +7,18 @@ import (
 )
 
 func (s *Server) Ping(w http.ResponseWriter, r *http.Request) error {
-	if !s.svc.Core.Ping() {
+	if !s.svc.Core.Ping(r.Context()) {
 		RespondJSON(w, r, http.StatusInternalServerError, apitypes.PingResponse{
 			Message: "Database unreachable", Status: apitypes.PingStatusError,
 		})
+
 		return nil
 	}
 
 	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{
 		Message: "Pong", Status: apitypes.PingStatusOK,
 	})
+
 	return nil
 }
 

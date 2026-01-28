@@ -86,7 +86,7 @@ export default function TypesPage() {
     }, [allTypes]);
 
     return (
-        <main className='flex-1 p-10 overflow-y-auto'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs items={[{ label: "Types" }]} />
 
             <PageHeader
@@ -95,7 +95,7 @@ export default function TypesPage() {
             />
 
             {/* Statistics */}
-            <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8'>
+            <div className='mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'>
                 <StatCard
                     label='Total'
                     value={allTypes.length}
@@ -153,18 +153,18 @@ export default function TypesPage() {
                                             title={key}
                                             description={type.description}
                                             badges={
-                                                <div className='flex flex-wrap gap-2 items-start justify-end max-w-[200px]'>
+                                                <div className='flex max-w-50 flex-wrap items-start justify-end gap-2'>
                                                     <TypeKindBadge
                                                         kind={type.kind}
                                                         size='sm'
                                                     />
                                                     {fieldCount > 0 && (
-                                                        <span className='text-xs px-2 py-1 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold whitespace-nowrap'>
+                                                        <span className='whitespace-nowrap rounded-lg border border-blue-500/30 bg-blue-500/20 px-2 py-1 font-semibold text-blue-400 text-xs'>
                                                             {fieldCount} {fieldCount === 1 ? "field" : "fields"}
                                                         </span>
                                                     )}
                                                     {enumCount > 0 && (
-                                                        <span className='text-xs px-2 py-1 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 font-semibold whitespace-nowrap'>
+                                                        <span className='whitespace-nowrap rounded-lg border border-purple-500/30 bg-purple-500/20 px-2 py-1 font-semibold text-purple-400 text-xs'>
                                                             {enumCount} {enumCount === 1 ? "value" : "values"}
                                                         </span>
                                                     )}
@@ -180,6 +180,6 @@ export default function TypesPage() {
                     ))}
                 </div>
             )}
-        </main>
+        </div>
     );
 }

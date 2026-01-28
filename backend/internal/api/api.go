@@ -27,16 +27,16 @@ const (
 
 const zeroUUID = "00000000-0000-0000-0000-000000000000"
 
-// HandlerFunc is a HTTP handler that can return an error
+// HandlerFunc is a HTTP handler that can return an error.
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
-// Server represents the API server
+// Server represents the API server.
 type Server struct {
 	l   *slog.Logger
 	svc *services.Services
 }
 
-// NewAPIServer creates a new API server
+// NewAPIServer creates a new API server.
 func NewAPIServer(l *slog.Logger, svc *services.Services) *Server {
 	return &Server{
 		l:   l.With(slog.String("component", "http-api")),
@@ -61,7 +61,7 @@ func NewValidationError(fieldErrors map[string]string) *apitypes.ErrorResponse {
 	}
 }
 
-// ErrorHandler wraps handlers with error handling
+// ErrorHandler wraps handlers with error handling.
 func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		l := GetLogger(r.Context())
@@ -73,10 +73,12 @@ func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 		}
 
 		// This is an expected HTTP error, we return the actual error to the client
-		if httpErr, ok := err.(*apitypes.ErrorResponse); ok {
+		var httpErr *apitypes.ErrorResponse
+		if errors.As(err, &httpErr) {
 			httpErr.RequestID = requestID
 			l.Warn("handler returned HTTP error", slog.Int("status", httpErr.StatusCode), slog.String("message", httpErr.Message))
 			RespondJSON(w, r, httpErr.StatusCode, httpErr)
+
 			return
 		}
 
@@ -92,7 +94,7 @@ func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 // RespondJSON sends a JSON response with given status code
 // If data is nil, only headers are sent
 // In case of JSON encoding error, it is logged but not returned to client
-// but the status code is sent already
+// but the status code is sent already.
 func RespondJSON(w http.ResponseWriter, r *http.Request, statusCode int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -109,7 +111,9 @@ func RespondJSON(w http.ResponseWriter, r *http.Request, statusCode int, data an
 	}
 }
 
-// DecodeJSON decodes JSON from request body with error handling
+// DecodeJSON decodes JSON from request body with error handling.
+//
+//nolint:ireturn // Generic functions must return type parameter T
 func DecodeJSON[T any](r *http.Request) (T, error) {
 	var zero T
 
@@ -118,10 +122,12 @@ func DecodeJSON[T any](r *http.Request) (T, error) {
 	res, err := utils.FromJSONStream[T](r.Body)
 	if err != nil {
 		// FIXME: on Go 1.26 use errors.AsType[...]()
-		var syntaxError *json.SyntaxError
-		var unmarshalTypeError *json.UnmarshalTypeError
-		var maxBytesError *http.MaxBytesError
-		var extraDataError *utils.ExtraDataAfterJSONError
+		var (
+			syntaxError        *json.SyntaxError
+			unmarshalTypeError *json.UnmarshalTypeError
+			maxBytesError      *http.MaxBytesError
+			extraDataError     *utils.ExtraDataAfterJSONError
+		)
 
 		switch {
 		case errors.As(err, &syntaxError):
@@ -154,7 +160,7 @@ func DecodeJSON[T any](r *http.Request) (T, error) {
 	return res, nil
 }
 
-// GenerateResponses adds standard error responses to the given responses map
+// GenerateResponses adds standard error responses to the given responses map.
 func GenerateResponses(responses map[int]router.ResponseSpec) map[int]router.ResponseSpec {
 	if _, exists := responses[http.StatusRequestEntityTooLarge]; !exists {
 		responses[http.StatusRequestEntityTooLarge] = router.ResponseSpec{
