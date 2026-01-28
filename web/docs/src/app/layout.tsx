@@ -18,14 +18,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <html
             lang='en'
             className='m-0 p-0 box-border'>
-            <body className='bg-bg-primary'>
+            <body className='bg-bg-primary flex'>
                 <div className='fixed top-5 right-5 z-50'>
                     <ThemeToggle />
                 </div>
-                <div className='flex min-h-screen'>
-                    <Sidebar />
-                    {children}
-                </div>
+                <Sidebar />
+                <main className='flex-1 min-h-screen'>{children}</main>
             </body>
         </html>
     );
