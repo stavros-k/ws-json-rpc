@@ -12,6 +12,11 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
+const (
+	// OpenAPIVersion is the OpenAPI specification version used for generated specs
+	OpenAPIVersion = "3.0.3"
+)
+
 // toOpenAPISchema converts extracted type metadata to an OpenAPI schema.
 func toOpenAPISchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 	switch typeInfo.Kind {
@@ -226,7 +231,7 @@ func buildComponentSchemas(doc *APIDocumentation) (openapi3.Schemas, error) {
 // generateOpenAPISpec generates a complete OpenAPI specification from documentation.
 func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 	spec := &openapi3.T{
-		OpenAPI:    "3.0.3",
+		OpenAPI:    OpenAPIVersion,
 		Info:       &openapi3.Info{},
 		Paths:      openapi3.NewPaths(),
 		Components: &openapi3.Components{Schemas: make(openapi3.Schemas)},

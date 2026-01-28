@@ -39,6 +39,12 @@ var (
 	ErrFieldSkipped    = errors.New("field skipped")
 )
 
+// External type format constants for OpenAPI schema generation.
+const (
+	FormatDateTime = "date-time"
+	FormatURI      = "uri"
+)
+
 // GoParser holds the parsed Go AST and type information.
 type GoParser struct {
 	fset  *token.FileSet
@@ -125,8 +131,8 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 		typeASTs:          make(map[string]*ast.GenDecl),
 		constASTs:         make(map[string]*ast.GenDecl),
 		externalTypeFormats: map[string]string{
-			"time.Time":                         "date-time",
-			"ws-json-rpc/backend/pkg/types.URL": "uri",
+			"time.Time":                         FormatDateTime,
+			"ws-json-rpc/backend/pkg/types.URL": FormatURI,
 		},
 		docsFilePath:        opts.DocsFileOutputPath,
 		openAPISpecFilePath: opts.OpenAPISpecOutputPath,
@@ -333,6 +339,33 @@ func (g *OpenAPICollector) RegisterJSONRepresentation(value any) error {
 	return nil
 }
 
+// processHTTPType extracts type name, marks it as HTTP, and registers JSON representations.
+// Returns the extracted type name.
+func (g *OpenAPICollector) processHTTPType(typeValue any, examples map[string]any, contextMsg string) (string, map[string]string, error) {
+	typeName, err := extractTypeNameFromValue(typeValue)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to extract %s type name: %w", contextMsg, err)
+	}
+
+	// Mark as used by HTTP (for OpenAPI spec filtering)
+	g.markTypeAsHTTP(typeName)
+
+	if err := g.RegisterJSONRepresentation(typeValue); err != nil {
+		return "", nil, fmt.Errorf("failed to register JSON representation for %s type: %w", contextMsg, err)
+	}
+
+	// Register and stringify examples if provided
+	var stringifiedExamples map[string]string
+	if examples != nil {
+		if err := g.registerExamples(examples); err != nil {
+			return "", nil, fmt.Errorf("failed to register JSON representation for %s example: %w", contextMsg, err)
+		}
+		stringifiedExamples = stringifyExamples(examples)
+	}
+
+	return typeName, stringifiedExamples, nil
+}
+
 func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	// Validate operationID is unique
 	if _, exists := g.httpOps[route.OperationID]; exists {
@@ -345,62 +378,35 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 			return fmt.Errorf("request Type must not be zero value in route [%s]", route.OperationID)
 		}
 
-		typeName, err := extractTypeNameFromValue(route.Request.TypeValue)
+		typeName, stringifiedExamples, err := g.processHTTPType(route.Request.TypeValue, route.Request.Examples, "request")
 		if err != nil {
-			return fmt.Errorf("failed to extract request type name: %w", err)
+			return err
 		}
 
 		route.Request.TypeName = typeName
-
-		// Mark as used by HTTP (for OpenAPI spec filtering)
-		g.markTypeAsHTTP(typeName)
-
-		if err := g.RegisterJSONRepresentation(route.Request.TypeValue); err != nil {
-			return fmt.Errorf("failed to register JSON representation for request type: %w", err)
-		}
-
-		if err := g.registerExamples(route.Request.Examples); err != nil {
-			return fmt.Errorf("failed to register JSON representation for request example: %w", err)
-		}
-
-		route.Request.ExamplesStringified = stringifyExamples(route.Request.Examples)
+		route.Request.ExamplesStringified = stringifiedExamples
 	}
 
 	for statusCode, response := range route.Responses {
 		resp := response
 
-		typeName, err := extractTypeNameFromValue(resp.TypeValue)
+		typeName, stringifiedExamples, err := g.processHTTPType(resp.TypeValue, resp.Examples, "response")
 		if err != nil {
-			return fmt.Errorf("failed to extract response type name: %w", err)
+			return err
 		}
 
 		resp.TypeName = typeName
-
-		// Mark as used by HTTP (for OpenAPI spec filtering)
-		g.markTypeAsHTTP(typeName)
-
-		if err := g.RegisterJSONRepresentation(resp.TypeValue); err != nil {
-			return fmt.Errorf("failed to register JSON representation for response type: %w", err)
-		}
-
-		if err := g.registerExamples(resp.Examples); err != nil {
-			return fmt.Errorf("failed to register JSON representation for response example: %w", err)
-		}
-
-		resp.ExamplesStringified = stringifyExamples(resp.Examples)
+		resp.ExamplesStringified = stringifiedExamples
 		route.Responses[statusCode] = resp
 	}
 
 	for i := range route.Parameters {
-		typeName, err := extractTypeNameFromValue(route.Parameters[i].TypeValue)
+		typeName, _, err := g.processHTTPType(route.Parameters[i].TypeValue, nil, "parameter")
 		if err != nil {
-			return fmt.Errorf("failed to extract parameter type name: %w", err)
+			return err
 		}
 
 		route.Parameters[i].TypeName = typeName
-
-		// Mark as used by HTTP (for OpenAPI spec filtering)
-		g.markTypeAsHTTP(typeName)
 	}
 
 	// Add operation keyed by operationID
