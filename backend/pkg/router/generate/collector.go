@@ -624,59 +624,80 @@ func (g *OpenAPICollector) parseGoTypesDir(goTypesDirPath string) (*GoParser, er
 }
 
 // extractAllTypesFromGo walks the Go AST and extracts all type information in one pass.
+// extractTypeDeclarations extracts all type declarations from a single AST file.
+func (g *OpenAPICollector) extractTypeDeclarations(file *ast.File) []error {
+	var errs []error
+
+	for _, decl := range file.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.TYPE {
+			continue
+		}
+
+		for _, spec := range genDecl.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+
+			typeName := typeSpec.Name.Name
+
+			typeInfo, err := g.extractTypeFromSpec(typeName, typeSpec, genDecl)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("failed to extract type %s: %w", typeName, err))
+
+				continue
+			}
+
+			g.types[typeName] = typeInfo
+		}
+	}
+
+	return errs
+}
+
+// extractConstDeclarations extracts enum values from const blocks in a single AST file.
+func (g *OpenAPICollector) extractConstDeclarations(file *ast.File) []error {
+	var errs []error
+
+	for _, decl := range file.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.CONST {
+			continue
+		}
+
+		// Try to extract enum from this const block
+		err := g.extractEnumsFromConstBlock(genDecl)
+		if err == nil {
+			continue
+		}
+
+		// Skip non-enum const blocks silently
+		if errors.Is(err, ErrEmptyConstBlock) ||
+			errors.Is(err, ErrMixedTypes) ||
+			errors.Is(err, ErrNoEnumType) {
+			continue
+		}
+
+		// All other errors are real problems
+		errs = append(errs, fmt.Errorf("failed to process const block: %w", err))
+	}
+
+	return errs
+}
+
 func (g *OpenAPICollector) extractAllTypesFromGo(goParser *GoParser) error {
 	g.l.Debug("Starting type extraction from Go AST")
 
-	var errs []error
+	errs := make([]error, 0, len(goParser.files)*2)
 
 	// Walk all files and extract type declarations
 	for _, file := range goParser.files {
 		// First pass: extract all type declarations
-		for _, decl := range file.Decls {
-			genDecl, ok := decl.(*ast.GenDecl)
-			if !ok || genDecl.Tok != token.TYPE {
-				continue
-			}
-
-			for _, spec := range genDecl.Specs {
-				typeSpec, ok := spec.(*ast.TypeSpec)
-				if !ok {
-					continue
-				}
-
-				typeName := typeSpec.Name.Name
-
-				typeInfo, err := g.extractTypeFromSpec(typeName, typeSpec, genDecl)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("failed to extract type %s: %w", typeName, err))
-
-					continue
-				}
-
-				g.types[typeName] = typeInfo
-			}
-		}
+		errs = append(errs, g.extractTypeDeclarations(file)...)
 
 		// Second pass: extract enums from const blocks
-		for _, decl := range file.Decls {
-			genDecl, ok := decl.(*ast.GenDecl)
-			if !ok || genDecl.Tok != token.CONST {
-				continue
-			}
-
-			// Try to extract enum from this const block
-			// Skip non-enum const blocks silently (they return specific errors we can ignore)
-			if err := g.extractEnumsFromConstBlock(genDecl); err != nil {
-				// Only skip if it's a known non-enum pattern
-				if errors.Is(err, ErrEmptyConstBlock) ||
-					errors.Is(err, ErrMixedTypes) ||
-					errors.Is(err, ErrNoEnumType) {
-					continue
-				}
-				// All other errors are real problems
-				errs = append(errs, fmt.Errorf("failed to process const block: %w", err))
-			}
-		}
+		errs = append(errs, g.extractConstDeclarations(file)...)
 	}
 
 	if len(errs) > 0 {
@@ -871,107 +892,110 @@ func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field 
 	return fieldInfo, refs, nil
 }
 
-// extractEnumsFromConstBlock extracts enum values from a const block.
-func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) error {
-	if len(constDecl.Specs) == 0 {
-		return ErrEmptyConstBlock
+// processEnumValue processes a single enum constant value and returns the EnumValue.
+// The index parameter maps the const name to its corresponding value in valueSpec.Values.
+// For example, in `const (Foo = "foo"; Bar = "bar")`, index 0 maps Foo to "foo".
+// Returns (value, true, nil) if successful, (zero, false, nil) to skip, (zero, false, error) on error.
+func (g *OpenAPICollector) processEnumValue(valueSpec *ast.ValueSpec, index int, name *ast.Ident, enumTypeName string) (EnumValue, bool, error) {
+	if index >= len(valueSpec.Values) {
+		if enumTypeName != "" {
+			return EnumValue{}, false, fmt.Errorf("enum constant %s.%s is missing a value", enumTypeName, name.Name)
+		}
+
+		return EnumValue{}, false, nil
 	}
 
-	// Check if this looks like an enum (all values are of the same type)
-	var (
-		enumTypeName string
-		enumValues   []EnumValue
-	)
+	basicLit, ok := valueSpec.Values[index].(*ast.BasicLit)
+	if !ok {
+		// Exported const without a literal value - this is a problem for enums
+		if enumTypeName != "" {
+			return EnumValue{}, false, fmt.Errorf("enum constant %s.%s must have a string literal value, got %T", enumTypeName, name.Name, valueSpec.Values[index])
+		}
 
-	hasExportedConsts := false
+		return EnumValue{}, false, nil
+	}
 
-	for _, spec := range constDecl.Specs {
-		valueSpec, ok := spec.(*ast.ValueSpec)
-		if !ok {
+	if basicLit.Kind != token.STRING {
+		// If we already identified an enum type, non-string values are an error
+		if enumTypeName != "" {
+			return EnumValue{}, false, fmt.Errorf("enum constant %s.%s must be a string, got %v", enumTypeName, name.Name, basicLit.Kind)
+		}
+
+		return EnumValue{}, false, nil
+	}
+
+	value := strings.Trim(basicLit.Value, "\"")
+
+	// Extract documentation
+	desc := ""
+	if valueSpec.Doc != nil {
+		desc = g.extractCommentsFromDoc(valueSpec.Doc)
+	} else if valueSpec.Comment != nil {
+		desc = g.extractCommentsFromDoc(valueSpec.Comment)
+	}
+
+	deprecated, cleanedDesc, err := g.parseDeprecation(desc)
+	if err != nil {
+		return EnumValue{}, false, fmt.Errorf("failed to parse deprecation for enum value %s.%s: %w", enumTypeName, name.Name, err)
+	}
+
+	return EnumValue{
+		Value:       value,
+		Description: cleanedDesc,
+		Deprecated:  deprecated,
+	}, true, nil
+}
+
+// validateEnumType checks if the valueSpec's type matches the expected enum type.
+// Returns the enum type name or an error if types are mixed.
+func validateEnumType(valueSpec *ast.ValueSpec, currentEnumType string) (string, error) {
+	if valueSpec.Type == nil {
+		return currentEnumType, nil
+	}
+
+	ident, ok := valueSpec.Type.(*ast.Ident)
+	if !ok {
+		return currentEnumType, nil
+	}
+
+	if currentEnumType == "" {
+		return ident.Name, nil
+	}
+
+	if currentEnumType != ident.Name {
+		return "", ErrMixedTypes
+	}
+
+	return currentEnumType, nil
+}
+
+// processValueSpec processes a single const value spec and extracts enum values.
+func (g *OpenAPICollector) processValueSpec(valueSpec *ast.ValueSpec, enumTypeName string) (values []EnumValue, hasExported bool, err error) {
+	for i, name := range valueSpec.Names {
+		if !name.IsExported() {
 			continue
 		}
 
-		// Get the type
-		if valueSpec.Type != nil {
-			if ident, ok := valueSpec.Type.(*ast.Ident); ok {
-				if enumTypeName == "" {
-					enumTypeName = ident.Name
-				} else if enumTypeName != ident.Name {
-					// Mixed types - not an enum
-					return ErrMixedTypes
-				}
-			}
+		hasExported = true
+
+		enumValue, ok, err := g.processEnumValue(valueSpec, i, name, enumTypeName)
+		if err != nil {
+			return nil, hasExported, err
 		}
 
-		// Extract values
-		for i, name := range valueSpec.Names {
-			if !name.IsExported() {
-				continue
-			}
-
-			hasExportedConsts = true
-
-			// Get the value
-			if i < len(valueSpec.Values) {
-				basicLit, ok := valueSpec.Values[i].(*ast.BasicLit)
-				if !ok {
-					// Exported const without a literal value - this is a problem for enums
-					if enumTypeName != "" {
-						return fmt.Errorf("enum constant %s.%s must have a string literal value, got %T", enumTypeName, name.Name, valueSpec.Values[i])
-					}
-
-					continue
-				}
-
-				if basicLit.Kind != token.STRING {
-					// If we already identified an enum type, non-string values are an error
-					if enumTypeName != "" {
-						return fmt.Errorf("enum constant %s.%s must be a string, got %v", enumTypeName, name.Name, basicLit.Kind)
-					}
-
-					continue
-				}
-
-				value := strings.Trim(basicLit.Value, "\"")
-
-				// Extract documentation
-				desc := ""
-				if valueSpec.Doc != nil {
-					desc = g.extractCommentsFromDoc(valueSpec.Doc)
-				} else if valueSpec.Comment != nil {
-					desc = g.extractCommentsFromDoc(valueSpec.Comment)
-				}
-
-				deprecated, cleanedDesc, err := g.parseDeprecation(desc)
-				if err != nil {
-					return fmt.Errorf("failed to parse deprecation for enum value %s.%s: %w", enumTypeName, name.Name, err)
-				}
-
-				enumValues = append(enumValues, EnumValue{
-					Value:       value,
-					Description: cleanedDesc,
-					Deprecated:  deprecated,
-				})
-			} else if enumTypeName != "" {
-				// Exported const in an enum type without a value
-				return fmt.Errorf("enum constant %s.%s is missing a value", enumTypeName, name.Name)
-			}
+		if ok {
+			values = append(values, enumValue)
 		}
 	}
 
-	if enumTypeName == "" || len(enumValues) == 0 {
-		return ErrNoEnumType
-	}
+	return values, hasExported, nil
+}
 
-	// Verify we have at least one enum value if we identified an enum type
-	if hasExportedConsts && len(enumValues) == 0 && enumTypeName != "" {
-		return fmt.Errorf("enum type %s has exported constants but no valid string values", enumTypeName)
-	}
-
+// storeEnumType stores or updates an enum type in the types map.
+func (g *OpenAPICollector) storeEnumType(enumTypeName string, enumValues []EnumValue, constDecl *ast.GenDecl) {
 	// Store the const block AST node for later Go source generation
 	g.constASTs[enumTypeName] = constDecl
 
-	// Check if we already have this type (from type declaration)
 	existingType, exists := g.types[enumTypeName]
 	if exists {
 		// Update existing type to be an enum
@@ -987,6 +1011,57 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 		}
 		g.l.Debug("Created new enum type", slog.String("name", enumTypeName), slog.Int("valueCount", len(enumValues)))
 	}
+}
+
+// extractEnumsFromConstBlock extracts enum values from a const block.
+func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) error {
+	if len(constDecl.Specs) == 0 {
+		return ErrEmptyConstBlock
+	}
+
+	var (
+		enumTypeName      string
+		enumValues        []EnumValue
+		hasExportedConsts bool
+	)
+
+	for _, spec := range constDecl.Specs {
+		valueSpec, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+
+		// Validate and get enum type
+		var err error
+
+		enumTypeName, err = validateEnumType(valueSpec, enumTypeName)
+		if err != nil {
+			return err
+		}
+
+		// Process values from this spec
+		values, hasExported, err := g.processValueSpec(valueSpec, enumTypeName)
+		if err != nil {
+			return err
+		}
+
+		if hasExported {
+			hasExportedConsts = true
+		}
+
+		enumValues = append(enumValues, values...)
+	}
+
+	if enumTypeName == "" || len(enumValues) == 0 {
+		return ErrNoEnumType
+	}
+
+	// Verify we have at least one enum value if we identified an enum type
+	if hasExportedConsts && len(enumValues) == 0 {
+		return fmt.Errorf("enum type %s has exported constants but no valid string values", enumTypeName)
+	}
+
+	g.storeEnumType(enumTypeName, enumValues, constDecl)
 
 	return nil
 }
