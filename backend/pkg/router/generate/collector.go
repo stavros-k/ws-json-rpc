@@ -1178,9 +1178,9 @@ func (g *OpenAPICollector) analyzeGoType(expr ast.Expr) (FieldType, []string, er
 			return primitiveType, refs, nil
 		}
 
-		// Reject any/interface{} explicitly
-		if typeName == "any" || typeName == "interface{}" {
-			return FieldType{}, nil, errors.New("type 'any' or 'interface{}' is not allowed in API types - use concrete types instead")
+		// Reject 'any' explicitly
+		if typeName == "any" {
+			return FieldType{}, nil, errors.New("type 'any' is not allowed in API types - use concrete types instead")
 		}
 
 		// Check if it's a defined type in our types map (will be populated after first pass)
