@@ -74,6 +74,15 @@ type OpenAPICollector struct {
 	openapiSpec string
 }
 
+// normalizeLocalPackagePath normalizes a path to be recognized as a local package.
+// It ensures the path starts with "./" so the Go package parser treats it as local.
+func normalizeLocalPackagePath(path string) string {
+	path = strings.TrimPrefix(path, "./")
+	path = strings.TrimPrefix(path, "/")
+
+	return "./" + path
+}
+
 type OpenAPICollectorOptions struct {
 	GoTypesDirPath               string // Path to Go types file for parsing
 	DocsFileOutputPath           string // Path for generated API docs JSON file
@@ -100,12 +109,8 @@ func NewOpenAPICollector(l *slog.Logger, opts OpenAPICollectorOptions) (*OpenAPI
 		return nil, errors.New("docs file path is required")
 	}
 
-	// Prepend "./" to the path if it's not already there, this is
-	// to make the package parser to know that it's a local package
-	// and not a standard library package
-	goTypesDirPath := strings.TrimPrefix(opts.GoTypesDirPath, "./")
-	goTypesDirPath = strings.TrimPrefix(goTypesDirPath, "/")
-	goTypesDirPath = "./" + goTypesDirPath
+	// Normalize path to be recognized as a local package
+	goTypesDirPath := normalizeLocalPackagePath(opts.GoTypesDirPath)
 
 	l.Debug("Creating guts generator", slog.String("goTypesDirPath", goTypesDirPath))
 
@@ -293,24 +298,14 @@ func (g *OpenAPICollector) Generate() error {
 	return nil
 }
 
-// stringifyResponseExamples converts response examples to stringified JSON.
-func stringifyResponseExamples(r ResponseInfo) ResponseInfo {
-	r.ExamplesStringified = make(map[string]string)
-	for name, example := range r.Examples {
-		r.ExamplesStringified[name] = string(utils.MustToJSONIndent(example))
+// stringifyExamples converts examples to stringified JSON.
+func stringifyExamples(examples map[string]any) map[string]string {
+	stringified := make(map[string]string)
+	for name, example := range examples {
+		stringified[name] = string(utils.MustToJSONIndent(example))
 	}
 
-	return r
-}
-
-// stringifyRequestExamples converts request examples to stringified JSON.
-func stringifyRequestExamples(r *RequestInfo) *RequestInfo {
-	r.ExamplesStringified = make(map[string]string)
-	for name, example := range r.Examples {
-		r.ExamplesStringified[name] = string(utils.MustToJSONIndent(example))
-	}
-
-	return r
+	return stringified
 }
 
 // RegisterJSONRepresentation registers the JSON representation of a type value.
@@ -345,7 +340,7 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	// Extract type names from zero values using reflection, and stringify examples
 	if route.Request != nil {
 		if reflect.ValueOf(route.Request.TypeValue).IsZero() {
-			return fmt.Errorf("Request Type must not be zero value in route [%s]", route.OperationID)
+			return fmt.Errorf("request Type must not be zero value in route [%s]", route.OperationID)
 		}
 
 		typeName, err := extractTypeNameFromValue(route.Request.TypeValue)
@@ -366,7 +361,7 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 			return fmt.Errorf("failed to register JSON representation for request example: %w", err)
 		}
 
-		route.Request = stringifyRequestExamples(route.Request)
+		route.Request.ExamplesStringified = stringifyExamples(route.Request.Examples)
 	}
 
 	for statusCode, response := range route.Responses {
@@ -390,7 +385,8 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 			return fmt.Errorf("failed to register JSON representation for response example: %w", err)
 		}
 
-		route.Responses[statusCode] = stringifyResponseExamples(resp)
+		resp.ExamplesStringified = stringifyExamples(resp.Examples)
+		route.Responses[statusCode] = resp
 	}
 
 	for i := range route.Parameters {
@@ -411,14 +407,37 @@ func (g *OpenAPICollector) RegisterRoute(route *RouteInfo) error {
 	return nil
 }
 
-// stringifyMQTTExamples converts MQTT examples to stringified JSON.
-func stringifyMQTTExamples(examples map[string]any) map[string]string {
-	stringified := make(map[string]string)
-	for name, example := range examples {
-		stringified[name] = string(utils.MustToJSONIndent(example))
+// processMQTTMessageType extracts type information and registers representations for an MQTT message.
+// Returns the type name and stringified examples.
+func (g *OpenAPICollector) processMQTTMessageType(operationID string, typeValue any, examples map[string]any, messageKind string) (typeName string, stringifiedExamples map[string]string, err error) {
+	// Validate type value is not zero
+	if reflect.ValueOf(typeValue).IsZero() {
+		return "", nil, fmt.Errorf("MessageType must not be zero value in %s [%s]", messageKind, operationID)
 	}
 
-	return stringified
+	// Extract type name from zero value using reflection
+	typeName, err = extractTypeNameFromValue(typeValue)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to extract message type name: %w", err)
+	}
+
+	// Mark as used by MQTT
+	g.markTypeAsMQTT(typeName)
+
+	// Register JSON representation
+	if err := g.RegisterJSONRepresentation(typeValue); err != nil {
+		return "", nil, fmt.Errorf("failed to register JSON representation for message type: %w", err)
+	}
+
+	// Register examples
+	if err := g.registerExamples(examples); err != nil {
+		return "", nil, fmt.Errorf("failed to register JSON representation for example: %w", err)
+	}
+
+	// Stringify examples
+	stringifiedExamples = stringifyExamples(examples)
+
+	return typeName, stringifiedExamples, nil
 }
 
 func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) error {
@@ -431,33 +450,14 @@ func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) err
 		return fmt.Errorf("duplicate MQTT publication operationID: %s", pub.OperationID)
 	}
 
-	// Extract type name from zero value using reflection
-	if reflect.ValueOf(pub.TypeValue).IsZero() {
-		return fmt.Errorf("MessageType must not be zero value in publication [%s]", pub.OperationID)
-	}
-
-	typeName, err := extractTypeNameFromValue(pub.TypeValue)
+	// Process message type and examples
+	typeName, stringifiedExamples, err := g.processMQTTMessageType(pub.OperationID, pub.TypeValue, pub.Examples, "publication")
 	if err != nil {
-		return fmt.Errorf("failed to extract message type name: %w", err)
+		return err
 	}
 
 	pub.TypeName = typeName
-
-	// Mark as used by MQTT
-	g.markTypeAsMQTT(typeName)
-
-	// Register JSON representation
-	if err := g.RegisterJSONRepresentation(pub.TypeValue); err != nil {
-		return fmt.Errorf("failed to register JSON representation for message type: %w", err)
-	}
-
-	// Register examples
-	if err := g.registerExamples(pub.Examples); err != nil {
-		return fmt.Errorf("failed to register JSON representation for example: %w", err)
-	}
-
-	// Stringify examples
-	pub.ExamplesStringified = stringifyMQTTExamples(pub.Examples)
+	pub.ExamplesStringified = stringifiedExamples
 
 	// Store publication
 	g.mqttPublications[pub.OperationID] = pub
@@ -475,33 +475,14 @@ func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) e
 		return fmt.Errorf("duplicate MQTT subscription operationID: %s", sub.OperationID)
 	}
 
-	// Extract type name from zero value using reflection
-	if reflect.ValueOf(sub.TypeValue).IsZero() {
-		return fmt.Errorf("MessageType must not be zero value in subscription [%s]", sub.OperationID)
-	}
-
-	typeName, err := extractTypeNameFromValue(sub.TypeValue)
+	// Process message type and examples
+	typeName, stringifiedExamples, err := g.processMQTTMessageType(sub.OperationID, sub.TypeValue, sub.Examples, "subscription")
 	if err != nil {
-		return fmt.Errorf("failed to extract message type name: %w", err)
+		return err
 	}
 
 	sub.TypeName = typeName
-
-	// Mark as used by MQTT
-	g.markTypeAsMQTT(typeName)
-
-	// Register JSON representation
-	if err := g.RegisterJSONRepresentation(sub.TypeValue); err != nil {
-		return fmt.Errorf("failed to register JSON representation for message type: %w", err)
-	}
-
-	// Register examples
-	if err := g.registerExamples(sub.Examples); err != nil {
-		return fmt.Errorf("failed to register JSON representation for example: %w", err)
-	}
-
-	// Stringify examples
-	sub.ExamplesStringified = stringifyMQTTExamples(sub.Examples)
+	sub.ExamplesStringified = stringifiedExamples
 
 	// Store subscription
 	g.mqttSubscriptions[sub.OperationID] = sub
@@ -537,8 +518,16 @@ func (g *OpenAPICollector) validateUniqueOperationID(operationID string) error {
 	return nil
 }
 
-// markTypeAsHTTP recursively marks a type and all its referenced types as used by HTTP.
-func (g *OpenAPICollector) markTypeAsHTTP(typeName string) {
+// ProtocolType represents the type of protocol using a type.
+type ProtocolType int
+
+const (
+	ProtocolHTTP ProtocolType = iota
+	ProtocolMQTT
+)
+
+// markTypeAsUsedBy recursively marks a type and all its referenced types as used by a protocol.
+func (g *OpenAPICollector) markTypeAsUsedBy(typeName string, protocol ProtocolType) {
 	if typeName == "" {
 		return
 	}
@@ -548,43 +537,36 @@ func (g *OpenAPICollector) markTypeAsHTTP(typeName string) {
 		return // Primitive or external type
 	}
 
-	// Skip if already marked
-	if typeInfo.UsedByHTTP {
-		return
-	}
+	// Check if already marked and mark this type
+	switch protocol {
+	case ProtocolHTTP:
+		if typeInfo.UsedByHTTP {
+			return
+		}
 
-	// Mark this type
-	typeInfo.UsedByHTTP = true
+		typeInfo.UsedByHTTP = true
+	case ProtocolMQTT:
+		if typeInfo.UsedByMQTT {
+			return
+		}
+
+		typeInfo.UsedByMQTT = true
+	}
 
 	// Recursively mark referenced types
 	for _, ref := range typeInfo.References {
-		g.markTypeAsHTTP(ref)
+		g.markTypeAsUsedBy(ref, protocol)
 	}
 }
 
-// markTypeAsMQTT recursively marks a type and all its referenced types as used by MQTT.
+// markTypeAsHTTP marks a type and all its referenced types as used by HTTP.
+func (g *OpenAPICollector) markTypeAsHTTP(typeName string) {
+	g.markTypeAsUsedBy(typeName, ProtocolHTTP)
+}
+
+// markTypeAsMQTT marks a type and all its referenced types as used by MQTT.
 func (g *OpenAPICollector) markTypeAsMQTT(typeName string) {
-	if typeName == "" {
-		return
-	}
-
-	typeInfo, exists := g.types[typeName]
-	if !exists {
-		return // Primitive or external type
-	}
-
-	// Skip if already marked
-	if typeInfo.UsedByMQTT {
-		return
-	}
-
-	// Mark this type
-	typeInfo.UsedByMQTT = true
-
-	// Recursively mark referenced types
-	for _, ref := range typeInfo.References {
-		g.markTypeAsMQTT(ref)
-	}
+	g.markTypeAsUsedBy(typeName, ProtocolMQTT)
 }
 
 // ExternalTypeInfo holds metadata about external Go types.
@@ -1120,10 +1102,8 @@ func (g *OpenAPICollector) extractCommentsFromDoc(doc *ast.CommentGroup) string 
 		if i > 0 {
 			builder.WriteString(" ")
 		}
-		// Remove // or /* */ prefix/suffix
+
 		text := strings.TrimPrefix(comment.Text, "//")
-		text = strings.TrimPrefix(text, "/*")
-		text = strings.TrimSuffix(text, "*/")
 		builder.WriteString(strings.TrimSpace(text))
 	}
 
