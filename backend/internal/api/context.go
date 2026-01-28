@@ -7,8 +7,11 @@ import (
 
 type contextKey struct{}
 
-var loggerKey = contextKey{}
-var requestIDKey = contextKey{}
+//nolint:gochecknoglobals // Context keys must be package-level variables
+var (
+	loggerKey    = contextKey{}
+	requestIDKey = contextKey{}
+)
 
 // WithLogger adds a request-scoped logger to the context.
 func WithLogger(ctx context.Context, logger *slog.Logger) context.Context {

@@ -106,5 +106,8 @@ linters:
         - G304
     tagliatelle:
       case:
-        rules:
-          json: goCamel
+        extended-rules:
+          json:
+            case: goCamel
+            initialism-overrides:
+              MQTT: true

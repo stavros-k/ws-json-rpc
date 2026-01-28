@@ -112,6 +112,8 @@ func RespondJSON(w http.ResponseWriter, r *http.Request, statusCode int, data an
 }
 
 // DecodeJSON decodes JSON from request body with error handling.
+//
+//nolint:ireturn // we want to return the generic type T
 func DecodeJSON[T any](r *http.Request) (T, error) {
 	var zero T
 
