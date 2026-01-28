@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FaDatabase } from "react-icons/fa";
 import { IoHome } from "react-icons/io5";
 import { MdChevronLeft, MdChevronRight } from "react-icons/md";
@@ -47,97 +47,29 @@ const SidebarLink = ({
 export const Sidebar = () => {
     const [isCollapsed, setIsCollapsed] = useState(false);
 
-    // Load collapsed state from localStorage after hydration
-    useEffect(() => {
-        const stored = localStorage.getItem("sidebar-collapsed");
-        if (stored === "true") {
-            setIsCollapsed(true);
-        }
-    }, []);
-
     const toggleCollapsed = () => {
-        const newState = !isCollapsed;
-        setIsCollapsed(newState);
-        localStorage.setItem("sidebar-collapsed", String(newState));
+        setIsCollapsed(!isCollapsed);
     };
 
-    if (isCollapsed) {
-        return (
-            <aside className='w-16 text-sm bg-bg-sidebar text-text-primary sticky top-0 max-h-screen border-r-2 border-border-sidebar flex flex-col'>
-                <div className='p-3 flex items-center justify-center border-b-2 border-border-sidebar'>
-                    <button
-                        type='button'
-                        onClick={toggleCollapsed}
-                        className='p-2.5 rounded-lg bg-bg-tertiary hover:bg-bg-hover active:scale-95 transition-all duration-200 border-2 border-border-primary hover:border-accent-blue-border shadow-sm hover:shadow-md'
-                        aria-label='Expand sidebar'
-                        title='Expand sidebar'>
-                        <MdChevronRight className='w-7 h-7 text-text-primary' />
-                    </button>
-                </div>
-
-                {/* Icon Navigation */}
-                <div className='flex-1 overflow-y-auto p-2 pt-4 flex flex-col gap-2'>
-                    <Link
-                        href='/'
-                        className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
-                        title='Home'>
-                        <IoHome className='w-6 h-6 text-text-primary group-hover:text-accent-blue-text' />
-                    </Link>
-
-                    <div className='border-t-2 border-border-sidebar my-2' />
-
-                    <Link
-                        href='/api/operations'
-                        className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
-                        title='HTTP Operations'>
-                        <TbApi className='w-6 h-6 text-accent-blue group-hover:text-accent-blue-text' />
-                    </Link>
-
-                    <Link
-                        href='/api/mqtt/publications'
-                        className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center'
-                        title='MQTT Publications'>
-                        <PubBadge border={false} />
-                    </Link>
-
-                    <Link
-                        href='/api/mqtt/subscriptions'
-                        className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center'
-                        title='MQTT Subscriptions'>
-                        <SubBadge border={false} />
-                    </Link>
-
-                    <Link
-                        href='/api/types'
-                        className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
-                        title='Types'>
-                        <TbCode className='w-6 h-6 text-success-text group-hover:text-accent-purple' />
-                    </Link>
-
-                    <div className='border-t-2 border-border-sidebar my-2' />
-
-                    <Link
-                        href='/api/database/schema'
-                        className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
-                        title='Database Schema'>
-                        <FaDatabase className='w-5 h-5 text-info-text group-hover:text-info-border' />
-                    </Link>
-
-                    <Link
-                        href='/api/openapi'
-                        className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
-                        title='OpenAPI Specification'>
-                        <TbFileDescription className='w-6 h-6 text-warning-text group-hover:text-warning-border' />
-                    </Link>
-                </div>
-            </aside>
-        );
-    }
-
     return (
-        <aside className='min-w-80 max-w-md w-fit text-sm bg-bg-sidebar text-text-primary sticky top-0 max-h-screen border-r-2 border-border-sidebar flex flex-col'>
-            {/* Sticky Header */}
-            <div className='p-6 pb-4 border-b-2 border-border-sidebar'>
+        <aside
+            className={`sidebar text-sm bg-bg-sidebar text-text-primary sticky top-0 max-h-screen border-r-2 border-border-sidebar flex flex-col ${
+                isCollapsed ? "collapsed" : ""
+            }`}>
+            {/* Collapsed Header */}
+            <div className='sidebar-collapsed-only p-3 flex items-center justify-center border-b-2 border-border-sidebar'>
+                <button
+                    type='button'
+                    onClick={toggleCollapsed}
+                    className='p-2.5 rounded-lg bg-bg-tertiary hover:bg-bg-hover active:scale-95 transition-all duration-200 border-2 border-border-primary hover:border-accent-blue-border shadow-sm hover:shadow-md'
+                    aria-label='Expand sidebar'
+                    title='Expand sidebar'>
+                    <MdChevronRight className='w-7 h-7 text-text-primary' />
+                </button>
+            </div>
+
+            {/* Expanded Header */}
+            <div className='sidebar-expanded-only p-6 pb-4 border-b-2 border-border-sidebar'>
                 <div className='flex items-center justify-between mb-4'>
                     <h1 className='text-xl font-bold'>
                         <Link
@@ -167,9 +99,65 @@ export const Sidebar = () => {
                 </div>
             </div>
 
-            {/* Scrollable Content */}
+            {/* Collapsed Icon Navigation */}
+            <div className='sidebar-collapsed-only flex-1 overflow-y-auto p-2 pt-4 flex flex-col gap-2'>
+                <Link
+                    href='/'
+                    className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
+                    title='Home'>
+                    <IoHome className='w-6 h-6 text-text-primary group-hover:text-accent-blue-text' />
+                </Link>
+
+                <div className='border-t-2 border-border-sidebar my-2' />
+
+                <Link
+                    href='/api/operations'
+                    className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
+                    title='HTTP Operations'>
+                    <TbApi className='w-6 h-6 text-accent-blue group-hover:text-accent-blue-text' />
+                </Link>
+
+                <Link
+                    href='/api/mqtt/publications'
+                    className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center'
+                    title='MQTT Publications'>
+                    <PubBadge border={false} />
+                </Link>
+
+                <Link
+                    href='/api/mqtt/subscriptions'
+                    className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center'
+                    title='MQTT Subscriptions'>
+                    <SubBadge border={false} />
+                </Link>
+
+                <Link
+                    href='/api/types'
+                    className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
+                    title='Types'>
+                    <TbCode className='w-6 h-6 text-success-text group-hover:text-accent-purple' />
+                </Link>
+
+                <div className='border-t-2 border-border-sidebar my-2' />
+
+                <Link
+                    href='/api/database/schema'
+                    className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
+                    title='Database Schema'>
+                    <FaDatabase className='w-5 h-5 text-info-text group-hover:text-info-border' />
+                </Link>
+
+                <Link
+                    href='/api/openapi'
+                    className='p-2.5 rounded-lg hover:bg-bg-hover transition-all duration-200 flex items-center justify-center group'
+                    title='OpenAPI Specification'>
+                    <TbFileDescription className='w-6 h-6 text-warning-text group-hover:text-warning-border' />
+                </Link>
+            </div>
+
+            {/* Expanded Scrollable Content */}
             <div
-                className='flex-1 overflow-y-scroll p-6 pt-4'
+                className='sidebar-expanded-only flex-1 overflow-y-scroll p-6 pt-4'
                 style={{
                     scrollbarWidth: "auto",
                     scrollbarColor: "rgb(100 116 139) transparent",

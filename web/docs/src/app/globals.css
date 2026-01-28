@@ -4,6 +4,34 @@
     scrollbar-width: none;
 }
 
+/* Sidebar CSS-based collapsing */
+.sidebar {
+    min-width: 20rem;
+    max-width: 28rem;
+    width: fit-content;
+    transition: all 0.3s ease;
+}
+
+.sidebar.collapsed {
+    min-width: 4rem;
+    max-width: 4rem;
+    width: 4rem;
+}
+
+/* Show collapsed elements only when collapsed */
+.sidebar-collapsed-only {
+    display: none;
+}
+
+.sidebar.collapsed .sidebar-collapsed-only {
+    display: flex;
+}
+
+/* Hide expanded elements when collapsed */
+.sidebar.collapsed .sidebar-expanded-only {
+    display: none;
+}
+
 /* Animations */
 @keyframes slideDownFadeIn {
     0% {
