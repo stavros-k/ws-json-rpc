@@ -914,15 +914,14 @@ func (g *OpenAPICollector) extractFieldInfo(parentName, fieldName string, field 
 // processEnumValue processes a single enum constant value and returns the EnumValue.
 // The index parameter maps the const name to its corresponding value in valueSpec.Values.
 // For example, in `const (Foo = "foo"; Bar = "bar")`, index 0 maps Foo to "foo".
-// Returns (value, true, nil) if successful, (zero, false, nil) to skip, (zero, false, error) on error.
-func (g *OpenAPICollector) processEnumValue(valueSpec *ast.ValueSpec, index int, name *ast.Ident, enumTypeName string) (EnumValue, bool, error) {
+func (g *OpenAPICollector) processEnumValue(valueSpec *ast.ValueSpec, index int, name *ast.Ident, enumTypeName string) (EnumValue, error) {
 	if index >= len(valueSpec.Values) {
-		return EnumValue{}, false, fmt.Errorf("enum constant %s.%s is missing a value", enumTypeName, name.Name)
+		return EnumValue{}, fmt.Errorf("enum constant %s.%s is missing a value", enumTypeName, name.Name)
 	}
 
 	basicLit, ok := valueSpec.Values[index].(*ast.BasicLit)
 	if !ok {
-		return EnumValue{}, false, fmt.Errorf("enum constant %s.%s must have a literal value, got %T", enumTypeName, name.Name, valueSpec.Values[index])
+		return EnumValue{}, fmt.Errorf("enum constant %s.%s must have a literal value, got %T", enumTypeName, name.Name, valueSpec.Values[index])
 	}
 
 	var value any
@@ -936,12 +935,12 @@ func (g *OpenAPICollector) processEnumValue(valueSpec *ast.ValueSpec, index int,
 		// Number enum value
 		intVal, err := strconv.ParseInt(basicLit.Value, 10, 64)
 		if err != nil {
-			return EnumValue{}, false, fmt.Errorf("enum constant %s.%s has invalid integer value %s: %w", enumTypeName, name.Name, basicLit.Value, err)
+			return EnumValue{}, fmt.Errorf("enum constant %s.%s has invalid integer value %s: %w", enumTypeName, name.Name, basicLit.Value, err)
 		}
 		value = intVal
 
 	default:
-		return EnumValue{}, false, fmt.Errorf("enum constant %s.%s must be a string or integer, got %v", enumTypeName, name.Name, basicLit.Kind)
+		return EnumValue{}, fmt.Errorf("enum constant %s.%s must be a string or integer, got %v", enumTypeName, name.Name, basicLit.Kind)
 	}
 
 	// Extract documentation
@@ -954,14 +953,14 @@ func (g *OpenAPICollector) processEnumValue(valueSpec *ast.ValueSpec, index int,
 
 	deprecated, cleanedDesc, err := g.parseDeprecation(desc)
 	if err != nil {
-		return EnumValue{}, false, fmt.Errorf("failed to parse deprecation for enum value %s.%s: %w", enumTypeName, name.Name, err)
+		return EnumValue{}, fmt.Errorf("failed to parse deprecation for enum value %s.%s: %w", enumTypeName, name.Name, err)
 	}
 
 	return EnumValue{
 		Value:       value,
 		Description: cleanedDesc,
 		Deprecated:  deprecated,
-	}, true, nil
+	}, nil
 }
 
 // processValueSpec processes a single const value spec and extracts enum values.
@@ -973,14 +972,12 @@ func (g *OpenAPICollector) processValueSpec(valueSpec *ast.ValueSpec, enumTypeNa
 			continue
 		}
 
-		enumValue, ok, err := g.processEnumValue(valueSpec, i, name, enumTypeName)
+		enumValue, err := g.processEnumValue(valueSpec, i, name, enumTypeName)
 		if err != nil {
 			return nil, err
 		}
 
-		if ok {
-			values = append(values, enumValue)
-		}
+		values = append(values, enumValue)
 	}
 
 	return values, nil
@@ -1096,16 +1093,8 @@ func (g *OpenAPICollector) extractEnumsFromConstBlock(constDecl *ast.GenDecl) er
 		enumValues = append(enumValues, values...)
 	}
 
-	// Validate we found an enum type with at least one value
-	if enumTypeName == "" || len(enumValues) == 0 {
-		return ErrNoEnumType
-	}
-
-	if err := g.storeEnumType(enumTypeName, enumValues, constDecl); err != nil {
-		return err
-	}
-
-	return nil
+	// storeEnumType validates we have values and stores the enum
+	return g.storeEnumType(enumTypeName, enumValues, constDecl)
 }
 
 // analyzePointerType handles pointer types (*T) which become nullable.
