@@ -1,5 +1,5 @@
 import type { Route } from "next";
-import { TbBrandTypescript, TbFileCode, TbInfoCircle, TbJson } from "react-icons/tb";
+import { TbBrandGolang, TbBrandTypescript, TbFileCode, TbInfoCircle, TbJson } from "react-icons/tb";
 import { BackButton } from "@/components/back-button";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CodeWrapper } from "@/components/code-wrapper";
@@ -72,57 +72,65 @@ export default async function Type(props: PageProps<"/api/type/[type]">) {
                     {
                         title: "TypeScript",
                         icon: <TbBrandTypescript className='w-8 h-8 text-lang-ts' />,
-                        code:
-                            "representations" in data && data.representations?.ts ? (
-                                <CodeWrapper
-                                    code={data.representations.ts}
-                                    lang='typescript'
-                                    label={{ text: type }}
-                                />
-                            ) : (
-                                <p className='text-sm text-text-tertiary p-4'>
-                                    No TypeScript representation available for this type.
-                                </p>
-                            ),
+                        code: data.representations?.ts ? (
+                            <CodeWrapper
+                                code={data.representations.ts}
+                                lang='typescript'
+                                label={{ text: type }}
+                            />
+                        ) : (
+                            <p className='text-sm text-text-tertiary p-4'>
+                                No TypeScript representation available for this type.
+                            </p>
+                        ),
+                    },
+                    {
+                        title: "Go",
+                        icon: <TbBrandGolang className='w-8 h-8 text-lang-go' />,
+                        code: data.representations?.go ? (
+                            <CodeWrapper
+                                code={data.representations.go}
+                                lang='go'
+                                label={{ text: type }}
+                            />
+                        ) : (
+                            <p className='text-sm text-text-tertiary p-4'>
+                                No Go representation available for this type.
+                            </p>
+                        ),
                     },
                     {
                         title: "JSON",
                         icon: <TbFileCode className='w-8 h-8 text-lang-json' />,
-                        code:
-                            "representations" in data &&
-                            data.representations?.json &&
-                            data.representations.json.trim() ? (
-                                <>
-                                    <CodeWrapper
-                                        code={data.representations.json}
-                                        lang='json'
-                                        label={{ text: type }}
-                                    />
-                                    <div className='mb-4 p-3 bg-bg-tertiary rounded-lg border border-border-secondary'>
-                                        <p className='text-xs text-text-muted'>
-                                            Example representation - actual values may vary
-                                        </p>
-                                    </div>
-                                </>
-                            ) : (
-                                <p className='text-sm text-text-tertiary p-4'>No JSON available for this type.</p>
-                            ),
+                        code: data.representations?.json ? (
+                            <>
+                                <CodeWrapper
+                                    code={data.representations.json}
+                                    lang='json'
+                                    label={{ text: type }}
+                                />
+                                <div className='mb-4 p-3 bg-bg-tertiary rounded-lg border border-border-secondary'>
+                                    <p className='text-xs text-text-muted'>
+                                        Example representation - actual values may vary
+                                    </p>
+                                </div>
+                            </>
+                        ) : (
+                            <p className='text-sm text-text-tertiary p-4'>No JSON available for this type.</p>
+                        ),
                     },
                     {
                         title: "JSON Schema",
                         icon: <TbJson className='w-8 h-8 text-purple-400' />,
-                        code:
-                            "representations" in data && data.representations?.jsonSchema ? (
-                                <CodeWrapper
-                                    code={data.representations.jsonSchema}
-                                    lang='json'
-                                    label={{ text: type }}
-                                />
-                            ) : (
-                                <p className='text-sm text-text-tertiary p-4'>
-                                    No JSON schema available for this type.
-                                </p>
-                            ),
+                        code: data.representations?.jsonSchema ? (
+                            <CodeWrapper
+                                code={data.representations.jsonSchema}
+                                lang='json'
+                                label={{ text: type }}
+                            />
+                        ) : (
+                            <p className='text-sm text-text-tertiary p-4'>No JSON schema available for this type.</p>
+                        ),
                     },
                 ]}
             />

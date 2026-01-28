@@ -121,6 +121,7 @@ html[data-theme="light"] {
     /* Language/Icon Colors */
     --color-lang-json: light-dark(#f59e0b, #fbbf24);
     --color-lang-ts: #3178c6;
+    --color-lang-go: #00add8;
     --color-lang-overview: light-dark(#3b82f6, #60a5fa);
     --color-lang-references: #10b981;
 
