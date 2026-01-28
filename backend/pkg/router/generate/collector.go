@@ -939,6 +939,7 @@ func (g *OpenAPICollector) processEnumValue(valueSpec *ast.ValueSpec, index int,
 
 	var value any
 
+	//nolint:exhaustive // Only STRING and INT literals are valid for enum constants
 	switch basicLit.Kind {
 	case token.STRING:
 		// String enum value
