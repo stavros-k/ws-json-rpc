@@ -31,7 +31,6 @@ const (
 	TypeKindObject     = "object"
 	TypeKindStringEnum = "string_enum"
 	TypeKindNumberEnum = "number_enum"
-	TypeKindUnion      = "union"
 	TypeKindAlias      = "alias"
 )
 

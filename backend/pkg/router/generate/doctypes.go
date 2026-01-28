@@ -45,7 +45,7 @@ type FieldInfo struct {
 
 // EnumValue represents an enum constant with its documentation.
 type EnumValue struct {
-	Value       string `json:"value"`
+	Value       any    `json:"value"`       // string for string enums, int64 for number enums
 	Description string `json:"description"`
 	Deprecated  string `json:"deprecated"`
 }

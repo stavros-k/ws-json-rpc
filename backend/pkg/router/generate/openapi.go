@@ -185,8 +185,19 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 		}
 	}
 
+	// Determine OpenAPI type based on enum kind
+	var schemaType string
+	switch typeInfo.Kind {
+	case TypeKindStringEnum:
+		schemaType = "string"
+	case TypeKindNumberEnum:
+		schemaType = "integer"
+	default:
+		return nil, fmt.Errorf("unsupported enum kind: %s", typeInfo.Kind)
+	}
+
 	return &openapi3.Schema{
-		Type:        &openapi3.Types{"string"},
+		Type:        &openapi3.Types{schemaType},
 		Enum:        values,
 		Description: enumDesc.String(),
 		Deprecated:  typeInfo.Deprecated != "",
