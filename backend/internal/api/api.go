@@ -73,7 +73,7 @@ func ErrorHandler(fn HandlerFunc) http.HandlerFunc {
 		}
 
 		// This is an expected HTTP error, we return the actual error to the client
-		httpErr := &apitypes.ErrorResponse{}
+		var httpErr *apitypes.ErrorResponse
 		if errors.As(err, &httpErr) {
 			httpErr.RequestID = requestID
 			l.Warn("handler returned HTTP error", slog.Int("status", httpErr.StatusCode), slog.String("message", httpErr.Message))
