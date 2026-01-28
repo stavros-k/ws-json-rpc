@@ -3,6 +3,7 @@ package generate
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -50,11 +51,6 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 			return nil, fmt.Errorf("failed to build schema for field %s: %w", field.Name, err)
 		}
 
-		// Mark field as deprecated
-		if field.Deprecated != "" {
-			fieldSchema.Value.Deprecated = true
-		}
-
 		schema.Properties[field.Name] = fieldSchema
 
 		if field.TypeInfo.Required {
@@ -67,14 +63,74 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 
 // buildFieldSchema creates an OpenAPI schema for a field.
 func buildFieldSchema(field FieldInfo) (*openapi3.SchemaRef, error) {
-	// Use structured type information
-	return buildSchemaFromFieldType(field.TypeInfo, field.Description)
+	schema, err := buildSchemaFromFieldType(field.TypeInfo, field.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply field-level deprecated metadata
+	return applyDeprecated(schema, field.Deprecated != "")
 }
 
 // applyNullable sets the Nullable field on a schema if needed.
-func applyNullable(schema *openapi3.Schema, nullable bool) {
-	if nullable {
-		schema.Nullable = true
+// For inline schemas (Value != nil), sets nullable directly.
+// For $ref schemas (Value == nil, Ref != ""), wraps with allOf in OpenAPI 3.0.
+// FIXME: OpenAPI 3.1 uses JSON Schema which supports type: 'null'.
+// When upgrading to OpenAPI 3.1, replace allOf+nullable pattern with anyOf containing type: 'null'.
+func applyNullable(schemaRef *openapi3.SchemaRef, nullable bool) (*openapi3.SchemaRef, error) {
+	switch {
+	case !nullable:
+		return schemaRef, nil
+	case schemaRef.Value != nil:
+		// Inline schema - set nullable directly
+		schemaRef.Value.Nullable = true
+
+		return schemaRef, nil
+	case schemaRef.Ref != "":
+		// OpenAPI 3.0: Reference schema - must wrap with allOf
+		return &openapi3.SchemaRef{
+			Value: &openapi3.Schema{
+				AllOf:    []*openapi3.SchemaRef{schemaRef},
+				Nullable: true,
+			},
+		}, nil
+		// OpenAPI 3.1: Use anyOf with null type instead
+		// nullType := &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"null"}}}
+		// return &openapi3.SchemaRef{Value: &openapi3.Schema{AnyOf: []*openapi3.SchemaRef{schemaRef, nullType}}}
+	default:
+		return nil, errors.New("invalid schemaRef: both Value and Ref are empty")
+	}
+}
+
+// applyDeprecated sets the Deprecated field on a schema if needed.
+// For inline schemas (Value != nil), sets deprecated directly.
+// For $ref schemas (Value == nil, Ref != ""), wraps with allOf in OpenAPI 3.0.
+// FIXME: OpenAPI 3.1 allows deprecated directly on $ref without wrapping.
+// When upgrading to OpenAPI 3.1, set deprecated as a sibling to $ref instead of wrapping.
+func applyDeprecated(schemaRef *openapi3.SchemaRef, deprecated bool) (*openapi3.SchemaRef, error) {
+	switch {
+	case !deprecated:
+		return schemaRef, nil
+	case schemaRef.Value != nil:
+		// Inline schema - set deprecated directly
+		schemaRef.Value.Deprecated = true
+
+		return schemaRef, nil
+	case schemaRef.Ref != "":
+		// OpenAPI 3.0: Reference schema - must wrap with allOf
+		return &openapi3.SchemaRef{
+			Value: &openapi3.Schema{
+				AllOf:      []*openapi3.SchemaRef{schemaRef},
+				Deprecated: true,
+			},
+		}, nil
+		// OpenAPI 3.1: Can set deprecated as sibling to $ref
+		// Example approach:
+		// schemaRef.Value = &openapi3.Schema{Deprecated: true}
+		// // Keep schemaRef.Ref as is
+		// return schemaRef
+	default:
+		return nil, errors.New("invalid schemaRef: both Value and Ref are empty")
 	}
 }
 
@@ -88,9 +144,9 @@ func buildPrimitiveSchemaFromFieldType(ft FieldType, description string) (*opena
 		schema.Format = ft.Format
 	}
 
-	applyNullable(schema, ft.Nullable)
+	schemaRef := &openapi3.SchemaRef{Value: schema}
 
-	return &openapi3.SchemaRef{Value: schema}, nil
+	return applyNullable(schemaRef, ft.Nullable)
 }
 
 // buildArraySchemaFromFieldType builds a schema for array types.
@@ -111,18 +167,17 @@ func buildArraySchemaFromFieldType(ft FieldType, description string) (*openapi3.
 		Items:       itemSchema,
 		Description: description,
 	}
-	applyNullable(schema, ft.Nullable)
 
-	return &openapi3.SchemaRef{Value: schema}, nil
+	schemaRef := &openapi3.SchemaRef{Value: schema}
+
+	return applyNullable(schemaRef, ft.Nullable)
 }
 
 // buildReferenceSchemaFromFieldType builds a schema reference for type references and enums.
 func buildReferenceSchemaFromFieldType(ft FieldType) (*openapi3.SchemaRef, error) {
-	// Return a $ref to the type in components/schemas
 	ref := createSchemaRef(ft.Type)
-	// Note: nullable on $ref requires wrapping in allOf or oneOf in OpenAPI 3.0
-	// For now, we'll handle this at a higher level if needed
-	return ref, nil
+
+	return applyNullable(ref, ft.Nullable)
 }
 
 // buildObjectSchemaFromFieldType builds a schema for object/map types.
@@ -131,7 +186,6 @@ func buildObjectSchemaFromFieldType(ft FieldType, description string) (*openapi3
 		Type:        &openapi3.Types{"object"},
 		Description: description,
 	}
-	applyNullable(schema, ft.Nullable)
 
 	schema.AdditionalProperties = openapi3.AdditionalProperties{Has: utils.Ptr(false)}
 
@@ -147,7 +201,9 @@ func buildObjectSchemaFromFieldType(ft FieldType, description string) (*openapi3
 		}
 	}
 
-	return &openapi3.SchemaRef{Value: schema}, nil
+	schemaRef := &openapi3.SchemaRef{Value: schema}
+
+	return applyNullable(schemaRef, ft.Nullable)
 }
 
 // buildSchemaFromFieldType converts a FieldType to an OpenAPI schema.
