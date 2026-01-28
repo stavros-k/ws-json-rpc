@@ -23,11 +23,11 @@ export function MQTTTopicHeader({ topic, topicMQTT, topicParameters, type }: MQT
     return (
         <div>
             {/* Header with badge and parameterized topic */}
-            <div className='flex items-center gap-3 mb-4'>
-                <span className={`px-3 py-1.5 rounded text-sm font-bold border-2 ${badgeColor}`}>
+            <div className='mb-4 flex items-center gap-3'>
+                <span className={`rounded border-2 px-3 py-1.5 font-bold text-sm ${badgeColor}`}>
                     {isPublication ? "PUB" : "SUB"}
                 </span>
-                <h2 className='text-xl font-mono font-semibold'>
+                <h2 className='font-mono font-semibold text-xl'>
                     <span>
                         {segments.map((segment, idx) => {
                             const uniqueKey = `${segment}-${idx}`;
@@ -49,7 +49,7 @@ export function MQTTTopicHeader({ topic, topicMQTT, topicParameters, type }: MQT
                                     <span className='text-type-enum'>{"{"}</span>
                                     <button
                                         type='button'
-                                        className={`font-bold transition-colors bg-transparent border-0 p-0 font-mono text-xl ${
+                                        className={`border-0 bg-transparent p-0 font-bold font-mono text-xl transition-colors ${
                                             isHovered ? "text-accent-blue-light" : "text-accent-blue"
                                         }`}
                                         onMouseEnter={() => setHoveredParam(paramName)}
@@ -74,7 +74,7 @@ export function MQTTTopicHeader({ topic, topicMQTT, topicParameters, type }: MQT
             {/* Topic Parameters */}
             {topicParameters && topicParameters.length > 0 && (
                 <div className='mb-8'>
-                    <h3 className='text-2xl font-bold text-text-primary mb-4'>Topic Parameters</h3>
+                    <h3 className='mb-4 font-bold text-2xl text-text-primary'>Topic Parameters</h3>
                     <div className='space-y-3'>
                         {topicParameters.map((param) => {
                             const isHovered = hoveredParam === param.name;
@@ -82,17 +82,17 @@ export function MQTTTopicHeader({ topic, topicMQTT, topicParameters, type }: MQT
                                 <button
                                     key={param.name}
                                     type='button'
-                                    className={`w-full p-4 rounded-lg border-2 transition-colors text-left ${
+                                    className={`w-full rounded-lg border-2 p-4 text-left transition-colors ${
                                         isHovered
-                                            ? "bg-accent-blue/5 border-accent-blue/50"
-                                            : "bg-bg-tertiary border-border-primary"
+                                            ? "border-accent-blue/50 bg-accent-blue/5"
+                                            : "border-border-primary bg-bg-tertiary"
                                     }`}
                                     onMouseEnter={() => setHoveredParam(param.name)}
                                     onMouseLeave={() => setHoveredParam(null)}
                                     aria-label={`Highlight ${param.name} parameter in topic`}>
-                                    <code className='text-base font-semibold text-text-primary'>{param.name}</code>
+                                    <code className='font-semibold text-base text-text-primary'>{param.name}</code>
                                     {param.description && (
-                                        <p className='text-sm text-text-tertiary mt-2'>{param.description}</p>
+                                        <p className='mt-2 text-sm text-text-tertiary'>{param.description}</p>
                                     )}
                                 </button>
                             );

@@ -16,11 +16,11 @@ export function CollapsibleGroup({ title, children, defaultOpen = true }: Collap
         <div className='mb-12'>
             <button
                 type='button'
-                onClick={() => setIsOpen(prev => !prev)}
-                className='w-full flex items-center justify-between text-2xl font-bold text-text-primary mb-6 pb-3 border-b-2 border-border-primary hover:text-accent-blue hover:border-accent-blue transition-all duration-200 group'>
-                <h2 className='group-hover:scale-105 transition-transform'>{title}</h2>
-                <span className='text-text-muted group-hover:text-accent-blue transition-colors'>
-                    {isOpen ? <MdExpandLess className='w-7 h-7' /> : <MdExpandMore className='w-7 h-7' />}
+                onClick={() => setIsOpen((prev) => !prev)}
+                className='group mb-6 flex w-full items-center justify-between border-border-primary border-b-2 pb-3 font-bold text-2xl text-text-primary transition-all duration-200 hover:border-accent-blue hover:text-accent-blue'>
+                <h2 className='transition-transform group-hover:scale-105'>{title}</h2>
+                <span className='text-text-muted transition-colors group-hover:text-accent-blue'>
+                    {isOpen ? <MdExpandLess className='h-7 w-7' /> : <MdExpandMore className='h-7 w-7' />}
                 </span>
             </button>
             {isOpen && <div className='grid gap-5'>{children}</div>}
@@ -39,20 +39,20 @@ export function CollapsibleCard({ title, subtitle, children, defaultOpen = false
     const [isOpen, setIsOpen] = useState(defaultOpen);
 
     return (
-        <div className='border-2 border-border-secondary rounded-xl mb-6 overflow-hidden shadow-sm hover:shadow-md transition-shadow'>
+        <div className='mb-6 overflow-hidden rounded-xl border-2 border-border-secondary shadow-sm transition-shadow hover:shadow-md'>
             <button
                 type='button'
-                onClick={() => setIsOpen(prev => !prev)}
-                className='w-full bg-bg-tertiary p-5 font-bold cursor-pointer flex justify-between items-center hover:bg-bg-hover text-text-primary transition-colors duration-200 group'>
+                onClick={() => setIsOpen((prev) => !prev)}
+                className='group flex w-full cursor-pointer items-center justify-between bg-bg-tertiary p-5 font-bold text-text-primary transition-colors duration-200 hover:bg-bg-hover'>
                 <div className='text-left'>
-                    <div className='group-hover:text-accent-blue transition-colors'>{title}</div>
-                    {subtitle && <div className='text-sm text-text-muted mt-1.5 font-normal'>{subtitle}</div>}
+                    <div className='transition-colors group-hover:text-accent-blue'>{title}</div>
+                    {subtitle && <div className='mt-1.5 font-normal text-sm text-text-muted'>{subtitle}</div>}
                 </div>
-                <span className='text-text-muted group-hover:text-accent-blue transition-colors'>
-                    {isOpen ? <MdExpandLess className='w-6 h-6' /> : <MdExpandMore className='w-6 h-6' />}
+                <span className='text-text-muted transition-colors group-hover:text-accent-blue'>
+                    {isOpen ? <MdExpandLess className='h-6 w-6' /> : <MdExpandMore className='h-6 w-6' />}
                 </span>
             </button>
-            {isOpen && <div className='p-5 bg-bg-secondary'>{children}</div>}
+            {isOpen && <div className='bg-bg-secondary p-5'>{children}</div>}
         </div>
     );
 }

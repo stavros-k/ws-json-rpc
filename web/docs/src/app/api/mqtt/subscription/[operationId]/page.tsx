@@ -38,7 +38,7 @@ export default async function MQTTSubscriptionPage(props: PageProps<"/api/mqtt/s
     const messageJson = subscription.type ? getTypeJson(subscription.type as TypeKeys) : null;
 
     return (
-        <main className='flex-1 p-10 overflow-y-auto'>
+        <main className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs
                 items={[
                     { label: "MQTT Subscriptions", href: "/api/mqtt/subscriptions" as Route },
@@ -52,8 +52,8 @@ export default async function MQTTSubscriptionPage(props: PageProps<"/api/mqtt/s
             />
 
             <div>
-                <div className='flex items-center justify-between gap-3 mb-3'>
-                    <h1 className='text-4xl font-bold text-text-primary'>{subscription.operationID}</h1>
+                <div className='mb-3 flex items-center justify-between gap-3'>
+                    <h1 className='font-bold text-4xl text-text-primary'>{subscription.operationID}</h1>
                     <Group
                         group={subscription.group || ""}
                         size='md'
@@ -65,15 +65,15 @@ export default async function MQTTSubscriptionPage(props: PageProps<"/api/mqtt/s
                     itemType='mqtt subscription'
                 />
 
-                <div className='text-text-tertiary mb-8 pb-6 border-b-2 border-border-primary'>
+                <div className='mb-8 border-border-primary border-b-2 pb-6 text-text-tertiary'>
                     <p className='mb-2'>{subscription.summary}</p>
                     {subscription.description && subscription.description !== subscription.summary && (
                         <p className='text-sm'>{subscription.description}</p>
                     )}
                 </div>
 
-                <div className='mb-6 p-4 bg-accent-blue-bg border-2 border-accent-blue-border rounded-lg'>
-                    <p className='text-sm text-accent-blue-text'>
+                <div className='mb-6 rounded-lg border-2 border-accent-blue-border bg-accent-blue-bg p-4'>
+                    <p className='text-accent-blue-text text-sm'>
                         <strong>Note:</strong> The server subscribes to this topic. Clients are expected to publish
                         (send) messages to this topic.
                     </p>
@@ -89,9 +89,9 @@ export default async function MQTTSubscriptionPage(props: PageProps<"/api/mqtt/s
 
             {/* MQTT Settings */}
             <CardBoxWrapper title='MQTT Settings'>
-                <div className='bg-bg-tertiary p-3 rounded-lg border border-border-secondary w-1/2'>
-                    <div className='text-xs text-text-muted mb-1'>QoS</div>
-                    <div className='text-sm font-semibold text-text-primary'>{subscription.qos}</div>
+                <div className='w-1/2 rounded-lg border border-border-secondary bg-bg-tertiary p-3'>
+                    <div className='mb-1 text-text-muted text-xs'>QoS</div>
+                    <div className='font-semibold text-sm text-text-primary'>{subscription.qos}</div>
                 </div>
             </CardBoxWrapper>
 
@@ -107,8 +107,8 @@ export default async function MQTTSubscriptionPage(props: PageProps<"/api/mqtt/s
                     lang='json'
                 />
                 {messageJson && (
-                    <div className='mb-4 p-3 bg-bg-tertiary rounded-lg border border-border-secondary'>
-                        <p className='text-xs text-text-muted'>Example representation - actual values may vary</p>
+                    <div className='mb-4 rounded-lg border border-border-secondary bg-bg-tertiary p-3'>
+                        <p className='text-text-muted text-xs'>Example representation - actual values may vary</p>
                     </div>
                 )}
             </CardBoxWrapper>

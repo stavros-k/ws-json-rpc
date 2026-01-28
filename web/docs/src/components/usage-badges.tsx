@@ -20,13 +20,13 @@ export function UsageBadges({ usedBy }: UsageBadgesProps) {
     return (
         <div className='flex items-center gap-2'>
             {hasHTTP && (
-                <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-green-bg text-accent-green-text border-2 border-accent-green-border font-semibold text-sm'>
-                    <TbApi className='w-4 h-4' />
+                <div className='flex items-center gap-1.5 rounded-lg border-2 border-accent-green-border bg-accent-green-bg px-3 py-1.5 font-semibold text-accent-green-text text-sm'>
+                    <TbApi className='h-4 w-4' />
                     <span>HTTP</span>
                 </div>
             )}
             {hasMQTT && (
-                <div className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-purple-bg text-accent-purple-text border-2 border-accent-purple-border font-semibold text-sm'>
+                <div className='flex items-center gap-1.5 rounded-lg border-2 border-accent-purple-border bg-accent-purple-bg px-3 py-1.5 font-semibold text-accent-purple-text text-sm'>
                     <span>MQTT</span>
                 </div>
             )}

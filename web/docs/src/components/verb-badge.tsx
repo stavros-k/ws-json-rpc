@@ -23,7 +23,7 @@ export function VerbBadge({ verb, size = "md" }: VerbBadgeProps) {
     }[size];
 
     return (
-        <span className={`${colorClasses} ${sizeClasses} rounded-lg font-bold font-mono border-2 inline-block`}>
+        <span className={`${colorClasses} ${sizeClasses} inline-block rounded-lg border-2 font-bold font-mono`}>
             {upperVerb}
         </span>
     );

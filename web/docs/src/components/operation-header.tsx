@@ -17,12 +17,12 @@ export function OperationHeader({ method, path, parameters }: OperationHeaderPro
 
     return (
         <div>
-            <div className='flex items-center gap-3 mb-4'>
+            <div className='mb-4 flex items-center gap-3'>
                 <VerbBadge
                     verb={method}
                     size='lg'
                 />
-                <h2 className='text-xl font-mono font-semibold'>
+                <h2 className='font-mono font-semibold text-xl'>
                     <span>
                         {segments.map((segment, idx) => {
                             const uniqueKey = `${segment}-${idx}`;
@@ -44,7 +44,7 @@ export function OperationHeader({ method, path, parameters }: OperationHeaderPro
                                     <span className='text-type-enum'>{"{"}</span>
                                     <button
                                         type='button'
-                                        className={`font-bold transition-colors bg-transparent border-0 p-0 font-mono text-xl ${
+                                        className={`border-0 bg-transparent p-0 font-bold font-mono text-xl transition-colors ${
                                             isHovered ? "text-accent-blue-light" : "text-accent-blue"
                                         }`}
                                         onMouseEnter={() => setHoveredParam(paramName)}
@@ -62,7 +62,7 @@ export function OperationHeader({ method, path, parameters }: OperationHeaderPro
 
             {parameters && parameters.length > 0 && (
                 <div className='mb-8'>
-                    <h3 className='text-2xl font-bold text-text-primary mb-4'>Parameters</h3>
+                    <h3 className='mb-4 font-bold text-2xl text-text-primary'>Parameters</h3>
                     <div className='space-y-3'>
                         {parameters.map((param) => {
                             const isHovered = hoveredParam === param.name;
@@ -70,29 +70,29 @@ export function OperationHeader({ method, path, parameters }: OperationHeaderPro
                                 <button
                                     key={param.name}
                                     type='button'
-                                    className={`w-full p-4 rounded-lg border-2 transition-colors text-left ${
+                                    className={`w-full rounded-lg border-2 p-4 text-left transition-colors ${
                                         isHovered
-                                            ? "bg-accent-blue/5 border-accent-blue/50"
-                                            : "bg-bg-tertiary border-border-primary"
+                                            ? "border-accent-blue/50 bg-accent-blue/5"
+                                            : "border-border-primary bg-bg-tertiary"
                                     }`}
                                     onMouseEnter={() => setHoveredParam(param.name)}
                                     onMouseLeave={() => setHoveredParam(null)}
                                     aria-label={`Highlight ${param.name} parameter in path`}>
-                                    <div className='flex items-start justify-between gap-4 mb-2'>
-                                        <div className='flex items-center gap-2 flex-wrap'>
-                                            <code className='text-base font-semibold text-text-primary'>
+                                    <div className='mb-2 flex items-start justify-between gap-4'>
+                                        <div className='flex flex-wrap items-center gap-2'>
+                                            <code className='font-semibold text-base text-text-primary'>
                                                 {param.name}
                                             </code>
                                             {param.required && (
-                                                <span className='text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-semibold'>
+                                                <span className='rounded border border-red-500/30 bg-red-500/20 px-2 py-0.5 font-semibold text-red-400 text-xs'>
                                                     required
                                                 </span>
                                             )}
-                                            <span className='text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30'>
+                                            <span className='rounded border border-blue-500/30 bg-blue-500/20 px-2 py-0.5 text-blue-400 text-xs'>
                                                 {param.in}
                                             </span>
                                         </div>
-                                        <code className='px-3 py-1.5 rounded-lg bg-type-primitive/10 text-type-primitive border-2 border-type-primitive/30 font-mono text-sm font-semibold'>
+                                        <code className='rounded-lg border-2 border-type-primitive/30 bg-type-primitive/10 px-3 py-1.5 font-mono font-semibold text-sm text-type-primitive'>
                                             {param.type}
                                         </code>
                                     </div>

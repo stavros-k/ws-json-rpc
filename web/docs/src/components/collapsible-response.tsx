@@ -14,29 +14,29 @@ export function CollapsibleResponse({ statusCode, description, children }: Colla
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div className='border-2 border-border-secondary rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow'>
+        <div className='overflow-hidden rounded-xl border-2 border-border-secondary shadow-sm transition-shadow hover:shadow-md'>
             <button
                 type='button'
-                onClick={() => setIsOpen(prev => !prev)}
-                className='w-full bg-bg-tertiary p-5 font-bold cursor-pointer flex justify-between items-center hover:bg-bg-hover text-text-primary transition-colors duration-200 group'>
+                onClick={() => setIsOpen((prev) => !prev)}
+                className='group flex w-full cursor-pointer items-center justify-between bg-bg-tertiary p-5 font-bold text-text-primary transition-colors duration-200 hover:bg-bg-hover'>
                 <div className='flex items-center gap-3'>
                     <span
-                        className={`text-lg font-bold px-3 py-1.5 rounded-lg font-mono ${
+                        className={`rounded-lg px-3 py-1.5 font-bold font-mono text-lg ${
                             statusCode.startsWith("2")
-                                ? "bg-green-500/20 text-green-400 border-2 border-green-500/30"
+                                ? "border-2 border-green-500/30 bg-green-500/20 text-green-400"
                                 : statusCode.startsWith("4")
-                                  ? "bg-yellow-500/20 text-yellow-400 border-2 border-yellow-500/30"
-                                  : "bg-red-500/20 text-red-400 border-2 border-red-500/30"
+                                  ? "border-2 border-yellow-500/30 bg-yellow-500/20 text-yellow-400"
+                                  : "border-2 border-red-500/30 bg-red-500/20 text-red-400"
                         }`}>
                         {statusCode}
                     </span>
-                    <span className='text-sm text-text-muted font-normal'>{description}</span>
+                    <span className='font-normal text-sm text-text-muted'>{description}</span>
                 </div>
-                <span className='text-text-muted group-hover:text-accent-blue transition-colors'>
-                    {isOpen ? <MdExpandLess className='w-6 h-6' /> : <MdExpandMore className='w-6 h-6' />}
+                <span className='text-text-muted transition-colors group-hover:text-accent-blue'>
+                    {isOpen ? <MdExpandLess className='h-6 w-6' /> : <MdExpandMore className='h-6 w-6' />}
                 </span>
             </button>
-            {isOpen && <div className='p-5 bg-bg-secondary'>{children}</div>}
+            {isOpen && <div className='bg-bg-secondary p-5'>{children}</div>}
         </div>
     );
 }

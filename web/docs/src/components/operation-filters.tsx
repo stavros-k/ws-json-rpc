@@ -53,19 +53,19 @@ export function OperationFilters({ verbs, groups, onFilterChange }: OperationFil
     };
 
     return (
-        <div className='flex flex-col gap-4 mb-8 p-4 bg-bg-secondary rounded-xl border-2 border-border-primary'>
-            <div className='flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap'>
+        <div className='mb-8 flex flex-col gap-4 rounded-xl border-2 border-border-primary bg-bg-secondary p-4'>
+            <div className='flex flex-col flex-wrap gap-4 sm:flex-row sm:items-center'>
                 {/* Verb Filter */}
                 <div className='flex items-center gap-3'>
-                    <span className='text-sm text-text-primary font-bold'>Method:</span>
-                    <div className='flex gap-2 flex-wrap'>
+                    <span className='font-bold text-sm text-text-primary'>Method:</span>
+                    <div className='flex flex-wrap gap-2'>
                         <button
                             type='button'
                             onClick={() => handleVerbChange("all")}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                            className={`rounded-lg px-3 py-1.5 font-bold text-sm transition-all duration-200 ${
                                 selectedVerb === "all"
-                                    ? "bg-bg-tertiary text-text-primary shadow-md border-2 border-accent-blue-border"
-                                    : "bg-bg-secondary text-text-primary border-2 border-border-primary hover:border-border-secondary"
+                                    ? "border-2 border-accent-blue-border bg-bg-tertiary text-text-primary shadow-md"
+                                    : "border-2 border-border-primary bg-bg-secondary text-text-primary hover:border-border-secondary"
                             }`}>
                             All
                         </button>
@@ -74,10 +74,10 @@ export function OperationFilters({ verbs, groups, onFilterChange }: OperationFil
                                 key={verb}
                                 type='button'
                                 onClick={() => handleVerbChange(verb)}
-                                className={`px-3 py-1.5 rounded-lg text-sm font-bold transition-all duration-200 ${
+                                className={`rounded-lg px-3 py-1.5 font-bold text-sm transition-all duration-200 ${
                                     selectedVerb === verb
-                                        ? "bg-bg-tertiary text-text-primary shadow-md border-2 border-accent-blue-border"
-                                        : "bg-bg-secondary text-text-primary border-2 border-border-primary hover:border-border-secondary"
+                                        ? "border-2 border-accent-blue-border bg-bg-tertiary text-text-primary shadow-md"
+                                        : "border-2 border-border-primary bg-bg-secondary text-text-primary hover:border-border-secondary"
                                 }`}>
                                 {verb}
                             </button>
@@ -88,11 +88,11 @@ export function OperationFilters({ verbs, groups, onFilterChange }: OperationFil
                 {/* Group Filter */}
                 {groups.length > 0 && (
                     <div className='flex items-center gap-3'>
-                        <span className='text-sm text-text-primary font-bold'>Group:</span>
+                        <span className='font-bold text-sm text-text-primary'>Group:</span>
                         <select
                             value={selectedGroup}
                             onChange={(e) => handleGroupChange(e.target.value)}
-                            className='px-3 py-1.5 rounded-lg text-sm font-bold bg-bg-tertiary text-text-primary border-2 border-border-primary hover:border-accent-blue focus:border-accent-blue focus:ring-2 focus:ring-accent-blue cursor-pointer'>
+                            className='cursor-pointer rounded-lg border-2 border-border-primary bg-bg-tertiary px-3 py-1.5 font-bold text-sm text-text-primary hover:border-accent-blue focus:border-accent-blue focus:ring-2 focus:ring-accent-blue'>
                             <option value='all'>All</option>
                             {groups.map((group) => (
                                 <option
@@ -106,14 +106,14 @@ export function OperationFilters({ verbs, groups, onFilterChange }: OperationFil
                 )}
 
                 {/* Hide Deprecated */}
-                <label className='flex items-center gap-2.5 cursor-pointer group'>
+                <label className='group flex cursor-pointer items-center gap-2.5'>
                     <input
                         type='checkbox'
                         checked={hideDeprecated}
                         onChange={handleDeprecatedToggle}
-                        className='w-5 h-5 rounded-md border-2 border-border-primary bg-bg-tertiary text-accent-blue focus:ring-accent-blue focus:ring-2 cursor-pointer'
+                        className='h-5 w-5 cursor-pointer rounded-md border-2 border-border-primary bg-bg-tertiary text-accent-blue focus:ring-2 focus:ring-accent-blue'
                     />
-                    <span className='text-sm text-text-primary font-bold group-hover:text-accent-blue transition-colors'>
+                    <span className='font-bold text-sm text-text-primary transition-colors group-hover:text-accent-blue'>
                         Hide deprecated
                     </span>
                 </label>
@@ -121,13 +121,13 @@ export function OperationFilters({ verbs, groups, onFilterChange }: OperationFil
 
             {/* Search */}
             <div className='flex items-center gap-3'>
-                <span className='text-sm text-text-primary font-bold'>Search:</span>
+                <span className='font-bold text-sm text-text-primary'>Search:</span>
                 <input
                     type='text'
                     value={search}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     placeholder='Search by operation name...'
-                    className='flex-1 px-3 py-2 rounded-lg text-sm bg-bg-tertiary text-text-primary border-2 border-border-primary hover:border-accent-blue focus:border-accent-blue focus:ring-2 focus:ring-accent-blue placeholder-text-muted'
+                    className='flex-1 rounded-lg border-2 border-border-primary bg-bg-tertiary px-3 py-2 text-sm text-text-primary placeholder-text-muted hover:border-accent-blue focus:border-accent-blue focus:ring-2 focus:ring-accent-blue'
                 />
             </div>
         </div>
