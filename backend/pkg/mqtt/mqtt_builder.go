@@ -234,7 +234,7 @@ func (mb *MQTTBuilder) Connect() error {
 		ticker := time.NewTicker(time.Second * 30)
 		defer ticker.Stop()
 		for range ticker.C {
-			if mb.client.IsConnected() {
+			if mb.client.IsConnectionOpen() {
 				return
 			}
 			mb.l.Warn("MQTT has not done an initial connection yet, still waiting...")
