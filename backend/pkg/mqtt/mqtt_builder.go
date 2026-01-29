@@ -160,8 +160,9 @@ func (mb *MQTTBuilder) MustPublish(topic string, spec PublicationSpec) {
 
 // Subscribe registers a subscription operation.
 func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
-	if topic != generate.SanitizePath(topic) {
-		return fmt.Errorf("invalid topic pattern")
+	sanitizedTopic := generate.SanitizePath(topic)
+	if topic != sanitizedTopic {
+		return fmt.Errorf("invalid topic pattern: topic %q does not match sanitized form %q", topic, sanitizedTopic)
 	}
 
 	// Validate topic
