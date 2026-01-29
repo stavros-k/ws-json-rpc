@@ -24,7 +24,7 @@ type TopicParameter struct {
 	// Description explains what this parameter represents
 	Description string
 
-	// Type is the parameter type
+	// Type is the Go type of the parameter (e.g., new(string))
 	Type any
 }
 
