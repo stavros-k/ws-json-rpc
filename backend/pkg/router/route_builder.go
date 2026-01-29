@@ -200,7 +200,7 @@ func (rb *RouteBuilder) MustDelete(path string, spec RouteSpec) {
 
 // Router returns the underlying chi.Router.
 //
-//nolint:ireturn
+//nolint:ireturn // we want to return the specific type chi.Router
 func (rb *RouteBuilder) Router() chi.Router {
 	return rb.router
 }

@@ -20,7 +20,8 @@ export const SidebarItem = ({ type, item }: Props) => {
     const isActive = currentName === item.name;
     const method = "method" in item ? item.method : undefined;
     const path = "path" in item ? item.path : undefined;
-    const kind = data && "kind" in data ? data.kind : undefined;
+    const topic = "topic" in item ? item.topic : undefined;
+    const kind = "kind" in data ? data.kind : undefined;
 
     return (
         <Link
@@ -28,12 +29,12 @@ export const SidebarItem = ({ type, item }: Props) => {
             href={urlPath}
             className={`block ${
                 isActive ? "bg-bg-tertiary text-text-primary shadow-md" : "bg-bg-secondary text-text-primary"
-            } py-2 px-2.5 rounded-lg mb-1.5 text-sm no-underline transition-all duration-200 hover:shadow-sm border-2 ${
+            } mb-1.5 rounded-lg border-2 px-2.5 py-2 text-sm no-underline transition-all duration-200 hover:shadow-sm ${
                 isActive ? "border-accent-blue-border" : "border-border-primary hover:border-border-secondary"
             } ${isDeprecated ? "opacity-deprecated" : ""}`}>
             <div className='flex flex-col gap-1'>
                 <div className='flex items-center justify-between gap-1.5'>
-                    <span className='font-semibold text-base truncate'>{title || item.name}</span>
+                    <span className='truncate font-semibold text-base'>{title || item.name}</span>
                     {kind && type === "type" && (
                         <TypeKindBadge
                             kind={kind}
@@ -49,7 +50,29 @@ export const SidebarItem = ({ type, item }: Props) => {
                         />
                         <RoutePath
                             path={path}
-                            className='text-xs text-text-muted font-mono truncate'
+                            className='truncate font-mono text-text-muted text-xs'
+                        />
+                    </div>
+                )}
+                {type === "mqtt-publication" && topic && (
+                    <div className='flex items-center gap-1'>
+                        <span className='rounded border border-accent-blue-border bg-accent-blue-bg px-1.5 py-0.5 font-bold text-[10px] text-accent-blue-text'>
+                            PUB
+                        </span>
+                        <RoutePath
+                            path={topic}
+                            className='truncate font-mono text-accent-blue-light text-xs'
+                        />
+                    </div>
+                )}
+                {type === "mqtt-subscription" && topic && (
+                    <div className='flex items-center gap-1'>
+                        <span className='rounded border border-accent-green-border bg-accent-green-bg px-1.5 py-0.5 font-bold text-[10px] text-accent-green-text'>
+                            SUB
+                        </span>
+                        <RoutePath
+                            path={topic}
+                            className='truncate font-mono text-accent-green-light text-xs'
                         />
                     </div>
                 )}

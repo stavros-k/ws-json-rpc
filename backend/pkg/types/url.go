@@ -7,6 +7,8 @@ import (
 )
 
 // URL wraps net/url.URL and marshals as a string instead of an object.
+//
+//nolint:recvcheck // Mixed receivers required: UnmarshalJSON needs pointer (mutates), MarshalJSON/String need value (non-addressable support)
 type URL struct {
 	*url.URL
 }
@@ -32,6 +34,7 @@ func MustNewURL(s string) URL {
 }
 
 // MarshalJSON marshals the URL as a JSON string.
+// Value receiver ensures this works for non-addressable values (map values, interface{}, etc).
 func (u URL) MarshalJSON() ([]byte, error) {
 	if u.URL == nil {
 		return utils.ToJSON("")
@@ -64,6 +67,7 @@ func (u *URL) UnmarshalJSON(data []byte) error {
 }
 
 // String returns the string representation of the URL.
+// Value receiver ensures this works for non-addressable values (map values, interface{}, etc).
 func (u URL) String() string {
 	if u.URL == nil {
 		return ""

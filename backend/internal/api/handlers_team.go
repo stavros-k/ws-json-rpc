@@ -11,14 +11,15 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (s *Server) GetTeam(w http.ResponseWriter, r *http.Request) error {
+func (s *Handler) GetTeam(w http.ResponseWriter, r *http.Request) error {
 	teamID := chi.URLParam(r, "teamID")
 
 	RespondJSON(w, r, http.StatusOK, apitypes.GetTeamResponse{TeamID: teamID, Users: []apitypes.User{{UserID: "Asdf"}}})
+
 	return nil
 }
 
-func RegisterGetTeam(path string, rb *router.RouteBuilder, s *Server) {
+func (s *Handler) RegisterGetTeam(path string, rb *router.RouteBuilder) {
 	rb.MustGet(path, router.RouteSpec{
 		OperationID: "getTeam",
 		Summary:     "Get a team",
@@ -66,12 +67,13 @@ func RegisterGetTeam(path string, rb *router.RouteBuilder, s *Server) {
 	})
 }
 
-func (s *Server) CreateTeam(w http.ResponseWriter, r *http.Request) error {
+func (s *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) error {
 	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK})
+
 	return nil
 }
 
-func RegisterCreateTeam(path string, rb *router.RouteBuilder, s *Server) {
+func (s *Handler) RegisterCreateTeam(path string, rb *router.RouteBuilder) {
 	rb.MustPost(path, router.RouteSpec{
 		OperationID: "createTeam",
 		Summary:     "Create a team",
@@ -103,12 +105,13 @@ func RegisterCreateTeam(path string, rb *router.RouteBuilder, s *Server) {
 	})
 }
 
-func (s *Server) DeleteTeam(w http.ResponseWriter, r *http.Request) error {
+func (s *Handler) DeleteTeam(w http.ResponseWriter, r *http.Request) error {
 	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK})
+
 	return nil
 }
 
-func RegisterDeleteTeam(path string, rb *router.RouteBuilder, s *Server) {
+func (s *Handler) RegisterDeleteTeam(path string, rb *router.RouteBuilder) {
 	rb.MustDelete(path, router.RouteSpec{
 		OperationID: "deleteTeam",
 		Summary:     "Create a team",
@@ -138,15 +141,15 @@ func RegisterDeleteTeam(path string, rb *router.RouteBuilder, s *Server) {
 			},
 		}),
 	})
-
 }
 
-func (s *Server) PutTeam(w http.ResponseWriter, r *http.Request) error {
+func (s *Handler) PutTeam(w http.ResponseWriter, r *http.Request) error {
 	RespondJSON(w, r, http.StatusOK, apitypes.PingResponse{Message: "Pong", Status: apitypes.PingStatusOK})
+
 	return nil
 }
 
-func RegisterPutTeam(path string, rb *router.RouteBuilder, s *Server) {
+func (s *Handler) RegisterPutTeam(path string, rb *router.RouteBuilder) {
 	rb.MustPut(path, router.RouteSpec{
 		OperationID: "putTeam",
 		Summary:     "Create a team",
@@ -176,5 +179,4 @@ func RegisterPutTeam(path string, rb *router.RouteBuilder, s *Server) {
 			},
 		}),
 	})
-
 }

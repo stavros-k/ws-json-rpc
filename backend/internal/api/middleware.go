@@ -8,14 +8,15 @@ import (
 	"github.com/google/uuid"
 )
 
-// responseWriter wraps http.ResponseWriter to capture status code
+// responseWriter wraps http.ResponseWriter to capture status code.
 type responseWriter struct {
 	http.ResponseWriter
+
 	statusCode int
 	written    bool
 }
 
-// WriteHeader captures the status code
+// WriteHeader captures the status code.
 func (rw *responseWriter) WriteHeader(code int) {
 	if !rw.written {
 		rw.statusCode = code
@@ -24,16 +25,17 @@ func (rw *responseWriter) WriteHeader(code int) {
 	}
 }
 
-// Write captures the status code if WriteHeader was not called
+// Write captures the status code if WriteHeader was not called.
 func (rw *responseWriter) Write(b []byte) (int, error) {
 	if !rw.written {
 		rw.statusCode = http.StatusOK
 		rw.written = true
 	}
+
 	return rw.ResponseWriter.Write(b)
 }
 
-func (s *Server) RequestIDMiddleware(next http.Handler) http.Handler {
+func (s *Handler) RequestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get or generate request ID
 		requestID := r.Header.Get(RequestIDHeader)
@@ -48,8 +50,8 @@ func (s *Server) RequestIDMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// LoggerMiddleware adds a request-scoped logger to the context and logs requests
-func (s *Server) LoggerMiddleware(next http.Handler) http.Handler {
+// LoggerMiddleware adds a request-scoped logger to the context and logs requests.
+func (s *Handler) LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := GetRequestID(r.Context())
 		// Create request-scoped logger with context
@@ -70,6 +72,7 @@ func (s *Server) LoggerMiddleware(next http.Handler) http.Handler {
 
 		// Log request start
 		start := time.Now()
+
 		reqLogger.Info("request started")
 
 		// Call next handler with enhanced context

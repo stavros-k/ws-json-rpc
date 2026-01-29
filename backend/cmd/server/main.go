@@ -12,9 +12,11 @@ import (
 	"syscall"
 	"time"
 	"ws-json-rpc/backend/internal/api"
-	"ws-json-rpc/backend/internal/app"
+	"ws-json-rpc/backend/internal/config"
 	sqlitegen "ws-json-rpc/backend/internal/database/sqlite/gen"
+	mqttapi "ws-json-rpc/backend/internal/mqtt"
 	"ws-json-rpc/backend/internal/services"
+	"ws-json-rpc/backend/pkg/mqtt"
 	"ws-json-rpc/backend/pkg/router"
 	"ws-json-rpc/backend/pkg/router/generate"
 	"ws-json-rpc/backend/pkg/utils"
@@ -29,7 +31,7 @@ const (
 )
 
 func main() {
-	config, err := app.NewConfig()
+	config, err := config.New()
 	if err != nil {
 		fatalIfErr(slog.Default(), fmt.Errorf("failed to create config: %w", err))
 	}
@@ -50,30 +52,64 @@ func main() {
 	// open sqlite database
 	db, err := sql.Open("sqlite3", config.Database)
 	fatalIfErr(logger, err)
-	defer db.Close()
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("failed to close database", slog.String("error", err.Error()))
+		}
+	}()
+
 	queries := sqlitegen.New(db)
 
 	services := services.NewServices(logger, db, queries)
 
-	server := api.NewAPIServer(logger, services)
+	apiHandler := api.NewAPIHandler(logger, services)
 
 	rb, err := router.NewRouteBuilder(logger, collector)
 	fatalIfErr(logger, err)
 
 	rb.Route("/api", func(rb *router.RouteBuilder) {
 		// Add request ID
-		rb.Use(server.RequestIDMiddleware)
+		rb.Use(apiHandler.RequestIDMiddleware)
 		// Add request logger
-		rb.Use(server.LoggerMiddleware)
+		rb.Use(apiHandler.LoggerMiddleware)
 
-		api.RegisterPing("/ping", rb, server)
+		apiHandler.RegisterPing("/ping", rb)
 		rb.Route("/team", func(rb *router.RouteBuilder) {
-			api.RegisterGetTeam("/{teamID}", rb, server)
-			api.RegisterPutTeam("/", rb, server)
-			api.RegisterCreateTeam("/", rb, server)
-			api.RegisterDeleteTeam("/", rb, server)
+			apiHandler.RegisterGetTeam("/{teamID}", rb)
+			apiHandler.RegisterPutTeam("/", rb)
+			apiHandler.RegisterCreateTeam("/", rb)
+			apiHandler.RegisterDeleteTeam("/", rb)
 		})
 	})
+
+	// Create MQTT builder and register MQTT operations (if enabled or in generate mode)
+	mqttHandler := mqttapi.NewMQTTHandler(logger, services)
+
+	mqttBuilder, err := mqtt.NewMQTTBuilder(logger, collector, mqtt.MQTTClientOptions{
+		BrokerURL: config.MQTTBroker,
+		ClientID:  config.MQTTClientID,
+		Username:  config.MQTTUsername,
+		Password:  config.MQTTPassword,
+	})
+	fatalIfErr(logger, err)
+
+	// Register MQTT operations
+	logger.Info("Registering MQTT operations...")
+
+	// Telemetry operations
+	mqttapi.RegisterTemperaturePublish(mqttBuilder)
+	mqttapi.RegisterTemperatureSubscribe(mqttBuilder, mqttHandler)
+	mqttapi.RegisterSensorTelemetryPublish(mqttBuilder)
+	mqttapi.RegisterSensorTelemetrySubscribe(mqttBuilder, mqttHandler)
+
+	// Control operations
+	mqttapi.RegisterDeviceCommandPublish(mqttBuilder)
+	mqttapi.RegisterDeviceCommandSubscribe(mqttBuilder, mqttHandler)
+	mqttapi.RegisterDeviceStatusPublish(mqttBuilder)
+	mqttapi.RegisterDeviceStatusSubscribe(mqttBuilder, mqttHandler)
+
+	logger.Info("MQTT operations registered successfully")
 
 	if config.Generate {
 		if err := collector.Generate(); err != nil {
@@ -84,6 +120,11 @@ func main() {
 
 		return
 	}
+
+	if err := mqttBuilder.Connect(); err != nil {
+		fatalIfErr(logger, fmt.Errorf("failed to connect to MQTT broker: %w", err))
+	}
+	defer mqttBuilder.Disconnect()
 
 	web.DocsApp().Register(rb.Router(), logger)
 	rb.Router().HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +168,8 @@ func main() {
 	logger.Info("http server shutdown complete")
 }
 
-func getCollector(c *app.Config, l *slog.Logger) (generate.RouteMetadataCollector, error) {
+//nolint:ireturn // Returns MetadataCollector interface (OpenAPICollector or NoopCollector)
+func getCollector(c *config.Config, l *slog.Logger) (generate.MetadataCollector, error) {
 	if !c.Generate {
 		return &generate.NoopCollector{}, nil
 	}
@@ -148,7 +190,7 @@ func getCollector(c *app.Config, l *slog.Logger) (generate.RouteMetadataCollecto
 	})
 }
 
-func getLogger(config *app.Config) *slog.Logger {
+func getLogger(config *config.Config) *slog.Logger {
 	logOptions := slog.HandlerOptions{
 		Level:       config.LogLevel,
 		ReplaceAttr: utils.SlogReplacer,

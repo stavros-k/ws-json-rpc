@@ -2,7 +2,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { BiLinkExternal } from "react-icons/bi";
 import type { EnumValue, FieldMetadata, TypeData, UsedByItem } from "@/data/api";
-import { docs, getAllOperations } from "@/data/api";
+import { docs, getAllMQTTPublications, getAllMQTTSubscriptions, getAllOperations } from "@/data/api";
 import { RoutePath } from "./route-path";
 import { VerbBadge } from "./verb-badge";
 
@@ -21,7 +21,7 @@ function TypeDescription({ description }: { description?: string }) {
 
     return (
         <div>
-            <h2 className='text-xl font-semibold mb-3 text-text-primary'>Description</h2>
+            <h2 className='mb-3 font-semibold text-text-primary text-xl'>Description</h2>
             <p className='text-text-secondary'>{description}</p>
         </div>
     );
@@ -31,6 +31,8 @@ function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
     if (!usedBy || usedBy.length === 0) return null;
 
     const allOperations = getAllOperations();
+    const allPublications = getAllMQTTPublications();
+    const allSubscriptions = getAllMQTTSubscriptions();
 
     // Group by operationID and collect roles
     const grouped = usedBy.reduce(
@@ -46,49 +48,137 @@ function UsedBySection({ usedBy }: { usedBy: UsedByItem[] | null }) {
 
     return (
         <div>
-            <h2 className='text-xl font-semibold mb-4 text-text-primary'>Used By Operations</h2>
-            <p className='text-sm text-text-tertiary mb-4'>This type is used by the following API operations:</p>
+            <h2 className='mb-4 font-semibold text-text-primary text-xl'>Used By Operations</h2>
+            <p className='mb-4 text-sm text-text-tertiary'>This type is used by the following operations:</p>
             <div className='grid grid-cols-1 gap-3'>
                 {Object.entries(grouped).map(([operationID, roles]) => {
-                    const operation = allOperations.find((op) => op.operationID === operationID);
-                    return (
-                        <Link
-                            key={operationID}
-                            href={`/api/operation/${operationID}` as Route}
-                            className='block p-4 rounded-lg bg-bg-tertiary border-2 border-border-primary hover:border-accent-blue transition-all duration-200 hover:shadow-md'>
-                            <div className='flex flex-col gap-2'>
-                                <div className='flex items-center justify-between gap-3'>
-                                    <div className='flex items-center gap-2 min-w-0'>
-                                        {operation && (
-                                            <>
-                                                <VerbBadge
-                                                    verb={operation.method}
-                                                    size='xs'
-                                                />
-                                                <span className='text-sm font-mono font-semibold truncate'>
-                                                    <RoutePath path={operation.path} />
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                    <div className='flex flex-wrap gap-1 shrink-0'>
-                                        {Array.from(roles).map((role) => (
-                                            <span
-                                                key={role}
-                                                className={`text-xs px-2 py-0.5 rounded font-medium ${
-                                                    role === "request"
-                                                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                                        : "bg-green-500/20 text-green-400 border border-green-500/30"
-                                                }`}>
-                                                {role}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                                <code className='text-xs text-text-muted font-mono'>{operationID}</code>
-                            </div>
-                        </Link>
+                    // Check roles to determine operation type
+                    const isHTTP = Array.from(roles).some((role) =>
+                        ["request", "response", "parameter"].includes(role)
                     );
+                    const isMQTTPublication = roles.has("mqtt_publication");
+                    const isMQTTSubscription = roles.has("mqtt_subscription");
+
+                    // HTTP Operation
+                    if (isHTTP) {
+                        const operation = allOperations.find((op) => op.operationID === operationID);
+                        return (
+                            <Link
+                                key={operationID}
+                                href={`/api/operation/${operationID}` as Route}
+                                className='block rounded-lg border-2 border-border-primary bg-bg-tertiary p-4 transition-all duration-200 hover:border-accent-green-light hover:shadow-md'>
+                                <div className='flex flex-col gap-2'>
+                                    <div className='flex items-center justify-between gap-3'>
+                                        <div className='flex min-w-0 items-center gap-2'>
+                                            {operation && (
+                                                <>
+                                                    <VerbBadge
+                                                        verb={operation.method}
+                                                        size='xs'
+                                                    />
+                                                    <span className='truncate font-mono font-semibold text-sm'>
+                                                        <RoutePath path={operation.path} />
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className='flex shrink-0 flex-wrap gap-1'>
+                                            {Array.from(roles).map((role) => (
+                                                <span
+                                                    key={role}
+                                                    className={`rounded px-2 py-0.5 font-medium text-xs ${
+                                                        role === "request"
+                                                            ? "border border-blue-500/30 bg-blue-500/20 text-blue-400"
+                                                            : "border border-green-500/30 bg-green-500/20 text-green-400"
+                                                    }`}>
+                                                    {role}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <code className='font-mono text-text-muted text-xs'>{operationID}</code>
+                                </div>
+                            </Link>
+                        );
+                    }
+
+                    // MQTT Publication
+                    if (isMQTTPublication) {
+                        const publication = allPublications.find((pub) => pub.operationID === operationID);
+                        return (
+                            <Link
+                                key={operationID}
+                                href={`/api/mqtt/publication/${operationID}` as Route}
+                                className='block rounded-lg border-2 border-border-primary bg-bg-tertiary p-4 transition-all duration-200 hover:border-accent-blue-light hover:shadow-md'>
+                                <div className='flex flex-col gap-2'>
+                                    <div className='flex items-center justify-between gap-3'>
+                                        <div className='flex min-w-0 items-center gap-2'>
+                                            {publication && (
+                                                <>
+                                                    <span className='rounded border border-accent-blue-border bg-accent-blue-bg px-2 py-0.5 font-bold text-accent-blue-text text-xs'>
+                                                        PUB
+                                                    </span>
+                                                    <span className='truncate font-mono font-semibold text-sm'>
+                                                        <RoutePath path={publication.topic} />
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className='flex shrink-0 flex-wrap gap-1'>
+                                            {Array.from(roles).map((role) => (
+                                                <span
+                                                    key={role}
+                                                    className='rounded border border-blue-500/30 bg-blue-500/20 px-2 py-0.5 font-medium text-blue-400 text-xs'>
+                                                    {role}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <code className='font-mono text-text-muted text-xs'>{operationID}</code>
+                                </div>
+                            </Link>
+                        );
+                    }
+
+                    // MQTT Subscription
+                    if (isMQTTSubscription) {
+                        const subscription = allSubscriptions.find((sub) => sub.operationID === operationID);
+                        return (
+                            <Link
+                                key={operationID}
+                                href={`/api/mqtt/subscription/${operationID}` as Route}
+                                className='block rounded-lg border-2 border-border-primary bg-bg-tertiary p-4 transition-all duration-200 hover:border-accent-green-light hover:shadow-md'>
+                                <div className='flex flex-col gap-2'>
+                                    <div className='flex items-center justify-between gap-3'>
+                                        <div className='flex min-w-0 items-center gap-2'>
+                                            {subscription && (
+                                                <>
+                                                    <span className='rounded border border-accent-green-border bg-accent-green-bg px-2 py-0.5 font-bold text-accent-green-text text-xs'>
+                                                        SUB
+                                                    </span>
+                                                    <span className='truncate font-mono font-semibold text-sm'>
+                                                        <RoutePath path={subscription.topic} />
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className='flex shrink-0 flex-wrap gap-1'>
+                                            {Array.from(roles).map((role) => (
+                                                <span
+                                                    key={role}
+                                                    className='rounded border border-green-500/30 bg-green-500/20 px-2 py-0.5 font-medium text-green-400 text-xs'>
+                                                    {role}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <code className='font-mono text-text-muted text-xs'>{operationID}</code>
+                                </div>
+                            </Link>
+                        );
+                    }
+
+                    return null;
                 })}
             </div>
         </div>
@@ -100,25 +190,25 @@ function EnumValuesSection({ enumValues }: { enumValues: EnumValue[] | null }) {
 
     return (
         <div>
-            <h2 className='text-xl font-semibold mb-4 text-text-primary'>Possible Values</h2>
+            <h2 className='mb-4 font-semibold text-text-primary text-xl'>Possible Values</h2>
             <div className='flex flex-col gap-4'>
                 {enumValues.map((enumValue) => (
                     <div
                         key={enumValue.value}
-                        className='p-4 rounded-lg bg-bg-secondary border-2 border-border-primary hover:border-accent-blue/50 transition-all duration-200'>
-                        <div className='flex items-center gap-2 mb-2'>
-                            <code className='px-3 py-1.5 rounded-lg bg-type-enum-bg text-type-enum border-2 border-type-enum-border font-mono text-sm font-semibold'>
+                        className='rounded-lg border-2 border-border-primary bg-bg-secondary p-4 transition-all duration-200 hover:border-accent-blue/50'>
+                        <div className='mb-2 flex items-center gap-2'>
+                            <code className='rounded-lg border-2 border-type-enum-border bg-type-enum-bg px-3 py-1.5 font-mono font-semibold text-sm text-type-enum'>
                                 &quot;{enumValue.value}&quot;
                             </code>
                             {enumValue.deprecated && (
-                                <span className='text-xs px-2 py-0.5 rounded bg-warning-bg text-warning-text border border-warning-border font-semibold'>
+                                <span className='rounded border border-warning-border bg-warning-bg px-2 py-0.5 font-semibold text-warning-text text-xs'>
                                     DEPRECATED
                                 </span>
                             )}
                         </div>
                         {enumValue.description && <p className='text-sm text-text-tertiary'>{enumValue.description}</p>}
                         {enumValue.deprecated && (
-                            <p className='text-sm text-warning-text mt-2 italic'>{enumValue.deprecated}</p>
+                            <p className='mt-2 text-sm text-warning-text italic'>{enumValue.deprecated}</p>
                         )}
                     </div>
                 ))}
@@ -137,22 +227,22 @@ function FieldItem({ field }: { field: FieldMetadata }) {
     const additionalProps = field.typeInfo?.additionalProperties;
 
     return (
-        <div className='p-4 rounded-lg bg-bg-secondary border-2 border-border-primary hover:border-accent-blue/50 transition-all duration-200'>
-            <div className='flex items-start justify-between mb-2 gap-4'>
-                <div className='flex items-center gap-2 flex-wrap'>
-                    <code className='text-lg font-semibold text-text-primary'>{field.name}</code>
+        <div className='rounded-lg border-2 border-border-primary bg-bg-secondary p-4 transition-all duration-200 hover:border-accent-blue/50'>
+            <div className='mb-2 flex items-start justify-between gap-4'>
+                <div className='flex flex-wrap items-center gap-2'>
+                    <code className='font-semibold text-lg text-text-primary'>{field.name}</code>
                     {"typeInfo" in field && field.typeInfo && field.typeInfo.required && (
-                        <span className='text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 font-semibold'>
+                        <span className='rounded border border-red-500/30 bg-red-500/20 px-2 py-0.5 font-semibold text-red-400 text-xs'>
                             required
                         </span>
                     )}
                     {"typeInfo" in field && field.typeInfo && !field.typeInfo.required && (
-                        <span className='text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'>
+                        <span className='rounded border border-yellow-500/30 bg-yellow-500/20 px-2 py-0.5 text-xs text-yellow-400'>
                             optional
                         </span>
                     )}
                     {"typeInfo" in field && field.typeInfo && field.typeInfo.nullable && (
-                        <span className='text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30'>
+                        <span className='rounded border border-blue-500/30 bg-blue-500/20 px-2 py-0.5 text-blue-400 text-xs'>
                             nullable
                         </span>
                     )}
@@ -161,12 +251,12 @@ function FieldItem({ field }: { field: FieldMetadata }) {
                     {isClickableType ? (
                         <Link
                             href={`/api/type/${actualType}`}
-                            className='inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-type-reference/10 text-type-reference hover:bg-type-reference/20 border-2 border-type-reference/30 hover:border-type-reference font-mono text-sm font-semibold transition-all duration-200 hover:scale-105'>
+                            className='inline-flex items-center gap-1 rounded-lg border-2 border-type-reference/30 bg-type-reference/10 px-3 py-1.5 font-mono font-semibold text-sm text-type-reference transition-all duration-200 hover:scale-105 hover:border-type-reference hover:bg-type-reference/20'>
                             {displayType}
-                            <BiLinkExternal className='w-3.5 h-3.5' />
+                            <BiLinkExternal className='h-3.5 w-3.5' />
                         </Link>
                     ) : (
-                        <code className='px-3 py-1.5 rounded-lg bg-type-primitive/10 text-type-primitive border-2 border-type-primitive/30 font-mono text-sm font-semibold'>
+                        <code className='rounded-lg border-2 border-type-primitive/30 bg-type-primitive/10 px-3 py-1.5 font-mono font-semibold text-sm text-type-primitive'>
                             {displayType}
                         </code>
                     )}
@@ -174,13 +264,13 @@ function FieldItem({ field }: { field: FieldMetadata }) {
             </div>
 
             {"description" in field && field.description && (
-                <p className='text-sm text-text-tertiary mt-2'>{String(field.description)}</p>
+                <p className='mt-2 text-sm text-text-tertiary'>{String(field.description)}</p>
             )}
 
             {additionalProps && (
-                <div className='mt-3 p-3 rounded-lg bg-bg-tertiary border border-border-primary'>
-                    <div className='flex items-center gap-2 mb-1'>
-                        <span className='text-xs font-semibold text-text-secondary uppercase tracking-wide'>
+                <div className='mt-3 rounded-lg border border-border-primary bg-bg-tertiary p-3'>
+                    <div className='mb-1 flex items-center gap-2'>
+                        <span className='font-semibold text-text-secondary text-xs uppercase tracking-wide'>
                             Map/Dictionary Type
                         </span>
                     </div>
@@ -189,12 +279,12 @@ function FieldItem({ field }: { field: FieldMetadata }) {
                         {isTypeLink(additionalProps.type) ? (
                             <Link
                                 href={`/api/type/${additionalProps.type}`}
-                                className='inline-flex items-center gap-1 px-2 py-0.5 rounded bg-type-reference/10 text-type-reference hover:bg-type-reference/20 border border-type-reference/30 hover:border-type-reference font-mono text-xs font-semibold transition-all duration-200'>
+                                className='inline-flex items-center gap-1 rounded border border-type-reference/30 bg-type-reference/10 px-2 py-0.5 font-mono font-semibold text-type-reference text-xs transition-all duration-200 hover:border-type-reference hover:bg-type-reference/20'>
                                 {additionalProps.type}
-                                <BiLinkExternal className='w-3 h-3' />
+                                <BiLinkExternal className='h-3 w-3' />
                             </Link>
                         ) : (
-                            <code className='px-2 py-0.5 rounded bg-type-primitive/10 text-type-primitive border border-type-primitive/30 font-mono text-xs font-semibold'>
+                            <code className='rounded border border-type-primitive/30 bg-type-primitive/10 px-2 py-0.5 font-mono font-semibold text-type-primitive text-xs'>
                                 {additionalProps.type}
                             </code>
                         )}
@@ -210,7 +300,7 @@ function FieldsSection({ fields }: { fields: FieldMetadata[] | undefined }) {
 
     return (
         <div>
-            <h2 className='text-xl font-semibold mb-4 text-text-primary'>Fields</h2>
+            <h2 className='mb-4 font-semibold text-text-primary text-xl'>Fields</h2>
             <div className='space-y-4'>
                 {fields.map((field) => (
                     <FieldItem
@@ -228,16 +318,16 @@ function ReferencedBySection({ referencedBy, typeName }: { referencedBy: string[
 
     return (
         <div>
-            <h2 className='text-xl font-semibold mb-4 text-text-primary'>Referenced By</h2>
+            <h2 className='mb-4 font-semibold text-text-primary text-xl'>Referenced By</h2>
             {hasReferencedBy ? (
                 <>
-                    <p className='text-sm text-text-tertiary mb-3'>Types that use {typeName}:</p>
+                    <p className='mb-3 text-sm text-text-tertiary'>Types that use {typeName}:</p>
                     <div className='flex flex-wrap gap-2'>
                         {referencedBy.map((ref: string) => (
                             <Link
                                 key={ref}
                                 href={`/api/type/${ref}`}
-                                className='px-3 py-1.5 rounded-md bg-type-enum-bg text-type-enum hover:brightness-110 transition-colors font-mono text-sm border border-type-enum-border'>
+                                className='rounded-md border border-type-enum-border bg-type-enum-bg px-3 py-1.5 font-mono text-sm text-type-enum transition-colors hover:brightness-110'>
                                 {ref}
                             </Link>
                         ))}
@@ -266,28 +356,28 @@ export function TypeMetadata({ data, typeName }: TypeMetadataProps) {
 
             {isPrimitiveOrEnum && (
                 <>
-                    <div className='border-t border-border-primary' />
+                    <div className='border-border-primary border-t' />
                     <EnumValuesSection enumValues={enumValues} />
                 </>
             )}
 
             {fields && fields.length > 0 && (
                 <>
-                    <div className='border-t border-border-primary' />
+                    <div className='border-border-primary border-t' />
                     <FieldsSection fields={fields} />
                 </>
             )}
 
             {usedBy && usedBy.length > 0 && (
                 <>
-                    <div className='border-t border-border-primary' />
+                    <div className='border-border-primary border-t' />
                     <UsedBySection usedBy={usedBy} />
                 </>
             )}
 
             {referencedBy && referencedBy.length > 0 && (
                 <>
-                    <div className='border-t border-border-primary' />
+                    <div className='border-border-primary border-t' />
                     <ReferencedBySection
                         referencedBy={referencedBy}
                         typeName={typeName}
