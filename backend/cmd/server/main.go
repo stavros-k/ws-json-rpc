@@ -16,9 +16,9 @@ import (
 	sqlitegen "ws-json-rpc/backend/internal/database/sqlite/gen"
 	mqttapi "ws-json-rpc/backend/internal/mqtt"
 	"ws-json-rpc/backend/internal/services"
+	"ws-json-rpc/backend/pkg/generate"
 	"ws-json-rpc/backend/pkg/mqtt"
 	"ws-json-rpc/backend/pkg/router"
-	"ws-json-rpc/backend/pkg/router/generate"
 	"ws-json-rpc/backend/pkg/utils"
 	"ws-json-rpc/web"
 

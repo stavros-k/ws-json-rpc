@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"ws-json-rpc/backend/pkg/generate"
 )
 
 // FIXME: Remove regex and use a function. Add tests as well.
@@ -89,4 +90,59 @@ func validateQoS(qos QoS) error {
 	}
 
 	return nil
+}
+
+func generateParameters(topic string, topicParams []TopicParameter) ([]generate.MQTTTopicParameter, error) {
+	var parameters []generate.MQTTTopicParameter
+	// Validate path parameters and collect metadata
+	params := map[string]struct{}{}
+	documentedPathParams := map[string]struct{}{}
+
+	// Extract param names from topic
+	for section := range strings.SplitSeq(topic, "/") {
+		paramsName, err := generate.ExtractParamName(section)
+		if err != nil {
+			return nil, fmt.Errorf("invalid topic %s: %w", topic, err)
+		}
+
+		for _, paramName := range paramsName {
+			params[paramName] = struct{}{}
+		}
+	}
+
+	// For each documented parameter, validate and collect metadata
+	for _, paramSpec := range topicParams {
+		if paramSpec.Name == "" {
+			return nil, fmt.Errorf("parameter name required for topic %s", topic)
+		}
+
+		if paramSpec.Description == "" {
+			return nil, fmt.Errorf("parameter Description required for topic %s", topic)
+		}
+
+		if paramSpec.Type == nil {
+			return nil, fmt.Errorf("parameter Type required for topic %s", topic)
+		}
+
+		parameters = append(parameters, generate.MQTTTopicParameter{
+			Name:        paramSpec.Name,
+			TypeValue:   paramSpec.Type,
+			Description: paramSpec.Description,
+		})
+
+		if _, exists := params[paramSpec.Name]; !exists {
+			return nil, fmt.Errorf("documented path parameter %s not found in path", paramSpec.Name)
+		}
+
+		documentedPathParams[paramSpec.Name] = struct{}{}
+	}
+
+	// Now go over all discovered path parameters and validate that they are documented
+	for name := range params {
+		if _, exists := documentedPathParams[name]; !exists {
+			return nil, fmt.Errorf("path parameter %s not documented", name)
+		}
+	}
+
+	return parameters, nil
 }

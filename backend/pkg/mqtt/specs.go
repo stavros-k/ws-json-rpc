@@ -23,6 +23,9 @@ type TopicParameter struct {
 
 	// Description explains what this parameter represents
 	Description string
+
+	// Type is the parameter type
+	Type any
 }
 
 // PublicationSpec describes an MQTT publication operation.

@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"ws-json-rpc/backend/pkg/router/generate"
+	"ws-json-rpc/backend/pkg/generate"
 
 	"github.com/go-chi/chi/v5"
 )

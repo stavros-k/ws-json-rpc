@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
-	"ws-json-rpc/backend/pkg/router/generate"
+	"ws-json-rpc/backend/pkg/generate"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -108,12 +108,9 @@ func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
 	}
 
 	// Convert topic parameters to documentation format
-	topicParams := make([]generate.MQTTTopicParameter, len(spec.TopicParameters))
-	for i, param := range spec.TopicParameters {
-		topicParams[i] = generate.MQTTTopicParameter{
-			Name:        param.Name,
-			Description: param.Description,
-		}
+	topicParams, err := generateParameters(topic, spec.TopicParameters)
+	if err != nil {
+		return fmt.Errorf("failed to generate topic parameters in operationID %s: %w", spec.OperationID, err)
 	}
 
 	// Convert parameterized topic to MQTT wildcard format
@@ -173,13 +170,10 @@ func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
 		return fmt.Errorf("duplicate operationID: %s", spec.OperationID)
 	}
 
-	// Convert topic parameters to documentation format
-	topicParams := make([]generate.MQTTTopicParameter, len(spec.TopicParameters))
-	for i, param := range spec.TopicParameters {
-		topicParams[i] = generate.MQTTTopicParameter{
-			Name:        param.Name,
-			Description: param.Description,
-		}
+	// Generate topic parameters
+	topicParams, err := generateParameters(topic, spec.TopicParameters)
+	if err != nil {
+		return fmt.Errorf("failed to generate topic parameters in operationID %s: %w", spec.OperationID, err)
 	}
 
 	// Convert parameterized topic to MQTT wildcard format

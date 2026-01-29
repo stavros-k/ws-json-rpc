@@ -22,6 +22,7 @@ func RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
 			{
 				Name:        "deviceID",
 				Description: "Unique identifier of the device sending the temperature reading",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.TemperatureReading{
@@ -60,6 +61,7 @@ func RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 			{
 				Name:        "deviceID",
 				Description: "Matches any device ID",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.TemperatureReading{
@@ -113,10 +115,12 @@ func RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
 			{
 				Name:        "deviceID",
 				Description: "Unique identifier of the device",
+				Type:        new(string),
 			},
 			{
 				Name:        "sensorType",
 				Description: "Type of sensor (e.g., humidity, pressure, motion)",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.SensorTelemetry{
@@ -161,10 +165,12 @@ func RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 			{
 				Name:        "deviceID",
 				Description: "Matches any device ID",
+				Type:        new(string),
 			},
 			{
 				Name:        "sensorType",
 				Description: "Matches any sensor type",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.SensorTelemetry{

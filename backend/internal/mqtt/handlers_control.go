@@ -21,6 +21,7 @@ func RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
 			{
 				Name:        "deviceID",
 				Description: "Unique identifier of the target device",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.DeviceCommand{
@@ -57,6 +58,7 @@ func RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 			{
 				Name:        "deviceID",
 				Description: "Matches any device ID",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.DeviceCommand{
@@ -105,6 +107,7 @@ func RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
 			{
 				Name:        "deviceID",
 				Description: "Unique identifier of the device",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.DeviceStatus{
@@ -143,6 +146,7 @@ func RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 			{
 				Name:        "deviceID",
 				Description: "Matches any device ID",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.DeviceStatus{
