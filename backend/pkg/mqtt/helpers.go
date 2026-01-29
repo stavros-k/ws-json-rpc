@@ -3,13 +3,35 @@ package mqtt
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
+	"unicode"
 	"ws-json-rpc/backend/pkg/generate"
 )
 
-// FIXME: Remove regex and use a function. Add tests as well.
-var topicParamRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
+// isValidParameterName validates that a parameter name:
+// - Starts with a letter (a-z, A-Z)
+// - Contains only letters, digits, and underscores
+func isValidParameterName(name string) bool {
+	if name == "" {
+		return false
+	}
+
+	for i, r := range name {
+		if i == 0 {
+			// First character must be a letter
+			if !unicode.IsLetter(r) {
+				return false
+			}
+		} else {
+			// Subsequent characters must be letters, digits, or underscores
+			if !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_' {
+				return false
+			}
+		}
+	}
+
+	return true
+}
 
 // validateTopicPattern validates an MQTT topic pattern with {param} placeholders.
 // Valid patterns:
@@ -37,8 +59,7 @@ func validateTopicPattern(topic string) error {
 		// Check for parameter syntax
 		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
 			paramName := segment[1 : len(segment)-1]
-			// FIXME: Remove regex and use a function. Add tests as well.
-			if !topicParamRegex.MatchString(paramName) {
+			if !isValidParameterName(paramName) {
 				return fmt.Errorf("invalid parameter name '%s' - must start with a letter and contain only alphanumeric characters and underscores", paramName)
 			}
 		} else if strings.Contains(segment, "{") || strings.Contains(segment, "}") {
@@ -65,22 +86,6 @@ func convertTopicToMQTT(topic string) string {
 	}
 
 	return strings.Join(segments, "/")
-}
-
-// extractTopicParameters extracts parameter names from a parameterized topic.
-// Returns a slice of parameter names in order (e.g., ["deviceID", "sensorType"]).
-func extractTopicParameters(topic string) []string {
-	var params []string
-
-	segments := strings.SplitSeq(topic, "/")
-	for segment := range segments {
-		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
-			paramName := segment[1 : len(segment)-1]
-			params = append(params, paramName)
-		}
-	}
-
-	return params
 }
 
 // validateQoS validates a QoS level.
