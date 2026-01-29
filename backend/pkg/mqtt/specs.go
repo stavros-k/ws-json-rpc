@@ -18,79 +18,35 @@ const (
 
 // TopicParameter describes a parameter in an MQTT topic pattern.
 type TopicParameter struct {
-	// Name is the parameter name (e.g., "deviceID")
-	Name string
-
-	// Description explains what this parameter represents
-	Description string
-
-	// Type is the Go type of the parameter (e.g., new(string))
-	Type any
+	Name        string // Name is the parameter name (e.g., "deviceID")
+	Description string // Description explains what this parameter represents
+	Type        any    // Type is the Go type of the parameter (e.g., new(string))
 }
 
 // PublicationSpec describes an MQTT publication operation.
 type PublicationSpec struct {
-	// OperationID is a unique identifier for this publication operation (e.g., "publishTemperature").
-	OperationID string
-
-	// Summary is a short description of the publication.
-	Summary string
-
-	// Description provides detailed information about the publication.
-	Description string
-
-	// Group is a logical grouping for the publication (e.g., "Telemetry", "Control").
-	Group string
-
-	// Deprecated contains an optional deprecation message.
-	Deprecated string
-
-	// TopicParameters describes the parameters in the topic pattern (e.g., {deviceID}).
-	TopicParameters []TopicParameter
-
-	// MessageType is the Go type of the message being published.
-	MessageType any
-
-	// QoS is the quality of service level for this publication.
-	QoS QoS
-
-	// Retained indicates whether the message should be retained by the broker.
-	Retained bool
-
-	// Examples contains named examples of messages that can be published.
-	Examples map[string]any
+	OperationID     string           // OperationID is a unique identifier for this publication operation (e.g., "publishTemperature").
+	Summary         string           // Summary is a short description of the publication.
+	Description     string           // Description provides detailed information about the publication.
+	Group           string           // Group is a logical grouping for the publication (e.g., "Telemetry", "Control").
+	Deprecated      string           // Deprecated contains an optional deprecation message.
+	TopicParameters []TopicParameter // TopicParameters describes the parameters in the topic pattern (e.g., {deviceID}).
+	MessageType     any              // MessageType is the Go type of the message being published.
+	QoS             QoS              // QoS is the quality of service level for this publication.
+	Retained        bool             // Retained indicates whether the message should be retained by the broker.
+	Examples        map[string]any   // Examples contains named examples of messages that can be published.
 }
 
 // SubscriptionSpec describes an MQTT subscription operation.
 type SubscriptionSpec struct {
-	// OperationID is a unique identifier for this subscription operation (e.g., "subscribeTemperature").
-	OperationID string
-
-	// Summary is a short description of the subscription.
-	Summary string
-
-	// Description provides detailed information about the subscription.
-	Description string
-
-	// Group is a logical grouping for the subscription (e.g., "Telemetry", "Control").
-	Group string
-
-	// Deprecated contains an optional deprecation message.
-	Deprecated string
-
-	// TopicParameters describes the parameters in the topic pattern (e.g., {deviceID}).
-	TopicParameters []TopicParameter
-
-	// MessageType is the expected Go type of messages received on this subscription.
-	// This should be a zero value of the message type (e.g., apitypes.TemperatureReading{}).
-	MessageType any
-
-	// Handler is the function that will be called when a message is received.
-	Handler mqtt.MessageHandler
-
-	// QoS is the quality of service level for this subscription.
-	QoS QoS
-
-	// Examples contains named examples of messages that may be received.
-	Examples map[string]any
+	OperationID     string              // OperationID is a unique identifier for this subscription operation (e.g., "subscribeTemperature").
+	Summary         string              // Summary is a short description of the subscription.
+	Description     string              // Description provides detailed information about the subscription.
+	Group           string              // Group is a logical grouping for the subscription (e.g., "Telemetry", "Control").
+	Deprecated      string              // Deprecated contains an optional deprecation message.
+	TopicParameters []TopicParameter    // TopicParameters describes the parameters in the topic pattern (e.g., {deviceID}).
+	MessageType     any                 // Expected Go type of messages received on this subscription.
+	Handler         mqtt.MessageHandler // Handler is the function that will be called when a message is received.
+	QoS             QoS                 // QoS is the quality of service level for this subscription.
+	Examples        map[string]any      // Examples contains named examples of messages that may be received.
 }
