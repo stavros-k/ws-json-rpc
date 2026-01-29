@@ -275,7 +275,7 @@ func (mb *MQTTBuilder) onConnect(client mqtt.Client) {
 
 		if err := token.Error(); err != nil {
 			mb.l.Error("Failed to subscribe", slog.String("topic", spec.TopicMQTT), slog.String("operationID", spec.OperationID), utils.ErrAttr(err))
-			return
+			continue
 		}
 
 		mb.l.Info("Subscribed", slog.String("topic", spec.TopicMQTT), slog.String("operationID", spec.OperationID))
