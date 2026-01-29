@@ -13,7 +13,7 @@ import (
 
 // RegisterDeviceCommandPublish registers the device command publication operation.
 func (s *Handler) RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
-	mb.MustPublish("devices/{deviceID}/commands", mqtt.PublicationSpec{
+	mb.MustRegisterPublish("devices/{deviceID}/commands", mqtt.PublicationSpec{
 		OperationID: "publishDeviceCommand",
 		Summary:     "Publish device command",
 		Description: "Sends commands to IoT devices.",
@@ -50,7 +50,7 @@ func (s *Handler) RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
 
 // RegisterDeviceCommandSubscribe registers the device command subscription operation.
 func (s *Handler) RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder) {
-	mb.MustSubscribe("devices/{deviceID}/commands", mqtt.SubscriptionSpec{
+	mb.MustRegisterSubscribe("devices/{deviceID}/commands", mqtt.SubscriptionSpec{
 		OperationID: "subscribeDeviceCommand",
 		Summary:     "Subscribe to device commands",
 		Description: "Receives commands sent to IoT devices for logging and monitoring.",
@@ -99,7 +99,7 @@ func (s *Handler) handleDeviceCommand(client pahomqtt.Client, msg pahomqtt.Messa
 
 // RegisterDeviceStatusPublish registers the device status publication operation.
 func (s *Handler) RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
-	mb.MustPublish("devices/{deviceID}/status", mqtt.PublicationSpec{
+	mb.MustRegisterPublish("devices/{deviceID}/status", mqtt.PublicationSpec{
 		OperationID: "publishDeviceStatus",
 		Summary:     "Publish device status",
 		Description: "Publishes device status updates.",
@@ -138,7 +138,7 @@ func (s *Handler) RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
 
 // RegisterDeviceStatusSubscribe registers the device status subscription operation.
 func (s *Handler) RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder) {
-	mb.MustSubscribe("devices/{deviceID}/status", mqtt.SubscriptionSpec{
+	mb.MustRegisterSubscribe("devices/{deviceID}/status", mqtt.SubscriptionSpec{
 		OperationID: "subscribeDeviceStatus",
 		Summary:     "Subscribe to device status",
 		Description: "Receives device status updates from all IoT devices.",

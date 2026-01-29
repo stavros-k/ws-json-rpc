@@ -20,10 +20,10 @@ type MQTTClient struct {
 func (c *MQTTClient) Publish(operationID string, actualTopic string, payload any) error {
 	c.builderLock.Lock()
 	pub, ok := c.builder.publications[operationID]
+	c.builderLock.Unlock()
 	if !ok {
 		return fmt.Errorf("publication not found for operationID %s", operationID)
 	}
-	c.builderLock.Unlock()
 
 	bytes, err := utils.ToJSON(payload)
 	if err != nil {

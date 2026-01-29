@@ -13,7 +13,7 @@ import (
 
 // RegisterTemperaturePublish registers the temperature publication operation.
 func (s *Handler) RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
-	mb.MustPublish("devices/{deviceID}/temperature", mqtt.PublicationSpec{
+	mb.MustRegisterPublish("devices/{deviceID}/temperature", mqtt.PublicationSpec{
 		OperationID: "publishTemperature",
 		Summary:     "Publish temperature reading",
 		Description: "Publishes temperature readings from IoT devices. The device ID is part of the topic path.",
@@ -53,7 +53,7 @@ func (s *Handler) RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
 
 // RegisterTemperatureSubscribe registers the temperature subscription operation.
 func (s *Handler) RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder) {
-	mb.MustSubscribe("devices/{deviceID}/temperature", mqtt.SubscriptionSpec{
+	mb.MustRegisterSubscribe("devices/{deviceID}/temperature", mqtt.SubscriptionSpec{
 		OperationID: "subscribeTemperature",
 		Summary:     "Subscribe to temperature readings",
 		Description: "Receives temperature readings from all IoT devices.",
@@ -101,7 +101,7 @@ func (s *Handler) handleTemperature(client pahomqtt.Client, msg pahomqtt.Message
 
 // RegisterSensorTelemetryPublish registers the sensor telemetry publication operation.
 func (s *Handler) RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
-	mb.MustPublish("devices/{deviceID}/sensors/{sensorType}", mqtt.PublicationSpec{
+	mb.MustRegisterPublish("devices/{deviceID}/sensors/{sensorType}", mqtt.PublicationSpec{
 		OperationID: "publishSensorTelemetry",
 		Summary:     "Publish sensor telemetry",
 		Description: "Publishes generic sensor telemetry data from IoT devices.",
@@ -151,7 +151,7 @@ func (s *Handler) RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
 
 // RegisterSensorTelemetrySubscribe registers the sensor telemetry subscription operation.
 func (s *Handler) RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder) {
-	mb.MustSubscribe("devices/{deviceID}/sensors/{sensorType}", mqtt.SubscriptionSpec{
+	mb.MustRegisterSubscribe("devices/{deviceID}/sensors/{sensorType}", mqtt.SubscriptionSpec{
 		OperationID: "subscribeSensorTelemetry",
 		Summary:     "Subscribe to sensor telemetry",
 		Description: "Receives generic sensor telemetry data from all IoT devices and sensor types.",
