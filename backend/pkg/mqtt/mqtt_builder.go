@@ -68,14 +68,21 @@ func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, op
 		clientOpts.SetPassword(opts.Password)
 	}
 
+	// Retry every 5 seconds, max interval 15 seconds
 	clientOpts.SetAutoReconnect(true)
 	clientOpts.SetConnectRetry(true)
+	clientOpts.SetConnectTimeout(5 * time.Second)
 	clientOpts.SetConnectRetryInterval(5 * time.Second)
-	clientOpts.SetMaxReconnectInterval(1 * time.Minute)
+	clientOpts.SetMaxReconnectInterval(15 * time.Second)
+	clientOpts.SetKeepAlive(30 * time.Second)
 
 	// Set connection callbacks
 	clientOpts.SetOnConnectHandler(mb.onConnect)
 	clientOpts.SetConnectionLostHandler(mb.onConnectionLost)
+	clientOpts.SetReconnectingHandler(mb.onReconnecting)
+
+	// FIXME: Set will message
+	// clientOpts.SetWill("", "", 2, true)
 
 	mb.client = mqtt.NewClient(clientOpts)
 
@@ -266,4 +273,9 @@ func (mb *MQTTBuilder) onConnect(client mqtt.Client) {
 func (mb *MQTTBuilder) onConnectionLost(client mqtt.Client, err error) {
 	mb.l.Warn("Connection to MQTT broker lost", utils.ErrAttr(err))
 	mb.connected = false
+}
+
+// onReconnecting is called when the client is reconnecting to the broker.
+func (mb *MQTTBuilder) onReconnecting(client mqtt.Client, opts *mqtt.ClientOptions) {
+	mb.l.Info("Reconnecting to MQTT broker", slog.String("broker", opts.Servers[0].String()))
 }

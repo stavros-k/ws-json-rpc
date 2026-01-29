@@ -79,16 +79,15 @@ func main() {
 			fatalIfErr(logger, fmt.Errorf("failed to generate API documentation: %w", err))
 		}
 
-		logger.Info("API documentation generated, exiting")
-
 		return
 	}
 
-	// FIXME:
-	// if err := mb.Connect(); err != nil {
-	// 	fatalIfErr(logger, fmt.Errorf("failed to connect to MQTT broker: %w", err))
-	// }
-	// defer mb.Disconnect()
+	go func() {
+		if err := mb.Connect(); err != nil {
+			logger.Error("Failed to connect to MQTT broker", utils.ErrAttr(err))
+		}
+		defer mb.Disconnect()
+	}()
 
 	addr := fmt.Sprintf(":%d", config.Port)
 	httpServer := &http.Server{
@@ -100,7 +99,6 @@ func main() {
 	sigCtx, sigCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer sigCancel()
 
-	// Start HTTP/WS server
 	go func() {
 		logger.Info("http server listening", slog.String("address", addr))
 
@@ -114,19 +112,15 @@ func main() {
 	<-sigCtx.Done()
 	logger.Info("received signal, shutting down...")
 
-	// FIXME: Also shutdown MQTT client
-
-	// Shutdown / Cleanup
+	// Shutdown HTTP server
 	logger.Info("http server shutting down...")
-
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
-
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("http server shutdown failed", utils.ErrAttr(err))
 	}
 
-	logger.Info("http server shutdown complete")
+	logger.Info("server exited gracefully")
 }
 
 // registerHTTPHandlers registers all HTTP handlers.

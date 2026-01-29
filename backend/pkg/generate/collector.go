@@ -326,6 +326,7 @@ func (g *OpenAPICollector) Generate() error {
 		return fmt.Errorf("failed to write docs JSON: %w", err)
 	}
 
+	g.l.Info("API documentation generated")
 	return nil
 }
 
