@@ -10,7 +10,7 @@ import (
 
 type Services struct {
 	l          *slog.Logger
-	mqttClient *mqtt.Client
+	mqttClient mqtt.Client
 	Core       *CoreService
 }
 
@@ -23,5 +23,5 @@ func NewServices(l *slog.Logger, db *sql.DB, queries *sqlitegen.Queries) *Servic
 
 // RegisterMQTTClient registers the MQTT client with the services.
 func (s *Services) RegisterMQTTClient(client mqtt.Client) {
-	s.mqttClient = &client
+	s.mqttClient = client
 }
