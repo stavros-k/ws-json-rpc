@@ -142,7 +142,7 @@ func generateParameters(topic string, topicParams []TopicParameter) ([]generate.
 	// Now go over all discovered path parameters and validate that they are documented
 	for name := range params {
 		if _, exists := documentedPathParams[name]; !exists {
-			return nil, fmt.Errorf("path parameter %s not documented", name)
+			return nil, fmt.Errorf("topic parameter %s not documented", name)
 		}
 	}
 
