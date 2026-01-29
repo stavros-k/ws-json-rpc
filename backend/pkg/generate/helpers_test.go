@@ -209,27 +209,27 @@ func TestIsValidParameterName(t *testing.T) {
 			want:  false,
 		},
 		{
-			name:  "multiple dashes",
+			name:  "contains dash",
 			param: "abc-def",
 			want:  false,
 		},
 		{
-			name:  "multiple dots",
+			name:  "contains dot",
 			param: "abc.def",
 			want:  false,
 		},
 		{
-			name:  "multiple slashes",
+			name:  "contains slash",
 			param: "abc/def",
 			want:  false,
 		},
 		{
-			name:  "multiple backslashes",
+			name:  "contains backslash",
 			param: "abc\\def",
 			want:  false,
 		},
 		{
-			name:  "multiple pipes",
+			name:  "contains pipe",
 			param: "abc|def",
 			want:  false,
 		},
