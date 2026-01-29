@@ -6,6 +6,7 @@ import (
 	"time"
 	"ws-json-rpc/backend/pkg/apitypes"
 	"ws-json-rpc/backend/pkg/mqtt"
+	"ws-json-rpc/backend/pkg/utils"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
@@ -82,7 +83,7 @@ func (s *Handler) handleDeviceCommand(client pahomqtt.Client, msg pahomqtt.Messa
 	if err := json.Unmarshal(msg.Payload(), &command); err != nil {
 		s.l.Error("Failed to unmarshal device command",
 			slog.String("topic", msg.Topic()),
-			slog.Any("error", err))
+			utils.ErrAttr(err))
 
 		return
 	}
@@ -174,7 +175,7 @@ func (s *Handler) handleDeviceStatus(client pahomqtt.Client, msg pahomqtt.Messag
 	if err := json.Unmarshal(msg.Payload(), &status); err != nil {
 		s.l.Error("Failed to unmarshal device status",
 			slog.String("topic", msg.Topic()),
-			slog.Any("error", err))
+			utils.ErrAttr(err))
 
 		return
 	}

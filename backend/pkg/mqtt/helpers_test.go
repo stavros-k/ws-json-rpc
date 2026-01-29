@@ -41,12 +41,14 @@ func TestValidateTopicPattern(t *testing.T) {
 		{
 			name:        "leading slash",
 			topic:       "/devices/temperature",
-			expectError: false,
+			expectError: true,
+			errorMsg:    "leading slash is not allowed",
 		},
 		{
 			name:        "trailing slash",
 			topic:       "devices/temperature/",
-			expectError: false,
+			expectError: true,
+			errorMsg:    "trailing slash is not allowed",
 		},
 
 		// Invalid patterns

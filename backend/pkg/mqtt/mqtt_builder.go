@@ -7,15 +7,12 @@ import (
 	"os"
 	"time"
 	"ws-json-rpc/backend/pkg/generate"
+	"ws-json-rpc/backend/pkg/utils"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-// subscriptionEntry holds a subscription specification with its topic.
-type subscriptionEntry struct {
-	topic string
-	spec  SubscriptionSpec
-}
+// TODO: Provide a wrapper around publish, that sets the QoS and retained flags correctly
 
 // MQTTBuilder provides a fluent API for registering MQTT publications and subscriptions.
 type MQTTBuilder struct {
@@ -24,7 +21,7 @@ type MQTTBuilder struct {
 	l             *slog.Logger
 	operationIDs  map[string]struct{}
 	publications  map[string]*PublicationSpec
-	subscriptions map[string]*subscriptionEntry
+	subscriptions map[string]*SubscriptionSpec
 	connected     bool
 }
 
@@ -53,11 +50,12 @@ func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, op
 		l:             l,
 		operationIDs:  make(map[string]struct{}),
 		publications:  make(map[string]*PublicationSpec),
-		subscriptions: make(map[string]*subscriptionEntry),
+		subscriptions: make(map[string]*SubscriptionSpec),
 		connected:     false,
 	}
 
 	// Configure MQTT client options
+	// TODO: Check this
 	clientOpts := mqtt.NewClientOptions()
 	clientOpts.AddBroker(opts.BrokerURL)
 	clientOpts.SetClientID(opts.ClientID)
@@ -116,6 +114,7 @@ func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
 
 	// Convert parameterized topic to MQTT wildcard format
 	mqttTopic := convertTopicToMQTT(topic)
+	spec.TopicMQTT = mqttTopic
 
 	// Register with collector
 	if err := mb.collector.RegisterMQTTPublication(&generate.MQTTPublicationInfo{
@@ -147,7 +146,7 @@ func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
 // MustPublish registers a publication operation and terminates the program if an error occurs.
 func (mb *MQTTBuilder) MustPublish(topic string, spec PublicationSpec) {
 	if err := mb.Publish(topic, spec); err != nil {
-		mb.l.Error("Failed to register publication", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group), slog.Any("error", err))
+		mb.l.Error("Failed to register publication", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group), utils.ErrAttr(err))
 		os.Exit(1)
 	}
 }
@@ -181,6 +180,7 @@ func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
 
 	// Convert parameterized topic to MQTT wildcard format
 	mqttTopic := convertTopicToMQTT(topic)
+	spec.TopicMQTT = mqttTopic
 
 	// Register with collector
 	if err := mb.collector.RegisterMQTTSubscription(&generate.MQTTSubscriptionInfo{
@@ -201,10 +201,7 @@ func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
 
 	// Store subscription with MQTT wildcard topic (for actual subscription)
 	mb.operationIDs[spec.OperationID] = struct{}{}
-	mb.subscriptions[spec.OperationID] = &subscriptionEntry{
-		topic: mqttTopic, // Use MQTT wildcard format for actual subscription
-		spec:  spec,
-	}
+	mb.subscriptions[spec.OperationID] = &spec
 
 	mb.l.Info("Registered MQTT subscription", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group))
 
@@ -214,7 +211,7 @@ func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
 // MustSubscribe registers a subscription operation and terminates the program if an error occurs.
 func (mb *MQTTBuilder) MustSubscribe(topic string, spec SubscriptionSpec) {
 	if err := mb.Subscribe(topic, spec); err != nil {
-		mb.l.Error("Failed to register subscription", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group), slog.Any("error", err))
+		mb.l.Error("Failed to register subscription", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group), utils.ErrAttr(err))
 		os.Exit(1)
 	}
 }
@@ -237,39 +234,36 @@ func (mb *MQTTBuilder) Connect() error {
 
 // Disconnect disconnects from the MQTT broker.
 func (mb *MQTTBuilder) Disconnect() {
-	if mb.client.IsConnected() {
-		mb.l.Info("Disconnecting from MQTT broker...")
-		mb.client.Disconnect(250) // 250ms grace period
-		mb.l.Info("Disconnected from MQTT broker")
+	if !mb.client.IsConnected() {
+		return
 	}
+
+	mb.l.Info("Disconnecting from MQTT broker...")
+	mb.client.Disconnect(250) // 250ms grace period
+	mb.l.Info("Disconnected from MQTT broker")
 }
 
 // onConnect is called when the client successfully connects or reconnects to the broker.
 func (mb *MQTTBuilder) onConnect(client mqtt.Client) {
-	mb.l.Info("Connected to MQTT broker, subscribing to topics",
-		slog.Int("subscriptionCount", len(mb.subscriptions)))
+	mb.l.Info("Connected to MQTT broker, subscribing to topics", slog.Int("subscriptionCount", len(mb.subscriptions)))
 	mb.connected = true
 
 	// Subscribe to all registered subscriptions
-	for _, entry := range mb.subscriptions {
-		token := client.Subscribe(entry.topic, byte(entry.spec.QoS), entry.spec.Handler)
+	for _, spec := range mb.subscriptions {
+		token := client.Subscribe(spec.TopicMQTT, byte(spec.QoS), spec.Handler)
 		token.Wait()
 
 		if err := token.Error(); err != nil {
-			mb.l.Error("Failed to subscribe",
-				slog.String("topic", entry.topic),
-				slog.String("operationID", entry.spec.OperationID),
-				slog.Any("error", err))
-		} else {
-			mb.l.Info("Subscribed",
-				slog.String("topic", entry.topic),
-				slog.String("operationID", entry.spec.OperationID))
+			mb.l.Error("Failed to subscribe", slog.String("topic", spec.TopicMQTT), slog.String("operationID", spec.OperationID), utils.ErrAttr(err))
+			return
 		}
+
+		mb.l.Info("Subscribed", slog.String("topic", spec.TopicMQTT), slog.String("operationID", spec.OperationID))
 	}
 }
 
 // onConnectionLost is called when the client loses connection to the broker.
 func (mb *MQTTBuilder) onConnectionLost(client mqtt.Client, err error) {
-	mb.l.Warn("Connection to MQTT broker lost", slog.Any("error", err))
+	mb.l.Warn("Connection to MQTT broker lost", utils.ErrAttr(err))
 	mb.connected = false
 }

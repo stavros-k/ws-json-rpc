@@ -26,6 +26,7 @@ type TopicParameter struct {
 // PublicationSpec describes an MQTT publication operation.
 type PublicationSpec struct {
 	OperationID     string           // OperationID is a unique identifier for this publication operation (e.g., "publishTemperature").
+	TopicMQTT       string           // TopicMQTT is the MQTT wildcard format (e.g., devices/+/temperature).
 	Summary         string           // Summary is a short description of the publication.
 	Description     string           // Description provides detailed information about the publication.
 	Group           string           // Group is a logical grouping for the publication (e.g., "Telemetry", "Control").
@@ -40,6 +41,7 @@ type PublicationSpec struct {
 // SubscriptionSpec describes an MQTT subscription operation.
 type SubscriptionSpec struct {
 	OperationID     string              // OperationID is a unique identifier for this subscription operation (e.g., "subscribeTemperature").
+	TopicMQTT       string              // TopicMQTT is the MQTT wildcard format (e.g., devices/+/temperature).
 	Summary         string              // Summary is a short description of the subscription.
 	Description     string              // Description provides detailed information about the subscription.
 	Group           string              // Group is a logical grouping for the subscription (e.g., "Telemetry", "Control").

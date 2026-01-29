@@ -42,6 +42,13 @@ func validateTopicPattern(topic string) error {
 	if topic == "" {
 		return errors.New("topic cannot be empty")
 	}
+	if strings.HasPrefix(topic, "/") {
+		return errors.New("leading slash is not allowed")
+	}
+
+	if strings.HasSuffix(topic, "/") {
+		return errors.New("trailing slash is not allowed")
+	}
 
 	for segment := range strings.SplitSeq(topic, "/") {
 		if segment == "" {
