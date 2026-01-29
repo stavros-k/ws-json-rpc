@@ -133,7 +133,7 @@ func generateParameters(topic string, topicParams []TopicParameter) ([]generate.
 		})
 
 		if _, exists := params[paramSpec.Name]; !exists {
-			return nil, fmt.Errorf("documented path parameter %s not found in path", paramSpec.Name)
+			return nil, fmt.Errorf("documented parameter %s not found in topic", paramSpec.Name)
 		}
 
 		documentedPathParams[paramSpec.Name] = struct{}{}
