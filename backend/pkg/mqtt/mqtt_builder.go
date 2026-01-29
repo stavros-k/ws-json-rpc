@@ -228,6 +228,18 @@ func (mb *MQTTBuilder) Connect() error {
 	mb.l.Info("Connecting to MQTT broker... Will wait indefinitely for connection to complete")
 
 	token := mb.client.Connect()
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 30)
+		defer ticker.Stop()
+		for range ticker.C {
+			if mb.client.IsConnected() {
+				return
+			}
+			mb.l.Warn("MQTT has not done an initial connection yet, still waiting...")
+		}
+	}()
+
 	// Waits indefinitely for the connection to complete
 	token.Wait()
 

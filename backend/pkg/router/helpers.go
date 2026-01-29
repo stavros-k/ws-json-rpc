@@ -48,6 +48,9 @@ func generateParameters(spec RouteSpec) ([]generate.ParameterInfo, error) {
 		}
 
 		for _, paramName := range paramsName {
+			if !generate.IsValidParameterName(paramName) {
+				return nil, fmt.Errorf("invalid parameter name %s in path %s", paramName, spec.fullPath)
+			}
 			paramsInPath[paramName] = struct{}{}
 		}
 	}

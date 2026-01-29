@@ -119,3 +119,46 @@ func TestSanitizePath(t *testing.T) {
 		})
 	}
 }
+
+func TestIsValidParameterName(t *testing.T) {
+	tests := []struct {
+		name  string
+		param string
+		want  bool
+	}{
+		// Valid cases
+		{name: "single letter", param: "a", want: true},
+		{name: "multiple letters", param: "abc", want: true},
+		{name: "multiple underscores", param: "abc_def", want: true},
+		{name: "letters and digits", param: "abc123", want: true},
+		{name: "letters, digits, and underscores", param: "abc_123_def", want: true},
+		// Invalid cases
+		{name: "empty", param: "", want: false},
+		{name: "single digit", param: "1", want: false},
+		{name: "single underscore", param: "_", want: false},
+		{name: "single dash", param: "-", want: false},
+		{name: "single dot", param: ".", want: false},
+		{name: "single slash", param: "/", want: false},
+		{name: "single backslash", param: "\\", want: false},
+		{name: "single pipe", param: "|", want: false},
+		{name: "single quote", param: "'", want: false},
+		{name: "single quote", param: "\"", want: false},
+		{name: "multiple digits", param: "123", want: false},
+		{name: "multiple dashes", param: "abc-def", want: false},
+		{name: "multiple dots", param: "abc.def", want: false},
+		{name: "multiple slashes", param: "abc/def", want: false},
+		{name: "multiple backslashes", param: "abc\\def", want: false},
+		{name: "multiple pipes", param: "abc|def", want: false},
+		{name: "multiple quotes", param: "abc'def", want: false},
+		{name: "multiple quotes", param: "abc\"def", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsValidParameterName(tt.param)
+			if result != tt.want {
+				t.Errorf("IsValidParameterName(%q) = %v, want %v", tt.param, result, tt.want)
+			}
+		})
+	}
+}

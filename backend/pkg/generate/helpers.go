@@ -3,6 +3,7 @@ package generate
 import (
 	"errors"
 	"strings"
+	"unicode"
 )
 
 // SanitizePath removes double slashes and trailing slashes from a path.
@@ -60,4 +61,37 @@ func ExtractParamName(path string) ([]string, error) {
 	}
 
 	return cleanParams, nil
+}
+
+func isASCIILetter(r rune) bool {
+	if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+		return true
+	}
+
+	return false
+}
+
+// isValidParameterName validates that a parameter name:
+// - Starts with a letter (a-z, A-Z)
+// - Contains only letters, digits, and underscores
+func IsValidParameterName(name string) bool {
+	if name == "" {
+		return false
+	}
+
+	for i, r := range name {
+		if i == 0 {
+			if !isASCIILetter(r) {
+				return false
+			}
+			continue
+		}
+
+		// Subsequent characters must be letters, digits, or underscores
+		if !isASCIILetter(r) && !unicode.IsDigit(r) && r != '_' {
+			return false
+		}
+	}
+
+	return true
 }
