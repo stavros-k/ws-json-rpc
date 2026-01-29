@@ -207,9 +207,13 @@ func (rb *RouteBuilder) Router() chi.Router {
 
 // add adds a new route to the router and collects metadata.
 func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
+	if path != generate.SanitizePath(path) {
+		return fmt.Errorf("invalid path")
+	}
+
 	spec.localPath = path
 	cleanPath := rb.prefix + spec.localPath
-	cleanPath = sanitizePath(cleanPath)
+	cleanPath = generate.SanitizePath(cleanPath)
 	spec.fullPath = cleanPath
 
 	if _, exists := rb.operationIDs[spec.OperationID]; exists {

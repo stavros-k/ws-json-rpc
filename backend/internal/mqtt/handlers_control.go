@@ -11,7 +11,7 @@ import (
 )
 
 // RegisterDeviceCommandPublish registers the device command publication operation.
-func RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
+func (s *Handler) RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
 	mb.MustPublish("devices/{deviceID}/commands", mqtt.PublicationSpec{
 		OperationID: "publishDeviceCommand",
 		Summary:     "Publish device command",
@@ -48,7 +48,7 @@ func RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterDeviceCommandSubscribe registers the device command subscription operation.
-func RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
+func (s *Handler) RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder) {
 	mb.MustSubscribe("devices/{deviceID}/commands", mqtt.SubscriptionSpec{
 		OperationID: "subscribeDeviceCommand",
 		Summary:     "Subscribe to device commands",
@@ -97,7 +97,7 @@ func (s *Handler) handleDeviceCommand(client pahomqtt.Client, msg pahomqtt.Messa
 }
 
 // RegisterDeviceStatusPublish registers the device status publication operation.
-func RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
+func (s *Handler) RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
 	mb.MustPublish("devices/{deviceID}/status", mqtt.PublicationSpec{
 		OperationID: "publishDeviceStatus",
 		Summary:     "Publish device status",
@@ -136,7 +136,7 @@ func RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterDeviceStatusSubscribe registers the device status subscription operation.
-func RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
+func (s *Handler) RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder) {
 	mb.MustSubscribe("devices/{deviceID}/status", mqtt.SubscriptionSpec{
 		OperationID: "subscribeDeviceStatus",
 		Summary:     "Subscribe to device status",

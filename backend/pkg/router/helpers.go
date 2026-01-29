@@ -8,21 +8,6 @@ import (
 	"ws-json-rpc/backend/pkg/generate"
 )
 
-// sanitizePath removes double slashes and trailing slashes from a path.
-func sanitizePath(path string) string {
-	cleanPath := path
-	for strings.Contains(cleanPath, "//") {
-		cleanPath = strings.ReplaceAll(cleanPath, "//", "/")
-	}
-
-	cleanPath = strings.TrimSuffix(cleanPath, "/")
-	if cleanPath == "" {
-		cleanPath = "/"
-	}
-
-	return cleanPath
-}
-
 // validateRouteSpec validates a RouteSpec.
 func validateRouteSpec(spec RouteSpec) error {
 	if spec.OperationID == "" {

@@ -11,7 +11,7 @@ import (
 )
 
 // RegisterTemperaturePublish registers the temperature publication operation.
-func RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
+func (s *Handler) RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
 	mb.MustPublish("devices/{deviceID}/temperature", mqtt.PublicationSpec{
 		OperationID: "publishTemperature",
 		Summary:     "Publish temperature reading",
@@ -51,7 +51,7 @@ func RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterTemperatureSubscribe registers the temperature subscription operation.
-func RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
+func (s *Handler) RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder) {
 	mb.MustSubscribe("devices/{deviceID}/temperature", mqtt.SubscriptionSpec{
 		OperationID: "subscribeTemperature",
 		Summary:     "Subscribe to temperature readings",
@@ -105,7 +105,7 @@ func (s *Handler) handleTemperature(client pahomqtt.Client, msg pahomqtt.Message
 }
 
 // RegisterSensorTelemetryPublish registers the sensor telemetry publication operation.
-func RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
+func (s *Handler) RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
 	mb.MustPublish("devices/{deviceID}/sensors/{sensorType}", mqtt.PublicationSpec{
 		OperationID: "publishSensorTelemetry",
 		Summary:     "Publish sensor telemetry",
@@ -155,7 +155,7 @@ func RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterSensorTelemetrySubscribe registers the sensor telemetry subscription operation.
-func RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
+func (s *Handler) RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder) {
 	mb.MustSubscribe("devices/{deviceID}/sensors/{sensorType}", mqtt.SubscriptionSpec{
 		OperationID: "subscribeSensorTelemetry",
 		Summary:     "Subscribe to sensor telemetry",

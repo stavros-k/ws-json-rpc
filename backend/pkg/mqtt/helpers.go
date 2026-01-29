@@ -43,9 +43,11 @@ func validateTopicPattern(topic string) error {
 		return errors.New("topic cannot be empty")
 	}
 
-	segments := strings.Split(topic, "/")
+	for segment := range strings.SplitSeq(topic, "/") {
+		if segment == "" {
+			return errors.New("empty segments are not allowed")
+		}
 
-	for i, segment := range segments {
 		// Check for multi-level wildcard - not allowed
 		if strings.Contains(segment, "#") {
 			return errors.New("multi-level wildcard '#' is not supported - use explicit parameters {param} instead")
@@ -64,11 +66,6 @@ func validateTopicPattern(topic string) error {
 			}
 		} else if strings.Contains(segment, "{") || strings.Contains(segment, "}") {
 			return errors.New("invalid parameter syntax - use {paramName} format")
-		}
-
-		// Empty segments are only allowed for leading/trailing slashes
-		if segment == "" && i != 0 && i != len(segments)-1 {
-			return errors.New("empty segments are not allowed in the middle of the topic")
 		}
 	}
 
@@ -150,4 +147,66 @@ func generateParameters(topic string, topicParams []TopicParameter) ([]generate.
 	}
 
 	return parameters, nil
+}
+
+// validatePublicationSpec validates a publication specification.
+func (mb *MQTTBuilder) validatePublicationSpec(spec PublicationSpec) error {
+	if spec.OperationID == "" {
+		return errors.New("operationID is required")
+	}
+
+	if spec.Summary == "" {
+		return errors.New("summary is required")
+	}
+
+	if spec.Description == "" {
+		return errors.New("description is required")
+	}
+
+	if spec.Group == "" {
+		return errors.New("group is required")
+	}
+
+	if spec.MessageType == nil {
+		return errors.New("messageType is required")
+	}
+
+	if err := validateQoS(spec.QoS); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateSubscriptionSpec validates a subscription specification.
+func (mb *MQTTBuilder) validateSubscriptionSpec(spec SubscriptionSpec) error {
+	if spec.OperationID == "" {
+		return errors.New("operationID is required")
+	}
+
+	if spec.Summary == "" {
+		return errors.New("summary is required")
+	}
+
+	if spec.Description == "" {
+		return errors.New("description is required")
+	}
+
+	if spec.Group == "" {
+		return errors.New("group is required")
+	}
+
+	if spec.MessageType == nil {
+		return errors.New("messageType is required")
+	}
+
+	if spec.Handler == nil {
+		return errors.New("handler is required")
+	}
+
+	if err := validateQoS(spec.QoS); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -5,6 +5,21 @@ import (
 	"strings"
 )
 
+// SanitizePath removes double slashes and trailing slashes from a path.
+func SanitizePath(path string) string {
+	cleanPath := path
+	for strings.Contains(cleanPath, "//") {
+		cleanPath = strings.ReplaceAll(cleanPath, "//", "/")
+	}
+
+	cleanPath = strings.TrimSuffix(cleanPath, "/")
+	if cleanPath == "" {
+		cleanPath = "/"
+	}
+
+	return cleanPath
+}
+
 // ExtractParamName extracts the parameter name from a path.
 // Currently it does not handle unclosed '{' braces.
 func ExtractParamName(path string) ([]string, error) {
