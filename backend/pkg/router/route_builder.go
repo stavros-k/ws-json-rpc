@@ -208,8 +208,9 @@ func (rb *RouteBuilder) Router() chi.Router {
 
 // add adds a new route to the router and collects metadata.
 func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
-	if path != generate.SanitizePath(path) {
-		return fmt.Errorf("invalid path")
+	sanitizedPath := generate.SanitizePath(path)
+	if path != sanitizedPath {
+		return fmt.Errorf("invalid path %q; sanitized form would be %q", path, sanitizedPath)
 	}
 
 	spec.localPath = path
