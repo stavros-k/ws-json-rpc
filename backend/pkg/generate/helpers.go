@@ -21,8 +21,8 @@ func SanitizePath(path string) string {
 	return cleanPath
 }
 
-// ExtractParamName extracts the parameter name from a path.
-// Currently it does not handle unclosed '{' braces.
+// ExtractParamName extracts parameter names from a path.
+// It returns an error if the number of '{' and '}' braces is mismatched.
 func ExtractParamName(path string) ([]string, error) {
 	dirtyParams := []string{}
 	cleanParams := []string{}
