@@ -35,7 +35,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
-func (s *Server) RequestIDMiddleware(next http.Handler) http.Handler {
+func (s *Handler) RequestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get or generate request ID
 		requestID := r.Header.Get(RequestIDHeader)
@@ -51,7 +51,7 @@ func (s *Server) RequestIDMiddleware(next http.Handler) http.Handler {
 }
 
 // LoggerMiddleware adds a request-scoped logger to the context and logs requests.
-func (s *Server) LoggerMiddleware(next http.Handler) http.Handler {
+func (s *Handler) LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := GetRequestID(r.Context())
 		// Create request-scoped logger with context

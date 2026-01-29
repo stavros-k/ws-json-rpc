@@ -7,14 +7,15 @@ import (
 	"strings"
 )
 
+// FIXME: Remove regex and use a function. Add tests as well.
 var topicParamRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
 
-// ValidateTopicPattern validates an MQTT topic pattern with {param} placeholders.
+// validateTopicPattern validates an MQTT topic pattern with {param} placeholders.
 // Valid patterns:
 // - Parameters must be in {paramName} format (e.g., devices/{deviceID}/temperature)
 // - Parameter names must start with a letter and contain only alphanumeric characters and underscores
 // - Multi-level wildcards '#' are NOT supported for explicitness.
-func ValidateTopicPattern(topic string) error {
+func validateTopicPattern(topic string) error {
 	if topic == "" {
 		return errors.New("topic cannot be empty")
 	}
@@ -35,6 +36,7 @@ func ValidateTopicPattern(topic string) error {
 		// Check for parameter syntax
 		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
 			paramName := segment[1 : len(segment)-1]
+			// FIXME: Remove regex and use a function. Add tests as well.
 			if !topicParamRegex.MatchString(paramName) {
 				return fmt.Errorf("invalid parameter name '%s' - must start with a letter and contain only alphanumeric characters and underscores", paramName)
 			}
@@ -51,9 +53,9 @@ func ValidateTopicPattern(topic string) error {
 	return nil
 }
 
-// ConvertTopicToMQTT converts a parameterized topic (devices/{deviceID}/temperature)
+// convertTopicToMQTT converts a parameterized topic (devices/{deviceID}/temperature)
 // to an MQTT wildcard pattern (devices/+/temperature).
-func ConvertTopicToMQTT(topic string) string {
+func convertTopicToMQTT(topic string) string {
 	segments := strings.Split(topic, "/")
 	for i, segment := range segments {
 		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
@@ -64,9 +66,9 @@ func ConvertTopicToMQTT(topic string) string {
 	return strings.Join(segments, "/")
 }
 
-// ExtractTopicParameters extracts parameter names from a parameterized topic.
+// extractTopicParameters extracts parameter names from a parameterized topic.
 // Returns a slice of parameter names in order (e.g., ["deviceID", "sensorType"]).
-func ExtractTopicParameters(topic string) []string {
+func extractTopicParameters(topic string) []string {
 	var params []string
 
 	segments := strings.SplitSeq(topic, "/")
@@ -80,8 +82,8 @@ func ExtractTopicParameters(topic string) []string {
 	return params
 }
 
-// ValidateQoS validates a QoS level.
-func ValidateQoS(qos QoS) error {
+// validateQoS validates a QoS level.
+func validateQoS(qos QoS) error {
 	if qos != QoSAtMostOnce && qos != QoSAtLeastOnce && qos != QoSExactlyOnce {
 		return errors.New("qos must be 0, 1, or 2")
 	}

@@ -47,7 +47,7 @@ func RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterDeviceCommandSubscribe registers the device command subscription operation.
-func RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder, s *Server) {
+func RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 	mb.MustSubscribe("devices/{deviceID}/commands", mqtt.SubscriptionSpec{
 		OperationID: "subscribeDeviceCommand",
 		Summary:     "Subscribe to device commands",
@@ -75,7 +75,7 @@ func RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder, s *Server) {
 }
 
 // handleDeviceCommand handles incoming device commands.
-func (s *Server) handleDeviceCommand(client pahomqtt.Client, msg pahomqtt.Message) {
+func (s *Handler) handleDeviceCommand(client pahomqtt.Client, msg pahomqtt.Message) {
 	var command apitypes.DeviceCommand
 	if err := json.Unmarshal(msg.Payload(), &command); err != nil {
 		s.l.Error("Failed to unmarshal device command",
@@ -133,7 +133,7 @@ func RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterDeviceStatusSubscribe registers the device status subscription operation.
-func RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder, s *Server) {
+func RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 	mb.MustSubscribe("devices/{deviceID}/status", mqtt.SubscriptionSpec{
 		OperationID: "subscribeDeviceStatus",
 		Summary:     "Subscribe to device status",
@@ -165,7 +165,7 @@ func RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder, s *Server) {
 }
 
 // handleDeviceStatus handles incoming device status updates.
-func (s *Server) handleDeviceStatus(client pahomqtt.Client, msg pahomqtt.Message) {
+func (s *Handler) handleDeviceStatus(client pahomqtt.Client, msg pahomqtt.Message) {
 	var status apitypes.DeviceStatus
 	if err := json.Unmarshal(msg.Payload(), &status); err != nil {
 		s.l.Error("Failed to unmarshal device status",

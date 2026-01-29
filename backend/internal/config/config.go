@@ -1,4 +1,4 @@
-package app
+package config
 
 import (
 	"fmt"
@@ -13,8 +13,9 @@ import (
 type EnvKey string
 
 const (
+	EnvGenerate EnvKey = "GENERATE"
+
 	EnvPort      EnvKey = "PORT"
-	EnvGenerate  EnvKey = "GENERATE"
 	EnvDataDir   EnvKey = "DATA_DIR"
 	EnvLogLevel  EnvKey = "LOG_LEVEL"
 	EnvLogToFile EnvKey = "LOG_TO_FILE"
@@ -40,7 +41,7 @@ type Config struct {
 	MQTTPassword string
 }
 
-func NewConfig() (*Config, error) {
+func New() (*Config, error) {
 	// Get data directory
 	dataDir := getStringEnv(EnvDataDir, "data")
 

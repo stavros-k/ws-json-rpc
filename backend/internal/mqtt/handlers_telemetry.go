@@ -50,7 +50,7 @@ func RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterTemperatureSubscribe registers the temperature subscription operation.
-func RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder, s *Server) {
+func RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 	mb.MustSubscribe("devices/{deviceID}/temperature", mqtt.SubscriptionSpec{
 		OperationID: "subscribeTemperature",
 		Summary:     "Subscribe to temperature readings",
@@ -82,7 +82,7 @@ func RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder, s *Server) {
 }
 
 // handleTemperature handles incoming temperature readings.
-func (s *Server) handleTemperature(client pahomqtt.Client, msg pahomqtt.Message) {
+func (s *Handler) handleTemperature(client pahomqtt.Client, msg pahomqtt.Message) {
 	var reading apitypes.TemperatureReading
 	if err := json.Unmarshal(msg.Payload(), &reading); err != nil {
 		s.l.Error("Failed to unmarshal temperature reading",
@@ -151,7 +151,7 @@ func RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterSensorTelemetrySubscribe registers the sensor telemetry subscription operation.
-func RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder, s *Server) {
+func RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 	mb.MustSubscribe("devices/{deviceID}/sensors/{sensorType}", mqtt.SubscriptionSpec{
 		OperationID: "subscribeSensorTelemetry",
 		Summary:     "Subscribe to sensor telemetry",
@@ -191,7 +191,7 @@ func RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder, s *Server) {
 }
 
 // handleSensorTelemetry handles incoming sensor telemetry data.
-func (s *Server) handleSensorTelemetry(client pahomqtt.Client, msg pahomqtt.Message) {
+func (s *Handler) handleSensorTelemetry(client pahomqtt.Client, msg pahomqtt.Message) {
 	var telemetry apitypes.SensorTelemetry
 	if err := json.Unmarshal(msg.Payload(), &telemetry); err != nil {
 		s.l.Error("Failed to unmarshal sensor telemetry",

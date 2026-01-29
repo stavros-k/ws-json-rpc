@@ -27,8 +27,8 @@ type MQTTBuilder struct {
 	connected     bool
 }
 
-// MQTTBuilderOptions contains configuration for creating an MQTTBuilder.
-type MQTTBuilderOptions struct {
+// MQTTClientOptions contains configuration for creating an MQTT client.
+type MQTTClientOptions struct {
 	BrokerURL string
 	ClientID  string
 	Username  string
@@ -36,7 +36,7 @@ type MQTTBuilderOptions struct {
 }
 
 // NewMQTTBuilder creates a new MQTT builder with the given broker configuration.
-func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, opts MQTTBuilderOptions) (*MQTTBuilder, error) {
+func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, opts MQTTClientOptions) (*MQTTBuilder, error) {
 	l = l.With(slog.String("component", "mqtt-builder"))
 
 	if opts.BrokerURL == "" {
@@ -85,10 +85,15 @@ func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, op
 	return mb, nil
 }
 
+// Client returns the underlying MQTT client.
+func (mb *MQTTBuilder) Client() mqtt.Client {
+	return mb.client
+}
+
 // Publish registers a publication operation.
 func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
 	// Validate topic
-	if err := ValidateTopicPattern(topic); err != nil {
+	if err := validateTopicPattern(topic); err != nil {
 		return fmt.Errorf("invalid topic pattern: %w", err)
 	}
 
@@ -112,7 +117,7 @@ func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
 	}
 
 	// Convert parameterized topic to MQTT wildcard format
-	mqttTopic := ConvertTopicToMQTT(topic)
+	mqttTopic := convertTopicToMQTT(topic)
 
 	// Register with collector
 	if err := mb.collector.RegisterMQTTPublication(&generate.MQTTPublicationInfo{
@@ -154,7 +159,7 @@ func (mb *MQTTBuilder) MustPublish(topic string, spec PublicationSpec) {
 // Subscribe registers a subscription operation.
 func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
 	// Validate topic
-	if err := ValidateTopicPattern(topic); err != nil {
+	if err := validateTopicPattern(topic); err != nil {
 		return fmt.Errorf("invalid topic pattern: %w", err)
 	}
 
@@ -178,7 +183,7 @@ func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
 	}
 
 	// Convert parameterized topic to MQTT wildcard format
-	mqttTopic := ConvertTopicToMQTT(topic)
+	mqttTopic := convertTopicToMQTT(topic)
 
 	// Register with collector
 	if err := mb.collector.RegisterMQTTSubscription(&generate.MQTTSubscriptionInfo{
@@ -296,7 +301,7 @@ func (mb *MQTTBuilder) validatePublicationSpec(spec PublicationSpec) error {
 		return errors.New("messageType is required")
 	}
 
-	if err := ValidateQoS(spec.QoS); err != nil {
+	if err := validateQoS(spec.QoS); err != nil {
 		return err
 	}
 
@@ -329,7 +334,7 @@ func (mb *MQTTBuilder) validateSubscriptionSpec(spec SubscriptionSpec) error {
 		return errors.New("handler is required")
 	}
 
-	if err := ValidateQoS(spec.QoS); err != nil {
+	if err := validateQoS(spec.QoS); err != nil {
 		return err
 	}
 

@@ -30,15 +30,15 @@ const zeroUUID = "00000000-0000-0000-0000-000000000000"
 // HandlerFunc is a HTTP handler that can return an error.
 type HandlerFunc func(w http.ResponseWriter, r *http.Request) error
 
-// Server represents the API server.
-type Server struct {
+// Handler represents the API handler.
+type Handler struct {
 	l   *slog.Logger
 	svc *services.Services
 }
 
-// NewAPIServer creates a new API server.
-func NewAPIServer(l *slog.Logger, svc *services.Services) *Server {
-	return &Server{
+// NewAPIHandler creates a new API handler.
+func NewAPIHandler(l *slog.Logger, svc *services.Services) *Handler {
+	return &Handler{
 		l:   l.With(slog.String("component", "http-api")),
 		svc: svc,
 	}
