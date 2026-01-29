@@ -17,6 +17,7 @@ import (
 // MQTTBuilder provides a fluent API for registering MQTT publications and subscriptions.
 type MQTTBuilder struct {
 	client        mqtt.Client
+	wrappedClient *MQTTClient
 	collector     generate.MQTTMetadataCollector
 	l             *slog.Logger
 	operationIDs  map[string]struct{}
@@ -85,6 +86,10 @@ func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, op
 	// clientOpts.SetWill("", "", 2, true)
 
 	mb.client = mqtt.NewClient(clientOpts)
+	mb.wrappedClient = &MQTTClient{
+		client:  mb.client,
+		builder: mb,
+	}
 
 	l.Info("MQTT builder created", slog.String("broker", opts.BrokerURL), slog.String("clientID", opts.ClientID))
 
@@ -92,12 +97,12 @@ func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, op
 }
 
 // Client returns the underlying MQTT client.
-func (mb *MQTTBuilder) Client() mqtt.Client {
-	return mb.client
+func (mb *MQTTBuilder) Client() *MQTTClient {
+	return mb.wrappedClient
 }
 
-// Publish registers a publication operation.
-func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
+// RegisterPublish registers a publication operation.
+func (mb *MQTTBuilder) RegisterPublish(topic string, spec PublicationSpec) error {
 	// Validate topic
 	if err := validateTopicPattern(topic); err != nil {
 		return fmt.Errorf("invalid topic pattern: %w", err)
@@ -150,16 +155,16 @@ func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
 	return nil
 }
 
-// MustPublish registers a publication operation and terminates the program if an error occurs.
-func (mb *MQTTBuilder) MustPublish(topic string, spec PublicationSpec) {
-	if err := mb.Publish(topic, spec); err != nil {
+// MustRegisterPublish registers a publication operation and terminates the program if an error occurs.
+func (mb *MQTTBuilder) MustRegisterPublish(topic string, spec PublicationSpec) {
+	if err := mb.RegisterPublish(topic, spec); err != nil {
 		mb.l.Error("Failed to register publication", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group), utils.ErrAttr(err))
 		os.Exit(1)
 	}
 }
 
-// Subscribe registers a subscription operation.
-func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
+// RegisterSubscribe registers a subscription operation.
+func (mb *MQTTBuilder) RegisterSubscribe(topic string, spec SubscriptionSpec) error {
 	sanitizedTopic := generate.SanitizePath(topic)
 	if topic != sanitizedTopic {
 		return fmt.Errorf("invalid topic pattern: topic %q does not match sanitized form %q", topic, sanitizedTopic)
@@ -216,9 +221,9 @@ func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
 	return nil
 }
 
-// MustSubscribe registers a subscription operation and terminates the program if an error occurs.
-func (mb *MQTTBuilder) MustSubscribe(topic string, spec SubscriptionSpec) {
-	if err := mb.Subscribe(topic, spec); err != nil {
+// MustRegisterSubscribe registers a subscription operation and terminates the program if an error occurs.
+func (mb *MQTTBuilder) MustRegisterSubscribe(topic string, spec SubscriptionSpec) {
+	if err := mb.RegisterSubscribe(topic, spec); err != nil {
 		mb.l.Error("Failed to register subscription", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group), utils.ErrAttr(err))
 		os.Exit(1)
 	}
