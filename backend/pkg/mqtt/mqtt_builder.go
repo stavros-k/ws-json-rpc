@@ -225,9 +225,10 @@ func (mb *MQTTBuilder) MustSubscribe(topic string, spec SubscriptionSpec) {
 
 // Connect connects to the MQTT broker.
 func (mb *MQTTBuilder) Connect() error {
-	mb.l.Info("Connecting to MQTT broker...")
+	mb.l.Info("Connecting to MQTT broker... Will wait indefinitely for connection to complete")
 
 	token := mb.client.Connect()
+	// Waits indefinitely for the connection to complete
 	token.Wait()
 
 	if err := token.Error(); err != nil {
