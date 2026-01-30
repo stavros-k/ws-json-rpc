@@ -4,26 +4,25 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"time"
-	"ws-json-rpc/backend/pkg/router/generate"
+	"ws-json-rpc/backend/pkg/generate"
+	"ws-json-rpc/backend/pkg/utils"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-// subscriptionEntry holds a subscription specification with its topic.
-type subscriptionEntry struct {
-	topic string
-	spec  SubscriptionSpec
-}
+// TODO: Provide a wrapper around publish, that sets the QoS and retained flags correctly
 
 // MQTTBuilder provides a fluent API for registering MQTT publications and subscriptions.
 type MQTTBuilder struct {
 	client        mqtt.Client
+	wrappedClient *MQTTClient
 	collector     generate.MQTTMetadataCollector
 	l             *slog.Logger
 	operationIDs  map[string]struct{}
 	publications  map[string]*PublicationSpec
-	subscriptions map[string]*subscriptionEntry
+	subscriptions map[string]*SubscriptionSpec
 	connected     bool
 }
 
@@ -52,11 +51,12 @@ func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, op
 		l:             l,
 		operationIDs:  make(map[string]struct{}),
 		publications:  make(map[string]*PublicationSpec),
-		subscriptions: make(map[string]*subscriptionEntry),
+		subscriptions: make(map[string]*SubscriptionSpec),
 		connected:     false,
 	}
 
 	// Configure MQTT client options
+	// TODO: Check this
 	clientOpts := mqtt.NewClientOptions()
 	clientOpts.AddBroker(opts.BrokerURL)
 	clientOpts.SetClientID(opts.ClientID)
@@ -69,16 +69,27 @@ func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, op
 		clientOpts.SetPassword(opts.Password)
 	}
 
+	// Retry every 5 seconds, max interval 15 seconds
 	clientOpts.SetAutoReconnect(true)
 	clientOpts.SetConnectRetry(true)
+	clientOpts.SetConnectTimeout(5 * time.Second)
 	clientOpts.SetConnectRetryInterval(5 * time.Second)
-	clientOpts.SetMaxReconnectInterval(1 * time.Minute)
+	clientOpts.SetMaxReconnectInterval(15 * time.Second)
+	clientOpts.SetKeepAlive(30 * time.Second)
 
 	// Set connection callbacks
 	clientOpts.SetOnConnectHandler(mb.onConnect)
 	clientOpts.SetConnectionLostHandler(mb.onConnectionLost)
+	clientOpts.SetReconnectingHandler(mb.onReconnecting)
+
+	// FIXME: Set will message
+	// clientOpts.SetWill("", "", 2, true)
 
 	mb.client = mqtt.NewClient(clientOpts)
+	mb.wrappedClient = &MQTTClient{
+		client:  mb.client,
+		builder: mb,
+	}
 
 	l.Info("MQTT builder created", slog.String("broker", opts.BrokerURL), slog.String("clientID", opts.ClientID))
 
@@ -86,12 +97,12 @@ func NewMQTTBuilder(l *slog.Logger, collector generate.MQTTMetadataCollector, op
 }
 
 // Client returns the underlying MQTT client.
-func (mb *MQTTBuilder) Client() mqtt.Client {
-	return mb.client
+func (mb *MQTTBuilder) Client() *MQTTClient {
+	return mb.wrappedClient
 }
 
-// Publish registers a publication operation.
-func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
+// RegisterPublish registers a publication operation.
+func (mb *MQTTBuilder) RegisterPublish(topic string, spec PublicationSpec) error {
 	// Validate topic
 	if err := validateTopicPattern(topic); err != nil {
 		return fmt.Errorf("invalid topic pattern: %w", err)
@@ -108,16 +119,14 @@ func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
 	}
 
 	// Convert topic parameters to documentation format
-	topicParams := make([]generate.MQTTTopicParameter, len(spec.TopicParameters))
-	for i, param := range spec.TopicParameters {
-		topicParams[i] = generate.MQTTTopicParameter{
-			Name:        param.Name,
-			Description: param.Description,
-		}
+	topicParams, err := generateParameters(topic, spec.TopicParameters)
+	if err != nil {
+		return fmt.Errorf("failed to generate topic parameters in operationID %s: %w", spec.OperationID, err)
 	}
 
 	// Convert parameterized topic to MQTT wildcard format
 	mqttTopic := convertTopicToMQTT(topic)
+	spec.TopicMQTT = mqttTopic
 
 	// Register with collector
 	if err := mb.collector.RegisterMQTTPublication(&generate.MQTTPublicationInfo{
@@ -141,23 +150,26 @@ func (mb *MQTTBuilder) Publish(topic string, spec PublicationSpec) error {
 	mb.operationIDs[spec.OperationID] = struct{}{}
 	mb.publications[spec.OperationID] = &spec
 
-	mb.l.Info("Registered MQTT publication",
-		slog.String("operationID", spec.OperationID),
-		slog.String("topic", topic),
-		slog.String("group", spec.Group))
+	mb.l.Info("Registered MQTT publication", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group))
 
 	return nil
 }
 
-// MustPublish registers a publication operation and panics on error.
-func (mb *MQTTBuilder) MustPublish(topic string, spec PublicationSpec) {
-	if err := mb.Publish(topic, spec); err != nil {
-		panic(fmt.Sprintf("failed to register publication: %v", err))
+// MustRegisterPublish registers a publication operation and terminates the program if an error occurs.
+func (mb *MQTTBuilder) MustRegisterPublish(topic string, spec PublicationSpec) {
+	if err := mb.RegisterPublish(topic, spec); err != nil {
+		mb.l.Error("Failed to register publication", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group), utils.ErrAttr(err))
+		os.Exit(1)
 	}
 }
 
-// Subscribe registers a subscription operation.
-func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
+// RegisterSubscribe registers a subscription operation.
+func (mb *MQTTBuilder) RegisterSubscribe(topic string, spec SubscriptionSpec) error {
+	sanitizedTopic := generate.SanitizePath(topic)
+	if topic != sanitizedTopic {
+		return fmt.Errorf("invalid topic pattern: topic %q does not match sanitized form %q", topic, sanitizedTopic)
+	}
+
 	// Validate topic
 	if err := validateTopicPattern(topic); err != nil {
 		return fmt.Errorf("invalid topic pattern: %w", err)
@@ -173,17 +185,15 @@ func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
 		return fmt.Errorf("duplicate operationID: %s", spec.OperationID)
 	}
 
-	// Convert topic parameters to documentation format
-	topicParams := make([]generate.MQTTTopicParameter, len(spec.TopicParameters))
-	for i, param := range spec.TopicParameters {
-		topicParams[i] = generate.MQTTTopicParameter{
-			Name:        param.Name,
-			Description: param.Description,
-		}
+	// Generate topic parameters
+	topicParams, err := generateParameters(topic, spec.TopicParameters)
+	if err != nil {
+		return fmt.Errorf("failed to generate topic parameters in operationID %s: %w", spec.OperationID, err)
 	}
 
 	// Convert parameterized topic to MQTT wildcard format
 	mqttTopic := convertTopicToMQTT(topic)
+	spec.TopicMQTT = mqttTopic
 
 	// Register with collector
 	if err := mb.collector.RegisterMQTTSubscription(&generate.MQTTSubscriptionInfo{
@@ -204,31 +214,47 @@ func (mb *MQTTBuilder) Subscribe(topic string, spec SubscriptionSpec) error {
 
 	// Store subscription with MQTT wildcard topic (for actual subscription)
 	mb.operationIDs[spec.OperationID] = struct{}{}
-	mb.subscriptions[spec.OperationID] = &subscriptionEntry{
-		topic: mqttTopic, // Use MQTT wildcard format for actual subscription
-		spec:  spec,
-	}
+	mb.subscriptions[spec.OperationID] = &spec
 
-	mb.l.Info("Registered MQTT subscription",
-		slog.String("operationID", spec.OperationID),
-		slog.String("topic", topic),
-		slog.String("group", spec.Group))
+	mb.l.Info("Registered MQTT subscription", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group))
 
 	return nil
 }
 
-// MustSubscribe registers a subscription operation and panics on error.
-func (mb *MQTTBuilder) MustSubscribe(topic string, spec SubscriptionSpec) {
-	if err := mb.Subscribe(topic, spec); err != nil {
-		panic(fmt.Sprintf("failed to register subscription: %v", err))
+// MustRegisterSubscribe registers a subscription operation and terminates the program if an error occurs.
+func (mb *MQTTBuilder) MustRegisterSubscribe(topic string, spec SubscriptionSpec) {
+	if err := mb.RegisterSubscribe(topic, spec); err != nil {
+		mb.l.Error("Failed to register subscription", slog.String("operationID", spec.OperationID), slog.String("topic", topic), slog.String("group", spec.Group), utils.ErrAttr(err))
+		os.Exit(1)
 	}
 }
 
 // Connect connects to the MQTT broker.
 func (mb *MQTTBuilder) Connect() error {
-	mb.l.Info("Connecting to MQTT broker...")
+	mb.l.Info("Connecting to MQTT broker... Will wait indefinitely for connection to complete")
 
 	token := mb.client.Connect()
+
+	done := make(chan struct{})
+	defer close(done)
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 30)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if mb.client.IsConnectionOpen() {
+					return
+				}
+				mb.l.Warn("MQTT has not done an initial connection yet, still waiting...")
+			}
+		}
+	}()
+
+	// Waits indefinitely for the connection to complete
 	token.Wait()
 
 	if err := token.Error(); err != nil {
@@ -242,101 +268,41 @@ func (mb *MQTTBuilder) Connect() error {
 
 // Disconnect disconnects from the MQTT broker.
 func (mb *MQTTBuilder) Disconnect() {
-	if mb.client.IsConnected() {
-		mb.l.Info("Disconnecting from MQTT broker...")
-		mb.client.Disconnect(250) // 250ms grace period
-		mb.l.Info("Disconnected from MQTT broker")
+	if !mb.client.IsConnected() {
+		return
 	}
+
+	mb.l.Info("Disconnecting from MQTT broker...")
+	mb.client.Disconnect(250) // 250ms grace period
+	mb.l.Info("Disconnected from MQTT broker")
 }
 
 // onConnect is called when the client successfully connects or reconnects to the broker.
 func (mb *MQTTBuilder) onConnect(client mqtt.Client) {
-	mb.l.Info("Connected to MQTT broker, subscribing to topics",
-		slog.Int("subscriptionCount", len(mb.subscriptions)))
+	mb.l.Info("Connected to MQTT broker, subscribing to topics", slog.Int("subscriptionCount", len(mb.subscriptions)))
 	mb.connected = true
 
 	// Subscribe to all registered subscriptions
-	for _, entry := range mb.subscriptions {
-		token := client.Subscribe(entry.topic, byte(entry.spec.QoS), entry.spec.Handler)
+	for _, spec := range mb.subscriptions {
+		token := client.Subscribe(spec.TopicMQTT, byte(spec.QoS), spec.Handler)
 		token.Wait()
 
 		if err := token.Error(); err != nil {
-			mb.l.Error("Failed to subscribe",
-				slog.String("topic", entry.topic),
-				slog.String("operationID", entry.spec.OperationID),
-				slog.Any("error", err))
-		} else {
-			mb.l.Info("Subscribed",
-				slog.String("topic", entry.topic),
-				slog.String("operationID", entry.spec.OperationID))
+			mb.l.Error("Failed to subscribe", slog.String("topic", spec.TopicMQTT), slog.String("operationID", spec.OperationID), utils.ErrAttr(err))
+			continue
 		}
+
+		mb.l.Info("Subscribed", slog.String("topic", spec.TopicMQTT), slog.String("operationID", spec.OperationID))
 	}
 }
 
 // onConnectionLost is called when the client loses connection to the broker.
 func (mb *MQTTBuilder) onConnectionLost(client mqtt.Client, err error) {
-	mb.l.Warn("Connection to MQTT broker lost", slog.Any("error", err))
+	mb.l.Warn("Connection to MQTT broker lost", utils.ErrAttr(err))
 	mb.connected = false
 }
 
-// validatePublicationSpec validates a publication specification.
-func (mb *MQTTBuilder) validatePublicationSpec(spec PublicationSpec) error {
-	if spec.OperationID == "" {
-		return errors.New("operationID is required")
-	}
-
-	if spec.Summary == "" {
-		return errors.New("summary is required")
-	}
-
-	if spec.Description == "" {
-		return errors.New("description is required")
-	}
-
-	if spec.Group == "" {
-		return errors.New("group is required")
-	}
-
-	if spec.MessageType == nil {
-		return errors.New("messageType is required")
-	}
-
-	if err := validateQoS(spec.QoS); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// validateSubscriptionSpec validates a subscription specification.
-func (mb *MQTTBuilder) validateSubscriptionSpec(spec SubscriptionSpec) error {
-	if spec.OperationID == "" {
-		return errors.New("operationID is required")
-	}
-
-	if spec.Summary == "" {
-		return errors.New("summary is required")
-	}
-
-	if spec.Description == "" {
-		return errors.New("description is required")
-	}
-
-	if spec.Group == "" {
-		return errors.New("group is required")
-	}
-
-	if spec.MessageType == nil {
-		return errors.New("messageType is required")
-	}
-
-	if spec.Handler == nil {
-		return errors.New("handler is required")
-	}
-
-	if err := validateQoS(spec.QoS); err != nil {
-		return err
-	}
-
-	return nil
+// onReconnecting is called when the client is reconnecting to the broker.
+func (mb *MQTTBuilder) onReconnecting(client mqtt.Client, opts *mqtt.ClientOptions) {
+	mb.l.Info("Reconnecting to MQTT broker", slog.String("broker", opts.Servers[0].String()))
 }

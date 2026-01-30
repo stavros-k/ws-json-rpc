@@ -326,6 +326,7 @@ func (g *OpenAPICollector) Generate() error {
 		return fmt.Errorf("failed to write docs JSON: %w", err)
 	}
 
+	g.l.Info("API documentation generated")
 	return nil
 }
 
@@ -431,6 +432,15 @@ func (g *OpenAPICollector) RegisterMQTTPublication(pub *MQTTPublicationInfo) err
 	pub.TypeName = typeName
 	pub.ExamplesStringified = stringifiedExamples
 
+	for i := range pub.TopicParameters {
+		typeName, err := g.processMQTTTopicParameter(pub.OperationID, pub.TopicParameters[i].TypeValue, "publication topic parameter")
+		if err != nil {
+			return err
+		}
+
+		pub.TopicParameters[i].TypeName = typeName
+	}
+
 	// Store publication
 	g.mqttPublications[pub.OperationID] = pub
 
@@ -451,6 +461,15 @@ func (g *OpenAPICollector) RegisterMQTTSubscription(sub *MQTTSubscriptionInfo) e
 
 	sub.TypeName = typeName
 	sub.ExamplesStringified = stringifiedExamples
+
+	for i := range sub.TopicParameters {
+		typeName, err := g.processMQTTTopicParameter(sub.OperationID, sub.TopicParameters[i].TypeValue, "subscription topic parameter")
+		if err != nil {
+			return err
+		}
+
+		sub.TopicParameters[i].TypeName = typeName
+	}
 
 	// Store subscription
 	g.mqttSubscriptions[sub.OperationID] = sub
@@ -518,6 +537,31 @@ func (g *OpenAPICollector) processMQTTMessageType(operationID string, typeValue 
 	stringifiedExamples = stringifyExamples(examples)
 
 	return typeName, stringifiedExamples, nil
+}
+
+// processMQTTTopicParameter extracts type information and registers representations for an MQTT topic parameter.
+// Returns the type name.
+func (g *OpenAPICollector) processMQTTTopicParameter(operationID string, typeValue any, contextMsg string) (string, error) {
+	// Validate type value is not zero
+	if reflect.ValueOf(typeValue).IsZero() {
+		return "", fmt.Errorf("topic parameter TypeValue must not be zero value in %s [%s]", contextMsg, operationID)
+	}
+
+	// Extract type name from zero value using reflection
+	typeName, err := extractTypeNameFromValue(typeValue)
+	if err != nil {
+		return "", fmt.Errorf("failed to extract topic parameter type name: %w", err)
+	}
+
+	// Mark as used by MQTT
+	g.markTypeAsMQTT(typeName)
+
+	// Register JSON representation
+	if err := g.RegisterJSONRepresentation(typeValue); err != nil {
+		return "", fmt.Errorf("failed to register JSON representation for topic parameter: %w", err)
+	}
+
+	return typeName, nil
 }
 
 // registerExamples registers JSON representations for a slice of examples.

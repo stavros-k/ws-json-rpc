@@ -90,9 +90,16 @@ export function MQTTTopicHeader({ topic, topicMQTT, topicParameters, type }: MQT
                                     onMouseEnter={() => setHoveredParam(param.name)}
                                     onMouseLeave={() => setHoveredParam(null)}
                                     aria-label={`Highlight ${param.name} parameter in topic`}>
-                                    <code className='font-semibold text-base text-text-primary'>{param.name}</code>
+                                    <div className='mb-2 flex items-start justify-between gap-4'>
+                                        <code className='font-semibold text-base text-text-primary'>{param.name}</code>
+                                        {param.type && (
+                                            <code className='rounded-lg border-2 border-type-primitive/30 bg-type-primitive/10 px-3 py-1.5 font-mono font-semibold text-sm text-type-primitive'>
+                                                {param.type}
+                                            </code>
+                                        )}
+                                    </div>
                                     {param.description && (
-                                        <p className='mt-2 text-sm text-text-tertiary'>{param.description}</p>
+                                        <p className='text-sm text-text-tertiary'>{param.description}</p>
                                     )}
                                 </button>
                             );

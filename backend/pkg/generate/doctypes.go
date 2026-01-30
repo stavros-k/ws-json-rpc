@@ -45,7 +45,7 @@ type FieldInfo struct {
 
 // EnumValue represents an enum constant with its documentation.
 type EnumValue struct {
-	Value       any    `json:"value"`       // string for string enums, int64 for number enums
+	Value       any    `json:"value"` // string for string enums, int64 for number enums
 	Description string `json:"description"`
 	Deprecated  string `json:"deprecated"`
 }
@@ -103,6 +103,8 @@ type ResponseInfo struct {
 type MQTTTopicParameter struct {
 	Name        string `json:"name"`        // Parameter name (e.g., "deviceID")
 	Description string `json:"description"` // Parameter description
+	TypeName    string `json:"type"`        // Parameter type (extracted type name, set by generator)
+	TypeValue   any    `json:"-"`           // Zero value of the type (set by mqtt builder)
 }
 
 // MQTTPublicationInfo contains metadata about an MQTT publication.

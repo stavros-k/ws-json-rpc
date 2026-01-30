@@ -6,13 +6,14 @@ import (
 	"time"
 	"ws-json-rpc/backend/pkg/apitypes"
 	"ws-json-rpc/backend/pkg/mqtt"
+	"ws-json-rpc/backend/pkg/utils"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // RegisterTemperaturePublish registers the temperature publication operation.
-func RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
-	mb.MustPublish("devices/{deviceID}/temperature", mqtt.PublicationSpec{
+func (s *Handler) RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
+	mb.MustRegisterPublish("devices/{deviceID}/temperature", mqtt.PublicationSpec{
 		OperationID: "publishTemperature",
 		Summary:     "Publish temperature reading",
 		Description: "Publishes temperature readings from IoT devices. The device ID is part of the topic path.",
@@ -22,6 +23,7 @@ func RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
 			{
 				Name:        "deviceID",
 				Description: "Unique identifier of the device sending the temperature reading",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.TemperatureReading{
@@ -50,8 +52,8 @@ func RegisterTemperaturePublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterTemperatureSubscribe registers the temperature subscription operation.
-func RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
-	mb.MustSubscribe("devices/{deviceID}/temperature", mqtt.SubscriptionSpec{
+func (s *Handler) RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder) {
+	mb.MustRegisterSubscribe("devices/{deviceID}/temperature", mqtt.SubscriptionSpec{
 		OperationID: "subscribeTemperature",
 		Summary:     "Subscribe to temperature readings",
 		Description: "Receives temperature readings from all IoT devices.",
@@ -60,6 +62,7 @@ func RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 			{
 				Name:        "deviceID",
 				Description: "Matches any device ID",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.TemperatureReading{
@@ -85,26 +88,20 @@ func RegisterTemperatureSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 func (s *Handler) handleTemperature(client pahomqtt.Client, msg pahomqtt.Message) {
 	var reading apitypes.TemperatureReading
 	if err := json.Unmarshal(msg.Payload(), &reading); err != nil {
-		s.l.Error("Failed to unmarshal temperature reading",
-			slog.String("topic", msg.Topic()),
-			slog.Any("error", err))
+		s.l.Error("Failed to unmarshal temperature reading", slog.String("topic", msg.Topic()), utils.ErrAttr(err))
 
 		return
 	}
 
-	s.l.Info("Received temperature reading",
-		slog.String("deviceID", reading.DeviceID),
-		slog.Float64("temperature", reading.Temperature),
-		slog.String("unit", reading.Unit),
-		slog.Time("timestamp", reading.Timestamp))
+	s.l.Info("Received temperature reading", slog.String("deviceID", reading.DeviceID), slog.Float64("temperature", reading.Temperature), slog.String("unit", reading.Unit), slog.Time("timestamp", reading.Timestamp))
 
 	// Process the reading (e.g., store in database, trigger alerts, etc.)
 	// TODO: Add your business logic here
 }
 
 // RegisterSensorTelemetryPublish registers the sensor telemetry publication operation.
-func RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
-	mb.MustPublish("devices/{deviceID}/sensors/{sensorType}", mqtt.PublicationSpec{
+func (s *Handler) RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
+	mb.MustRegisterPublish("devices/{deviceID}/sensors/{sensorType}", mqtt.PublicationSpec{
 		OperationID: "publishSensorTelemetry",
 		Summary:     "Publish sensor telemetry",
 		Description: "Publishes generic sensor telemetry data from IoT devices.",
@@ -113,10 +110,12 @@ func RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
 			{
 				Name:        "deviceID",
 				Description: "Unique identifier of the device",
+				Type:        new(string),
 			},
 			{
 				Name:        "sensorType",
 				Description: "Type of sensor (e.g., humidity, pressure, motion)",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.SensorTelemetry{
@@ -151,8 +150,8 @@ func RegisterSensorTelemetryPublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterSensorTelemetrySubscribe registers the sensor telemetry subscription operation.
-func RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
-	mb.MustSubscribe("devices/{deviceID}/sensors/{sensorType}", mqtt.SubscriptionSpec{
+func (s *Handler) RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder) {
+	mb.MustRegisterSubscribe("devices/{deviceID}/sensors/{sensorType}", mqtt.SubscriptionSpec{
 		OperationID: "subscribeSensorTelemetry",
 		Summary:     "Subscribe to sensor telemetry",
 		Description: "Receives generic sensor telemetry data from all IoT devices and sensor types.",
@@ -161,10 +160,12 @@ func RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 			{
 				Name:        "deviceID",
 				Description: "Matches any device ID",
+				Type:        new(string),
 			},
 			{
 				Name:        "sensorType",
 				Description: "Matches any sensor type",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.SensorTelemetry{
@@ -194,19 +195,12 @@ func RegisterSensorTelemetrySubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 func (s *Handler) handleSensorTelemetry(client pahomqtt.Client, msg pahomqtt.Message) {
 	var telemetry apitypes.SensorTelemetry
 	if err := json.Unmarshal(msg.Payload(), &telemetry); err != nil {
-		s.l.Error("Failed to unmarshal sensor telemetry",
-			slog.String("topic", msg.Topic()),
-			slog.Any("error", err))
+		s.l.Error("Failed to unmarshal sensor telemetry", slog.String("topic", msg.Topic()), utils.ErrAttr(err))
 
 		return
 	}
 
-	s.l.Info("Received sensor telemetry",
-		slog.String("deviceID", telemetry.DeviceID),
-		slog.String("sensorType", telemetry.SensorType),
-		slog.Float64("value", telemetry.Value),
-		slog.String("unit", telemetry.Unit),
-		slog.Int("quality", telemetry.Quality))
+	s.l.Info("Received sensor telemetry", slog.String("deviceID", telemetry.DeviceID), slog.String("sensorType", telemetry.SensorType), slog.Float64("value", telemetry.Value), slog.String("unit", telemetry.Unit), slog.Int("quality", telemetry.Quality))
 
 	// Process the telemetry (e.g., store in database, trigger alerts, etc.)
 	// TODO: Add your business logic here

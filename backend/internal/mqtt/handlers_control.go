@@ -6,13 +6,14 @@ import (
 	"time"
 	"ws-json-rpc/backend/pkg/apitypes"
 	"ws-json-rpc/backend/pkg/mqtt"
+	"ws-json-rpc/backend/pkg/utils"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 // RegisterDeviceCommandPublish registers the device command publication operation.
-func RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
-	mb.MustPublish("devices/{deviceID}/commands", mqtt.PublicationSpec{
+func (s *Handler) RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
+	mb.MustRegisterPublish("devices/{deviceID}/commands", mqtt.PublicationSpec{
 		OperationID: "publishDeviceCommand",
 		Summary:     "Publish device command",
 		Description: "Sends commands to IoT devices.",
@@ -21,6 +22,7 @@ func RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
 			{
 				Name:        "deviceID",
 				Description: "Unique identifier of the target device",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.DeviceCommand{
@@ -47,8 +49,8 @@ func RegisterDeviceCommandPublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterDeviceCommandSubscribe registers the device command subscription operation.
-func RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
-	mb.MustSubscribe("devices/{deviceID}/commands", mqtt.SubscriptionSpec{
+func (s *Handler) RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder) {
+	mb.MustRegisterSubscribe("devices/{deviceID}/commands", mqtt.SubscriptionSpec{
 		OperationID: "subscribeDeviceCommand",
 		Summary:     "Subscribe to device commands",
 		Description: "Receives commands sent to IoT devices for logging and monitoring.",
@@ -57,6 +59,7 @@ func RegisterDeviceCommandSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 			{
 				Name:        "deviceID",
 				Description: "Matches any device ID",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.DeviceCommand{
@@ -80,7 +83,7 @@ func (s *Handler) handleDeviceCommand(client pahomqtt.Client, msg pahomqtt.Messa
 	if err := json.Unmarshal(msg.Payload(), &command); err != nil {
 		s.l.Error("Failed to unmarshal device command",
 			slog.String("topic", msg.Topic()),
-			slog.Any("error", err))
+			utils.ErrAttr(err))
 
 		return
 	}
@@ -95,8 +98,8 @@ func (s *Handler) handleDeviceCommand(client pahomqtt.Client, msg pahomqtt.Messa
 }
 
 // RegisterDeviceStatusPublish registers the device status publication operation.
-func RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
-	mb.MustPublish("devices/{deviceID}/status", mqtt.PublicationSpec{
+func (s *Handler) RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
+	mb.MustRegisterPublish("devices/{deviceID}/status", mqtt.PublicationSpec{
 		OperationID: "publishDeviceStatus",
 		Summary:     "Publish device status",
 		Description: "Publishes device status updates.",
@@ -105,6 +108,7 @@ func RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
 			{
 				Name:        "deviceID",
 				Description: "Unique identifier of the device",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.DeviceStatus{
@@ -133,8 +137,8 @@ func RegisterDeviceStatusPublish(mb *mqtt.MQTTBuilder) {
 }
 
 // RegisterDeviceStatusSubscribe registers the device status subscription operation.
-func RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
-	mb.MustSubscribe("devices/{deviceID}/status", mqtt.SubscriptionSpec{
+func (s *Handler) RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder) {
+	mb.MustRegisterSubscribe("devices/{deviceID}/status", mqtt.SubscriptionSpec{
 		OperationID: "subscribeDeviceStatus",
 		Summary:     "Subscribe to device status",
 		Description: "Receives device status updates from all IoT devices.",
@@ -143,6 +147,7 @@ func RegisterDeviceStatusSubscribe(mb *mqtt.MQTTBuilder, s *Handler) {
 			{
 				Name:        "deviceID",
 				Description: "Matches any device ID",
+				Type:        new(string),
 			},
 		},
 		MessageType: apitypes.DeviceStatus{
@@ -170,7 +175,7 @@ func (s *Handler) handleDeviceStatus(client pahomqtt.Client, msg pahomqtt.Messag
 	if err := json.Unmarshal(msg.Payload(), &status); err != nil {
 		s.l.Error("Failed to unmarshal device status",
 			slog.String("topic", msg.Topic()),
-			slog.Any("error", err))
+			utils.ErrAttr(err))
 
 		return
 	}

@@ -1229,7 +1229,8 @@
       "topicParameters": [
         {
           "name": "deviceID",
-          "description": "Unique identifier of the target device"
+          "description": "Unique identifier of the target device",
+          "type": "string"
         }
       ],
       "summary": "Publish device command",
@@ -1251,7 +1252,8 @@
       "topicParameters": [
         {
           "name": "deviceID",
-          "description": "Unique identifier of the device"
+          "description": "Unique identifier of the device",
+          "type": "string"
         }
       ],
       "summary": "Publish device status",
@@ -1273,11 +1275,13 @@
       "topicParameters": [
         {
           "name": "deviceID",
-          "description": "Unique identifier of the device"
+          "description": "Unique identifier of the device",
+          "type": "string"
         },
         {
           "name": "sensorType",
-          "description": "Type of sensor (e.g., humidity, pressure, motion)"
+          "description": "Type of sensor (e.g., humidity, pressure, motion)",
+          "type": "string"
         }
       ],
       "summary": "Publish sensor telemetry",
@@ -1299,7 +1303,8 @@
       "topicParameters": [
         {
           "name": "deviceID",
-          "description": "Unique identifier of the device sending the temperature reading"
+          "description": "Unique identifier of the device sending the temperature reading",
+          "type": "string"
         }
       ],
       "summary": "Publish temperature reading",
@@ -1323,7 +1328,8 @@
       "topicParameters": [
         {
           "name": "deviceID",
-          "description": "Matches any device ID"
+          "description": "Matches any device ID",
+          "type": "string"
         }
       ],
       "summary": "Subscribe to device commands",
@@ -1343,7 +1349,8 @@
       "topicParameters": [
         {
           "name": "deviceID",
-          "description": "Matches any device ID"
+          "description": "Matches any device ID",
+          "type": "string"
         }
       ],
       "summary": "Subscribe to device status",
@@ -1363,11 +1370,13 @@
       "topicParameters": [
         {
           "name": "deviceID",
-          "description": "Matches any device ID"
+          "description": "Matches any device ID",
+          "type": "string"
         },
         {
           "name": "sensorType",
-          "description": "Matches any sensor type"
+          "description": "Matches any sensor type",
+          "type": "string"
         }
       ],
       "summary": "Subscribe to sensor telemetry",
@@ -1387,7 +1396,8 @@
       "topicParameters": [
         {
           "name": "deviceID",
-          "description": "Matches any device ID"
+          "description": "Matches any device ID",
+          "type": "string"
         }
       ],
       "summary": "Subscribe to temperature readings",

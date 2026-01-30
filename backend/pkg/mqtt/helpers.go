@@ -3,12 +3,9 @@ package mqtt
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
+	"ws-json-rpc/backend/pkg/generate"
 )
-
-// FIXME: Remove regex and use a function. Add tests as well.
-var topicParamRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_]*$`)
 
 // validateTopicPattern validates an MQTT topic pattern with {param} placeholders.
 // Valid patterns:
@@ -19,10 +16,19 @@ func validateTopicPattern(topic string) error {
 	if topic == "" {
 		return errors.New("topic cannot be empty")
 	}
+	if strings.HasPrefix(topic, "/") {
+		return errors.New("leading slash is not allowed")
+	}
 
-	segments := strings.Split(topic, "/")
+	if strings.HasSuffix(topic, "/") {
+		return errors.New("trailing slash is not allowed")
+	}
 
-	for i, segment := range segments {
+	for segment := range strings.SplitSeq(topic, "/") {
+		if segment == "" {
+			return errors.New("empty segments are not allowed")
+		}
+
 		// Check for multi-level wildcard - not allowed
 		if strings.Contains(segment, "#") {
 			return errors.New("multi-level wildcard '#' is not supported - use explicit parameters {param} instead")
@@ -36,17 +42,11 @@ func validateTopicPattern(topic string) error {
 		// Check for parameter syntax
 		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
 			paramName := segment[1 : len(segment)-1]
-			// FIXME: Remove regex and use a function. Add tests as well.
-			if !topicParamRegex.MatchString(paramName) {
+			if !generate.IsValidParameterName(paramName) {
 				return fmt.Errorf("invalid parameter name '%s' - must start with a letter and contain only alphanumeric characters and underscores", paramName)
 			}
 		} else if strings.Contains(segment, "{") || strings.Contains(segment, "}") {
 			return errors.New("invalid parameter syntax - use {paramName} format")
-		}
-
-		// Empty segments are only allowed for leading/trailing slashes
-		if segment == "" && i != 0 && i != len(segments)-1 {
-			return errors.New("empty segments are not allowed in the middle of the topic")
 		}
 	}
 
@@ -66,26 +66,127 @@ func convertTopicToMQTT(topic string) string {
 	return strings.Join(segments, "/")
 }
 
-// extractTopicParameters extracts parameter names from a parameterized topic.
-// Returns a slice of parameter names in order (e.g., ["deviceID", "sensorType"]).
-func extractTopicParameters(topic string) []string {
-	var params []string
-
-	segments := strings.SplitSeq(topic, "/")
-	for segment := range segments {
-		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
-			paramName := segment[1 : len(segment)-1]
-			params = append(params, paramName)
-		}
-	}
-
-	return params
-}
-
 // validateQoS validates a QoS level.
 func validateQoS(qos QoS) error {
 	if qos != QoSAtMostOnce && qos != QoSAtLeastOnce && qos != QoSExactlyOnce {
 		return errors.New("qos must be 0, 1, or 2")
+	}
+
+	return nil
+}
+
+func generateParameters(topic string, topicParams []TopicParameter) ([]generate.MQTTTopicParameter, error) {
+	var parameters []generate.MQTTTopicParameter
+	// Validate path parameters and collect metadata
+	params := map[string]struct{}{}
+	documentedPathParams := map[string]struct{}{}
+
+	// Extract param names from topic
+	for section := range strings.SplitSeq(topic, "/") {
+		paramsName, err := generate.ExtractParamName(section)
+		if err != nil {
+			return nil, fmt.Errorf("invalid topic %s: %w", topic, err)
+		}
+
+		for _, paramName := range paramsName {
+			params[paramName] = struct{}{}
+		}
+	}
+
+	// For each documented parameter, validate and collect metadata
+	for _, paramSpec := range topicParams {
+		if paramSpec.Name == "" {
+			return nil, fmt.Errorf("parameter name required for topic %s", topic)
+		}
+
+		if paramSpec.Description == "" {
+			return nil, fmt.Errorf("parameter Description required for topic %s", topic)
+		}
+
+		if paramSpec.Type == nil {
+			return nil, fmt.Errorf("parameter Type required for topic %s", topic)
+		}
+
+		parameters = append(parameters, generate.MQTTTopicParameter{
+			Name:        paramSpec.Name,
+			TypeValue:   paramSpec.Type,
+			Description: paramSpec.Description,
+		})
+
+		if _, exists := params[paramSpec.Name]; !exists {
+			return nil, fmt.Errorf("documented parameter %s not found in topic", paramSpec.Name)
+		}
+
+		documentedPathParams[paramSpec.Name] = struct{}{}
+	}
+
+	// Now go over all discovered path parameters and validate that they are documented
+	for name := range params {
+		if _, exists := documentedPathParams[name]; !exists {
+			return nil, fmt.Errorf("topic parameter %s not documented", name)
+		}
+	}
+
+	return parameters, nil
+}
+
+// validatePublicationSpec validates a publication specification.
+func (mb *MQTTBuilder) validatePublicationSpec(spec PublicationSpec) error {
+	if spec.OperationID == "" {
+		return errors.New("operationID is required")
+	}
+
+	if spec.Summary == "" {
+		return errors.New("summary is required")
+	}
+
+	if spec.Description == "" {
+		return errors.New("description is required")
+	}
+
+	if spec.Group == "" {
+		return errors.New("group is required")
+	}
+
+	if spec.MessageType == nil {
+		return errors.New("messageType is required")
+	}
+
+	if err := validateQoS(spec.QoS); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateSubscriptionSpec validates a subscription specification.
+func (mb *MQTTBuilder) validateSubscriptionSpec(spec SubscriptionSpec) error {
+	if spec.OperationID == "" {
+		return errors.New("operationID is required")
+	}
+
+	if spec.Summary == "" {
+		return errors.New("summary is required")
+	}
+
+	if spec.Description == "" {
+		return errors.New("description is required")
+	}
+
+	if spec.Group == "" {
+		return errors.New("group is required")
+	}
+
+	if spec.MessageType == nil {
+		return errors.New("messageType is required")
+	}
+
+	if spec.Handler == nil {
+		return errors.New("handler is required")
+	}
+
+	if err := validateQoS(spec.QoS); err != nil {
+		return err
 	}
 
 	return nil
