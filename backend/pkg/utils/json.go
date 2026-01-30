@@ -8,9 +8,15 @@ import (
 	"os"
 )
 
+type ExtraDataAfterJSONError struct{}
+
+func (e *ExtraDataAfterJSONError) Error() string {
+	return "extra data after JSON object"
+}
+
 // FromJSON decodes JSON from byte slice (wrapper around streaming version).
 //
-//nolint:ireturn
+//nolint:ireturn // Generic functions must return type parameter T
 func FromJSON[T any](data []byte) (T, error) {
 	var result T
 	if len(data) == 0 {
@@ -24,20 +30,28 @@ func FromJSON[T any](data []byte) (T, error) {
 
 // FromJSONStream decodes JSON from io.Reader (streaming version).
 //
-//nolint:ireturn
+//nolint:ireturn // Generic functions must return type parameter T
 func FromJSONStream[T any](r io.Reader) (T, error) {
 	var result T
 
 	decoder := json.NewDecoder(r)
 	decoder.DisallowUnknownFields()
-	err := decoder.Decode(&result)
 
-	return result, err
+	err := decoder.Decode(&result)
+	if err != nil {
+		return result, err
+	}
+
+	if decoder.More() {
+		return result, &ExtraDataAfterJSONError{}
+	}
+
+	return result, nil
 }
 
 // MustFromJSON decodes JSON from byte slice (wrapper around streaming version).
 //
-//nolint:ireturn
+//nolint:ireturn // Generic functions must return type parameter T
 func MustFromJSON[T any](data []byte) T {
 	result, err := FromJSON[T](data)
 	if err != nil {

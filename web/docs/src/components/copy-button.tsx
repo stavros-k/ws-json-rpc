@@ -34,13 +34,13 @@ export const CopyButton = ({ code }: Props) => {
     return (
         <button
             onClick={handleCopy}
-            className='absolute top-3 right-3 p-2 rounded-lg bg-bg-secondary hover:bg-bg-tertiary border border-border-primary transition-all duration-200 group'
+            className='group absolute top-3 right-3 rounded-lg border border-border-primary bg-bg-secondary p-2 transition-all duration-200 hover:bg-bg-tertiary'
             title={copied ? "Copied!" : "Copy code"}
             type='button'>
             {copied ? (
-                <FiCheck className='w-4 h-4 text-green-500' />
+                <FiCheck className='h-4 w-4 text-green-500' />
             ) : (
-                <FiCopy className='w-4 h-4 text-text-secondary group-hover:text-text-primary transition-colors' />
+                <FiCopy className='h-4 w-4 text-text-secondary transition-colors group-hover:text-text-primary' />
             )}
         </button>
     );

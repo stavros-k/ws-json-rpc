@@ -13,11 +13,11 @@ type Props = {
 export const CodeWrapper = ({ label, code, lang, noCodeMessage }: Props) => {
     return (
         <div className='mb-6 last:mb-0'>
-            <div className='text-sm font-bold text-text-tertiary mb-3'>
+            <div className='mb-3 font-bold text-sm text-text-tertiary'>
                 {label.href && code ? (
                     <Link
                         href={label.href}
-                        className='text-accent-blue-hover hover:text-accent-blue-light transition-colors'>
+                        className='text-accent-blue-hover transition-colors hover:text-accent-blue-light'>
                         {label.text}
                     </Link>
                 ) : (
@@ -25,12 +25,14 @@ export const CodeWrapper = ({ label, code, lang, noCodeMessage }: Props) => {
                 )}
             </div>
             {code && (
-                <div className='relative'>
+                <div className='relative overflow-hidden'>
                     <CopyButton code={code} />
-                    <CodeBlock
-                        code={code}
-                        lang={lang}
-                    />
+                    <div className='overflow-x-auto'>
+                        <CodeBlock
+                            code={code}
+                            lang={lang}
+                        />
+                    </div>
                 </div>
             )}
         </div>

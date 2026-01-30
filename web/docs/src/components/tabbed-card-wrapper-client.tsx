@@ -18,17 +18,17 @@ export const TabbedCardWrapper = ({ tabs }: Props) => {
     if (!tabs || tabs.length === 0) return null;
 
     return (
-        <div className='bg-bg-secondary rounded-lg p-6 mb-6 shadow-sm border border-border-primary'>
+        <div className='mb-6 rounded-lg border border-border-primary bg-bg-secondary p-6 shadow-sm'>
             <div>
-                <div className='flex border-b border-border-secondary mb-4 overflow-x-auto'>
+                <div className='mb-4 flex overflow-x-auto border-border-secondary border-b'>
                     {tabs.map((tab, index) => (
                         <button
                             key={tab.title}
                             type='button'
                             onClick={() => setActiveTab(index)}
-                            className={`flex items-center gap-2 px-4 py-2 cursor-pointer border-b-2 transition-colors whitespace-nowrap ${
+                            className={`flex cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2 transition-colors ${
                                 activeTab === index
-                                    ? "border-accent-blue-hover text-accent-blue-hover font-semibold"
+                                    ? "border-accent-blue-hover font-semibold text-accent-blue-hover"
                                     : "border-transparent text-text-muted hover:text-text-secondary"
                             }`}>
                             {tab.icon}

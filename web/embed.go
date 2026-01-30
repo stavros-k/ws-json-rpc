@@ -12,6 +12,11 @@ import (
 //go:embed all:docs/dist
 var docsFS embed.FS
 
+type Router interface {
+	HandleFunc(pattern string, handler http.HandlerFunc)
+	Mount(pattern string, handler http.Handler)
+}
+
 func DocsApp() WebApp { return NewWebApp("docs", docsFS, "docs/dist", "/docs/") }
 
 type WebApp struct {
@@ -75,7 +80,7 @@ func (wa WebApp) Handler(path string) http.Handler {
 }
 
 // Register registers the WebApp with the given ServeMux.
-func (wa WebApp) Register(mux *http.ServeMux, l *slog.Logger) {
+func (wa WebApp) Register(mux Router, l *slog.Logger) {
 	wa.l = l.With(slog.String("app", wa.name), slog.String("urlBase", wa.urlBase), slog.String("component", "file-server"))
 	wa.l.Info("Registering web app")
 
@@ -85,6 +90,6 @@ func (wa WebApp) Register(mux *http.ServeMux, l *slog.Logger) {
 		http.Redirect(w, r, wa.urlBase, http.StatusMovedPermanently)
 	})
 
-	// Serve the app at the base URL
-	mux.Handle(wa.urlBase, wa.Handler(wa.urlBase))
+	// Mount the web app with prefix stripping
+	mux.Mount(baseWithoutSlash, wa.Handler(wa.urlBase))
 }

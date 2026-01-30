@@ -1,8 +1,8 @@
-//go:generate bash -c "cd ../../; ./generate.sh"
 package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -11,18 +11,18 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"ws-json-rpc/backend/internal/app"
-	"ws-json-rpc/backend/internal/database/sqlite"
-	"ws-json-rpc/backend/internal/rpcapi"
-	rpctypes "ws-json-rpc/backend/internal/rpcapi/types"
-	"ws-json-rpc/backend/pkg/database"
-	"ws-json-rpc/backend/pkg/rpc"
-	"ws-json-rpc/backend/pkg/rpc/generate"
-	"ws-json-rpc/backend/pkg/rpc/middleware"
+	"ws-json-rpc/backend/internal/api"
+	"ws-json-rpc/backend/internal/config"
+	sqlitegen "ws-json-rpc/backend/internal/database/sqlite/gen"
+	mqttapi "ws-json-rpc/backend/internal/mqtt"
+	"ws-json-rpc/backend/internal/services"
+	"ws-json-rpc/backend/pkg/generate"
+	"ws-json-rpc/backend/pkg/mqtt"
+	"ws-json-rpc/backend/pkg/router"
 	"ws-json-rpc/backend/pkg/utils"
 	"ws-json-rpc/web"
 
-	"github.com/google/uuid"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
@@ -30,85 +30,77 @@ const (
 	readHeaderTimeout = 5 * time.Second
 )
 
-//nolint:funlen
 func main() {
-	config, err := app.NewConfig()
+	config, err := config.New()
 	if err != nil {
 		fatalIfErr(slog.Default(), fmt.Errorf("failed to create config: %w", err))
 	}
 
-	defer func() {
-		if err := config.Close(); err != nil {
-			fatalIfErr(slog.Default(), fmt.Errorf("failed to close config: %w", err))
-		}
-	}()
+	defer utils.LogOnError(slog.Default(), config.Close, "failed to close config")
 
+	// Initialize logger
 	logger := getLogger(config)
 
-	g, err := generator(config, logger)
-	if err != nil {
-		fatalIfErr(logger, fmt.Errorf("failed to create generator: %w", err))
-	}
+	// TODO: Pass DB
+	// open sqlite database
+	db, err := sql.Open("sqlite3", config.Database)
+	fatalIfErr(logger, err)
 
-	hub := rpc.NewHub(logger, g)
-	mux := http.NewServeMux()
+	defer utils.LogOnError(logger, db.Close, "failed to close database")
 
-	methods := rpcapi.NewHandlers(hub)
-	hub.WithMiddleware(middleware.LoggingMiddleware)
+	queries := sqlitegen.New(db)
+	services := services.NewServices(logger, db, queries)
+	apiHandler := api.NewAPIHandler(logger, services)
+	mqttHandler := mqttapi.NewMQTTHandler(logger, services)
 
-	// Register events
-	registerEvents(hub)
+	// Create collector for OpenAPI generation
+	collector, err := getCollector(config, logger)
+	fatalIfErr(logger, err)
 
-	// Register methods
-	registerMethods(hub, methods)
+	// Builders
+	rb, err := router.NewRouteBuilder(logger, collector)
+	fatalIfErr(logger, err)
 
-	if err := hub.GenerateDocs(); err != nil {
-		fatalIfErr(logger, fmt.Errorf("failed to generate API docs: %w", err))
-	}
+	mb, err := mqtt.NewMQTTBuilder(logger, collector, mqtt.MQTTClientOptions{
+		BrokerURL: config.MQTTBroker,
+		ClientID:  config.MQTTClientID,
+		Username:  config.MQTTUsername,
+		Password:  config.MQTTPassword,
+	})
+	fatalIfErr(logger, err)
+
+	services.RegisterMQTTClient(mb.Client())
+
+	registerHTTPHandlers(logger, rb, apiHandler)
+	registerMQTTHandlers(logger, mb, mqttHandler)
 
 	if config.Generate {
-		logger.Info("Exiting after generating docs")
+		if err := collector.Generate(); err != nil {
+			fatalIfErr(logger, fmt.Errorf("failed to generate API documentation: %w", err))
+		}
 
 		return
 	}
 
-	migrator, err := database.NewMigrator(logger, sqlite.GetMigrationsFS(), config.Database)
-	if err != nil {
-		fatalIfErr(logger, fmt.Errorf("failed to create migrator: %w", err))
-	}
-
-	if err := migrator.Migrate(); err != nil {
-		fatalIfErr(logger, fmt.Errorf("failed to migrate database: %w", err))
-	}
-
-	go hub.Run()
-	go simulate(hub) // TODO: Remove this
-
-	logger.Info("Registering WS-RPC at /ws")
-	mux.HandleFunc("/ws", hub.ServeWS())
-
-	logger.Info("Registering HTTP-RPC at /rpc")
-	mux.HandleFunc("/rpc", hub.ServeHTTP())
-
-	web.DocsApp().Register(mux, logger)
-	// Redirect root to docs
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
-	})
+	go func() {
+		if err := mb.Connect(); err != nil {
+			logger.Error("Failed to connect to MQTT broker", utils.ErrAttr(err))
+		}
+		defer mb.Disconnect()
+	}()
 
 	addr := fmt.Sprintf(":%d", config.Port)
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           rb.Router(),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 
 	sigCtx, sigCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer sigCancel()
 
-	// Start HTTP/WS server
 	go func() {
-		logger.Info("http/ws server listening", slog.String("address", addr))
+		logger.Info("http server listening", slog.String("address", addr))
 
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("server failed", utils.ErrAttr(err))
@@ -120,136 +112,83 @@ func main() {
 	<-sigCtx.Done()
 	logger.Info("received signal, shutting down...")
 
-	// Shutdown / Cleanup
-	logger.Info("http/ws server shutting down...")
-
+	// Shutdown HTTP server
+	logger.Info("http server shutting down...")
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
-
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		logger.Error("http/ws server shutdown failed", utils.ErrAttr(err))
+		logger.Error("http server shutdown failed", utils.ErrAttr(err))
 	}
 
-	logger.Info("http/ws server shutdown complete")
+	logger.Info("server exited gracefully")
 }
 
-func registerEvents(h *rpc.Hub) {
-	rpc.RegisterEvent[rpctypes.DataCreatedEvent](h, string(rpctypes.EventKindDataCreated), rpc.EventOptions{
-		Docs: generate.EventDocs{
-			Title:       "DataCreated",
-			Description: "Event fired when new data is created",
-			Group:       "Data",
-			Deprecated:  true,
-			Examples: []generate.Example{
-				{
-					Title:       "Basic example",
-					Description: "Subscribe to the DataCreated event",
-					ResultObj:   rpctypes.DataCreatedEvent{ID: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")},
-				},
-			},
-		},
+// registerHTTPHandlers registers all HTTP handlers.
+func registerHTTPHandlers(l *slog.Logger, rb *router.RouteBuilder, h *api.Handler) {
+	l.Info("Registering HTTP handlers...")
+	rb.Route("/api", func(rb *router.RouteBuilder) {
+		// Add request ID
+		rb.Use(h.RequestIDMiddleware)
+		// Add request logger
+		rb.Use(h.LoggerMiddleware)
+
+		h.RegisterPing("/ping", rb)
+		rb.Route("/team", func(rb *router.RouteBuilder) {
+			h.RegisterGetTeam("/{teamID}", rb)
+			h.RegisterPutTeam("/", rb)
+			h.RegisterCreateTeam("/", rb)
+			h.RegisterDeleteTeam("/", rb)
+		})
 	})
+
+	web.DocsApp().Register(rb.Router(), l)
+	rb.Router().HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
+	})
+
+	l.Info("HTTP handlers registered successfully")
 }
 
-//nolint:funlen
-func registerMethods(h *rpc.Hub, methods *rpcapi.Handlers) {
-	rpc.RegisterMethod(h, string(rpctypes.MethodKindPing), methods.PingHandler, rpc.RegisterMethodOptions{
-		Docs: generate.MethodDocs{
-			Title:       "Ping",
-			Description: "A simple ping method to check if the server is alive",
-			Group:       "Core",
-			Tags:        []string{"health", "status"},
-			Examples: []generate.Example{
-				{
-					Title:       "Ping",
-					Description: "Ping the server",
-					ParamsObj:   nil,
-					ResultObj:   rpctypes.PingResult{Message: "pong", Status: rpctypes.PingStatusSuccess},
-				},
-			},
-		},
-	})
+// registerMQTTHandlers registers all MQTT handlers.
+func registerMQTTHandlers(l *slog.Logger, mb *mqtt.MQTTBuilder, h *mqttapi.Handler) {
+	l.Info("Registering MQTT handlers...")
+	// Telemetry operations
+	h.RegisterTemperaturePublish(mb)
+	h.RegisterTemperatureSubscribe(mb)
+	h.RegisterSensorTelemetryPublish(mb)
+	h.RegisterSensorTelemetrySubscribe(mb)
 
-	rpc.RegisterMethod(h, string(rpctypes.MethodKindSubscribe), methods.Subscribe, rpc.RegisterMethodOptions{
-		Docs: generate.MethodDocs{
-			Title:       "Subscribe",
-			Description: "Subscribe to a data event",
-			Group:       "Utility",
-			NoHTTP:      true,
-			Examples: []generate.Example{
-				{
-					Title:       "Subscribe",
-					Description: "Subscribe to the DataCreated event",
-					ParamsObj:   rpctypes.SubscribeParams{Event: rpctypes.EventKindDataCreated},
-					ResultObj:   rpctypes.SubscribeResult{Success: true},
-				},
-			},
-			Errors: []generate.ErrorDoc{
-				{
-					Title:       "Invalid event",
-					Description: "The event topic is invalid",
-					Code:        400,
-					Message:     "Invalid event topic",
-				},
-			},
-		},
-	})
-
-	rpc.RegisterMethod(h, string(rpctypes.MethodKindUnsubscribe), methods.Unsubscribe, rpc.RegisterMethodOptions{
-		Docs: generate.MethodDocs{
-			Title:       "Unsubscribe",
-			Description: "Unsubscribe from a data event",
-			Group:       "Utility",
-			NoHTTP:      true,
-			Examples: []generate.Example{
-				{
-					Title:       "Unsubscribe",
-					Description: "Unsubscribe from the DataCreated event",
-					ParamsObj:   rpctypes.UnsubscribeParams{Event: rpctypes.EventKindDataCreated},
-					ResultObj:   rpctypes.UnsubscribeResult{Success: true},
-				},
-			},
-			Errors: []generate.ErrorDoc{
-				{
-					Title:       "Invalid event",
-					Description: "The event topic is invalid",
-					Code:        400,
-					Message:     "Invalid event topic",
-				},
-			},
-		},
-	})
+	// Control operations
+	h.RegisterDeviceCommandPublish(mb)
+	h.RegisterDeviceCommandSubscribe(mb)
+	h.RegisterDeviceStatusPublish(mb)
+	h.RegisterDeviceStatusSubscribe(mb)
+	l.Info("MQTT handlers registered successfully")
 }
 
-//nolint:ireturn
-func generator(config *app.Config, logger *slog.Logger) (generate.Generator, error) {
-	if !config.Generate {
-		return &generate.MockGenerator{}, nil
+//nolint:ireturn // Returns MetadataCollector interface (OpenAPICollector or NoopCollector)
+func getCollector(c *config.Config, l *slog.Logger) (generate.MetadataCollector, error) {
+	if !c.Generate {
+		return &generate.NoopCollector{}, nil
 	}
 
-	return generate.NewGenerator(logger, generate.GeneratorOptions{
-		GoTypesDirPath:               "backend/internal/rpcapi/types",
-		DocsFileOutputPath:           "api_docs.json",
+	return generate.NewOpenAPICollector(l, generate.OpenAPICollectorOptions{
+		GoTypesDirPath:               "backend/pkg/apitypes",
 		DatabaseSchemaFileOutputPath: "schema.sql",
-		TSTypesOutputPath:            "web/ws-client/generated.ts",
-		DocsOptions: generate.DocsOptions{
+		DocsFileOutputPath:           "api_docs.json",
+		OpenAPISpecOutputPath:        "openapi.yaml",
+		APIInfo: generate.APIInfo{
 			Title:       "Local API",
-			Description: "A JSON-RPC API over HTTP and Websockets",
+			Version:     utils.GetVersionShort(),
+			Description: "Local API Documentation",
+			Servers: []generate.ServerInfo{
+				{URL: "http://localhost:8080", Description: "Local server"},
+			},
 		},
 	})
 }
 
-// TODO: Remove this.
-func simulate(h *rpc.Hub) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		h.PublishEvent(rpc.NewEvent(string(rpctypes.EventKindDataCreated), map[string]any{"id": uuid.NewString()}))
-	}
-}
-
-func getLogger(config *app.Config) *slog.Logger {
+func getLogger(config *config.Config) *slog.Logger {
 	logOptions := slog.HandlerOptions{
 		Level:       config.LogLevel,
 		ReplaceAttr: utils.SlogReplacer,

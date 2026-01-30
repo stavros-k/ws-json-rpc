@@ -1,16 +1,32 @@
-import type { ItemType } from "@/data/api";
-
 type Props = {
-    type: ItemType;
-    deprecated: boolean;
+    deprecated: string;
+    itemType: "type" | "operation" | "mqtt publication" | "mqtt subscription";
 };
 
-export const Deprecation = ({ type, deprecated }: Props) => {
+function getItemLabel(itemType: Props["itemType"]) {
+    switch (itemType) {
+        case "type":
+            return "type";
+        case "operation":
+            return "operation";
+        case "mqtt publication":
+            return "MQTT publication";
+        case "mqtt subscription":
+            return "MQTT subscription";
+    }
+}
+export const Deprecation = ({ deprecated, itemType = "type" }: Props) => {
     if (!deprecated) return null;
 
     return (
-        <div className='bg-warning-bg border border-warning-border px-4 py-3 rounded-lg mb-4 text-warning-text'>
-            ⚠️ This {type} is deprecated and may be removed in a future version.
+        <div className='mb-6 rounded-lg border-2 border-warning-border bg-warning-bg px-4 py-3 text-warning-text'>
+            <div className='flex items-start gap-3'>
+                <span className='text-xl'>⚠️</span>
+                <div>
+                    <p className='mb-1 font-bold'>This {getItemLabel(itemType)} is deprecated</p>
+                    <p className='text-sm'>{deprecated}</p>
+                </div>
+            </div>
         </div>
     );
 };
