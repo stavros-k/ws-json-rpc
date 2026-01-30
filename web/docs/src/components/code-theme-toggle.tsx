@@ -91,21 +91,21 @@ export const CodeThemeToggle = () => {
     return (
         <div
             ref={dropdownRef}
-            className='px-3 py-2 rounded-lg border border-border-primary bg-bg-secondary relative w-full'>
+            className='relative w-full rounded-lg border border-border-primary bg-bg-secondary px-3 py-2'>
             <div className='flex flex-col gap-2'>
-                <span className='text-sm font-medium text-text-primary text-center'>Code Theme</span>
+                <span className='text-center font-medium text-sm text-text-primary'>Code Theme</span>
                 <button
                     type='button'
-                    onClick={() => setIsOpen(!isOpen)}
-                    className='px-2 py-1 text-xs border border-border-primary rounded bg-bg-primary text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-blue flex items-center gap-1 w-full justify-between hover:bg-bg-tertiary transition-colors'>
+                    onClick={() => setIsOpen((prev) => !prev)}
+                    className='flex w-full items-center justify-between gap-1 rounded border border-border-primary bg-bg-primary px-2 py-1 text-text-primary text-xs transition-colors hover:bg-bg-tertiary focus:outline-none focus:ring-1 focus:ring-accent-blue'>
                     <span className='truncate'>{THEMES[codeTheme].label}</span>
-                    <IoChevronDown className={`w-3 h-3 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+                    <IoChevronDown className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                 </button>
             </div>
 
             {isOpen && (
                 <div
-                    className='absolute top-full left-0 right-0 mt-1 bg-bg-primary border border-border-primary rounded-lg shadow-lg z-50 max-h-[70vh] overflow-y-scroll scrollbar-gutter-stable'
+                    className='scrollbar-gutter-stable absolute top-full right-0 left-0 z-50 mt-1 max-h-[70vh] overflow-y-scroll rounded-lg border border-border-primary bg-bg-primary shadow-lg'
                     style={{
                         scrollbarWidth: "auto",
                         scrollbarColor: "rgb(100 116 139) transparent",
@@ -118,9 +118,9 @@ export const CodeThemeToggle = () => {
                             onClick={() => handleSelect(id as CodeTheme)}
                             onMouseEnter={() => handleHover(id as CodeTheme)}
                             onMouseLeave={handleHoverEnd}
-                            className={`w-full px-3 py-2 text-xs text-left hover:bg-bg-tertiary transition-colors ${
+                            className={`w-full px-3 py-2 text-left text-xs transition-colors hover:bg-bg-tertiary ${
                                 codeTheme === id
-                                    ? "bg-accent-blue/20 text-accent-blue font-semibold"
+                                    ? "bg-accent-blue/20 font-semibold text-accent-blue"
                                     : "text-text-primary"
                             }`}>
                             {theme.label}

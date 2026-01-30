@@ -25,7 +25,7 @@ export function RoutePath({ path, className = "" }: RoutePathProps) {
                     return (
                         <Fragment key={uniqueKey}>
                             <span className='text-type-enum'>{"{"}</span>
-                            <span className='text-accent-blue font-bold'>{paramName}</span>
+                            <span className='font-bold text-accent-blue'>{paramName}</span>
                             <span className='text-type-enum'>{"}"}</span>
                         </Fragment>
                     );

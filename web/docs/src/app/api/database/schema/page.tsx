@@ -12,24 +12,24 @@ export default function DatabaseSchema() {
     const tableCount = docs.database.tableCount || 0;
 
     return (
-        <main className='flex-1 p-10 overflow-y-auto'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs items={[{ label: "Database Schema" }]} />
 
             <div>
-                <h1 className='text-4xl font-bold mb-3 text-text-primary'>Database Schema</h1>
-                <h2 className='text-xl text-text-primary mb-4'>Database structure definition</h2>
+                <h1 className='mb-3 font-bold text-4xl text-text-primary'>Database Schema</h1>
+                <h2 className='mb-4 text-text-primary text-xl'>Database structure definition</h2>
 
-                <div className='text-text-tertiary mb-8 pb-6 border-b-2 border-border-primary'>
+                <div className='mb-8 border-border-primary border-b-2 pb-6 text-text-tertiary'>
                     <p>This page displays the database schema used by the application.</p>
                 </div>
             </div>
 
             <div className='mb-8'>
-                <div className='inline-block p-6 bg-bg-secondary rounded-xl border-2 border-border-primary'>
+                <div className='inline-block rounded-xl border-2 border-border-primary bg-bg-secondary p-6'>
                     <div className='flex items-center gap-4'>
                         <div className='text-center'>
-                            <div className='text-4xl font-bold text-accent-blue mb-1'>{tableCount}</div>
-                            <div className='text-sm text-text-secondary font-semibold'>
+                            <div className='mb-1 font-bold text-4xl text-accent-blue'>{tableCount}</div>
+                            <div className='font-semibold text-sm text-text-secondary'>
                                 {tableCount === 1 ? "Table" : "Tables"}
                             </div>
                         </div>
@@ -44,6 +44,6 @@ export default function DatabaseSchema() {
                     lang='sql'
                 />
             </CardBoxWrapper>
-        </main>
+        </div>
     );
 }

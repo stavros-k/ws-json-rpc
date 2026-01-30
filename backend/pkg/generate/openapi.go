@@ -13,12 +13,17 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
+const (
+	// OpenAPIVersion is the OpenAPI specification version used for generated specs.
+	OpenAPIVersion = "3.0.3"
+)
+
 // toOpenAPISchema converts extracted type metadata to an OpenAPI schema.
 func toOpenAPISchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
-	switch typeInfo.Kind {
-	case TypeKindObject:
+	switch {
+	case typeInfo.Kind == TypeKindObject:
 		return buildObjectSchema(typeInfo)
-	case TypeKindStringEnum:
+	case isEnumKind(typeInfo.Kind):
 		return buildEnumSchema(typeInfo)
 	default:
 		return nil, fmt.Errorf("unsupported type kind: %s", typeInfo.Kind)
@@ -46,11 +51,6 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 			return nil, fmt.Errorf("failed to build schema for field %s: %w", field.Name, err)
 		}
 
-		// Mark field as deprecated
-		if field.Deprecated != "" {
-			fieldSchema.Value.Deprecated = true
-		}
-
 		schema.Properties[field.Name] = fieldSchema
 
 		if field.TypeInfo.Required {
@@ -63,91 +63,186 @@ func buildObjectSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 
 // buildFieldSchema creates an OpenAPI schema for a field.
 func buildFieldSchema(field FieldInfo) (*openapi3.SchemaRef, error) {
-	// Use structured type information
-	return buildSchemaFromFieldType(field.TypeInfo, field.Description)
+	schema, err := buildSchemaFromFieldType(field.TypeInfo, field.Description)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply field-level deprecated metadata
+	return applyDeprecated(schema, field.Deprecated != "")
+}
+
+// applyNullable sets the Nullable field on a schema if needed.
+// For inline schemas (Value != nil), sets nullable directly.
+// For $ref schemas (Value == nil, Ref != ""), wraps with allOf in OpenAPI 3.0.
+// FIXME: OpenAPI 3.1 uses JSON Schema which supports type: 'null'.
+// When upgrading to OpenAPI 3.1, replace allOf+nullable pattern with anyOf containing type: 'null'.
+func applyNullable(schemaRef *openapi3.SchemaRef, nullable bool) (*openapi3.SchemaRef, error) {
+	switch {
+	case !nullable:
+		return schemaRef, nil
+	case schemaRef.Value != nil:
+		// Inline schema - set nullable directly
+		schemaRef.Value.Nullable = true
+
+		return schemaRef, nil
+	case schemaRef.Ref != "":
+		// OpenAPI 3.0: Reference schema - must wrap with allOf
+		return &openapi3.SchemaRef{
+			Value: &openapi3.Schema{
+				AllOf:    []*openapi3.SchemaRef{schemaRef},
+				Nullable: true,
+			},
+		}, nil
+		// OpenAPI 3.1: Use anyOf with null type instead
+		// nullType := &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"null"}}}
+		// return &openapi3.SchemaRef{Value: &openapi3.Schema{AnyOf: []*openapi3.SchemaRef{schemaRef, nullType}}}
+	default:
+		return nil, errors.New("invalid schemaRef: both Value and Ref are empty")
+	}
+}
+
+// applyDeprecated sets the Deprecated field on a schema if needed.
+// For inline schemas (Value != nil), sets deprecated directly.
+// For $ref schemas (Value == nil, Ref != ""), wraps with allOf in OpenAPI 3.0.
+// FIXME: OpenAPI 3.1 allows deprecated directly on $ref without wrapping.
+// When upgrading to OpenAPI 3.1, set deprecated as a sibling to $ref instead of wrapping.
+func applyDeprecated(schemaRef *openapi3.SchemaRef, deprecated bool) (*openapi3.SchemaRef, error) {
+	switch {
+	case !deprecated:
+		return schemaRef, nil
+	case schemaRef.Value != nil:
+		// Inline schema - set deprecated directly
+		schemaRef.Value.Deprecated = true
+
+		return schemaRef, nil
+	case schemaRef.Ref != "":
+		// OpenAPI 3.0: Reference schema - must wrap with allOf
+		return &openapi3.SchemaRef{
+			Value: &openapi3.Schema{
+				AllOf:      []*openapi3.SchemaRef{schemaRef},
+				Deprecated: true,
+			},
+		}, nil
+		// OpenAPI 3.1: Can set deprecated as sibling to $ref
+		// Example approach:
+		// schemaRef.Value = &openapi3.Schema{Deprecated: true}
+		// // Keep schemaRef.Ref as is
+		// return schemaRef
+	default:
+		return nil, errors.New("invalid schemaRef: both Value and Ref are empty")
+	}
+}
+
+// buildPrimitiveSchemaFromFieldType builds a schema for primitive types.
+func buildPrimitiveSchemaFromFieldType(ft FieldType, description string) (*openapi3.SchemaRef, error) {
+	schema := &openapi3.Schema{
+		Type:        &openapi3.Types{ft.Type},
+		Description: description,
+	}
+	if ft.Format != "" {
+		schema.Format = ft.Format
+	}
+
+	schemaRef := &openapi3.SchemaRef{Value: schema}
+
+	return applyNullable(schemaRef, ft.Nullable)
+}
+
+// buildArraySchemaFromFieldType builds a schema for array types.
+func buildArraySchemaFromFieldType(ft FieldType, description string) (*openapi3.SchemaRef, error) {
+	var itemSchema *openapi3.SchemaRef
+
+	if ft.ItemsType != nil {
+		var err error
+
+		itemSchema, err = buildSchemaFromFieldType(*ft.ItemsType, "")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	schema := &openapi3.Schema{
+		Type:        &openapi3.Types{"array"},
+		Items:       itemSchema,
+		Description: description,
+	}
+
+	schemaRef := &openapi3.SchemaRef{Value: schema}
+
+	return applyNullable(schemaRef, ft.Nullable)
+}
+
+// buildReferenceSchemaFromFieldType builds a schema reference for type references and enums.
+func buildReferenceSchemaFromFieldType(ft FieldType) (*openapi3.SchemaRef, error) {
+	ref := createSchemaRef(ft.Type)
+
+	return applyNullable(ref, ft.Nullable)
+}
+
+// buildObjectSchemaFromFieldType builds a schema for object/map types.
+func buildObjectSchemaFromFieldType(ft FieldType, description string) (*openapi3.SchemaRef, error) {
+	schema := &openapi3.Schema{
+		Type:        &openapi3.Types{"object"},
+		Description: description,
+	}
+
+	schema.AdditionalProperties = openapi3.AdditionalProperties{Has: utils.Ptr(false)}
+
+	// Handle additionalProperties for map types
+	if ft.AdditionalProperties != nil {
+		additionalPropsSchema, err := buildSchemaFromFieldType(*ft.AdditionalProperties, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to build additionalProperties schema: %w", err)
+		}
+
+		schema.AdditionalProperties = openapi3.AdditionalProperties{
+			Schema: additionalPropsSchema,
+		}
+	}
+
+	schemaRef := &openapi3.SchemaRef{Value: schema}
+
+	return applyNullable(schemaRef, ft.Nullable)
 }
 
 // buildSchemaFromFieldType converts a FieldType to an OpenAPI schema.
 func buildSchemaFromFieldType(ft FieldType, description string) (*openapi3.SchemaRef, error) {
 	switch ft.Kind {
 	case FieldKindPrimitive:
-		schema := &openapi3.Schema{
-			Type:        &openapi3.Types{ft.Type},
-			Description: description,
-		}
-		if ft.Format != "" {
-			schema.Format = ft.Format
-		}
-
-		if ft.Nullable {
-			schema.Nullable = true
-		}
-
-		return &openapi3.SchemaRef{Value: schema}, nil
+		return buildPrimitiveSchemaFromFieldType(ft, description)
 
 	case FieldKindArray:
-		var itemSchema *openapi3.SchemaRef
-
-		if ft.ItemsType != nil {
-			var err error
-
-			itemSchema, err = buildSchemaFromFieldType(*ft.ItemsType, "")
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		schema := &openapi3.Schema{
-			Type:        &openapi3.Types{"array"},
-			Items:       itemSchema,
-			Description: description,
-		}
-		if ft.Nullable {
-			schema.Nullable = true
-		}
-
-		return &openapi3.SchemaRef{Value: schema}, nil
+		return buildArraySchemaFromFieldType(ft, description)
 
 	case FieldKindReference, FieldKindEnum:
-		// Return a $ref to the type in components/schemas
-		ref := createSchemaRef(ft.Type)
-		// Note: nullable on $ref requires wrapping in allOf or oneOf in OpenAPI 3.0
-		// For now, we'll handle this at a higher level if needed
-		return ref, nil
+		return buildReferenceSchemaFromFieldType(ft)
 
 	case FieldKindObject:
-		schema := &openapi3.Schema{
-			Type:        &openapi3.Types{"object"},
-			Description: description,
-		}
-		if ft.Nullable {
-			schema.Nullable = true
-		}
-
-		// Handle additionalProperties for map types
-		if ft.AdditionalProperties != nil {
-			additionalPropsSchema, err := buildSchemaFromFieldType(*ft.AdditionalProperties, "")
-			if err != nil {
-				return nil, fmt.Errorf("failed to build additionalProperties schema: %w", err)
-			}
-			schema.AdditionalProperties = openapi3.AdditionalProperties{
-				Schema: additionalPropsSchema,
-			}
-		} else {
-			schema.AdditionalProperties = openapi3.AdditionalProperties{
-				Has: utils.Ptr(false),
-			}
-		}
-
-		return &openapi3.SchemaRef{Value: schema}, nil
-
-	case FieldKindUnknown:
-		// Unknown type - fail with error
-		return nil, errors.New("cannot generate OpenAPI schema for unknown field type")
+		return buildObjectSchemaFromFieldType(ft, description)
 
 	default:
 		// Unhandled type kind - fail with error
 		return nil, fmt.Errorf("unhandled field kind: %s", ft.Kind)
+	}
+}
+
+// formatEnumValueDescription formats a single enum value for documentation.
+func formatEnumValueDescription(ev EnumValue) string {
+	switch {
+	case ev.Deprecated != "":
+		result := fmt.Sprintf("- `%v`: **[DEPRECATED]** ", ev.Value)
+		result += ev.Deprecated
+
+		if ev.Description != "" {
+			result += " - " + ev.Description
+		}
+
+		return result + "\n"
+	case ev.Description != "":
+		return fmt.Sprintf("- `%v`: %s\n", ev.Value, ev.Description)
+	default:
+		return fmt.Sprintf("- `%v`\n", ev.Value)
 	}
 }
 
@@ -167,41 +262,40 @@ func buildEnumSchema(typeInfo *TypeInfo) (*openapi3.Schema, error) {
 
 	for i, ev := range typeInfo.EnumValues {
 		values[i] = ev.Value
+		enumDesc.WriteString(formatEnumValueDescription(ev))
+	}
 
-		// Build enum value description with deprecation info
-		switch {
-		case ev.Deprecated != "":
-			enumDesc.WriteString(fmt.Sprintf("- `%s`: **[DEPRECATED]** ", ev.Value))
+	// Determine OpenAPI type based on enum kind
+	var schemaType string
 
-			if ev.Deprecated != "" {
-				enumDesc.WriteString(ev.Deprecated)
-			}
-
-			if ev.Description != "" {
-				enumDesc.WriteString(" - " + ev.Description)
-			}
-
-			enumDesc.WriteString("\n")
-		case ev.Description != "":
-			enumDesc.WriteString(fmt.Sprintf("- `%s`: %s\n", ev.Value, ev.Description))
-		default:
-			enumDesc.WriteString(fmt.Sprintf("- `%s`\n", ev.Value))
-		}
+	switch typeInfo.Kind {
+	case TypeKindStringEnum:
+		schemaType = "string"
+	case TypeKindNumberEnum:
+		schemaType = "integer"
+	default:
+		return nil, fmt.Errorf("unsupported enum kind: %s", typeInfo.Kind)
 	}
 
 	return &openapi3.Schema{
-		Type:        &openapi3.Types{"string"},
+		Type:        &openapi3.Types{schemaType},
 		Enum:        values,
 		Description: enumDesc.String(),
 		Deprecated:  typeInfo.Deprecated != "",
 	}, nil
 }
 
-// buildComponentSchemas builds OpenAPI component schemas from all extracted types.
+// buildComponentSchemas builds OpenAPI component schemas from HTTP-related types only.
+// Types are marked as HTTP-related during RegisterRoute.
 func buildComponentSchemas(doc *APIDocumentation) (openapi3.Schemas, error) {
 	schemas := make(openapi3.Schemas)
 
+	// Build schemas only for types marked as used by HTTP
 	for name, typeInfo := range doc.Types {
+		if !typeInfo.UsedByHTTP {
+			continue
+		}
+
 		schema, err := toOpenAPISchema(typeInfo)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build schema for %s: %w", name, err)
@@ -216,7 +310,7 @@ func buildComponentSchemas(doc *APIDocumentation) (openapi3.Schemas, error) {
 // generateOpenAPISpec generates a complete OpenAPI specification from documentation.
 func generateOpenAPISpec(doc *APIDocumentation) (*openapi3.T, error) {
 	spec := &openapi3.T{
-		OpenAPI:    "3.0.3",
+		OpenAPI:    OpenAPIVersion,
 		Info:       &openapi3.Info{},
 		Paths:      openapi3.NewPaths(),
 		Components: &openapi3.Components{Schemas: make(openapi3.Schemas)},

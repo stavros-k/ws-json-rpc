@@ -13,7 +13,7 @@ export const Group = ({ group, size = "md" }: Props) => {
 
     return (
         <span
-            className={`${sizeClasses} bg-tag-teal-bg text-tag-teal-text rounded-lg font-bold border-2 border-tag-teal-border shadow-sm inline-block`}>
+            className={`${sizeClasses} inline-block rounded-lg border-2 border-tag-teal-border bg-tag-teal-bg font-bold text-tag-teal-text shadow-sm`}>
             {group}
         </span>
     );

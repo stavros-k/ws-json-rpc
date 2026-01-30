@@ -15,13 +15,13 @@ export const SidebarGroupCollapsible = ({ groupName, children }: SidebarGroupCol
         <div className='mb-3'>
             <button
                 type='button'
-                onClick={() => setIsOpen(!isOpen)}
-                className='w-full flex items-center justify-between px-1 py-1 rounded hover:bg-bg-hover transition-colors group'>
-                <h3 className='text-xs font-semibold text-text-dim group-hover:text-text-primary uppercase transition-colors'>
+                onClick={() => setIsOpen((prev) => !prev)}
+                className='group flex w-full items-center justify-between rounded px-1 py-1 transition-colors hover:bg-bg-hover'>
+                <h3 className='font-semibold text-text-dim text-xs uppercase transition-colors group-hover:text-text-primary'>
                     {groupName}
                 </h3>
-                <span className='text-text-dim group-hover:text-text-primary transition-colors'>
-                    {isOpen ? <MdExpandLess className='w-4 h-4' /> : <MdExpandMore className='w-4 h-4' />}
+                <span className='text-text-dim transition-colors group-hover:text-text-primary'>
+                    {isOpen ? <MdExpandLess className='h-4 w-4' /> : <MdExpandMore className='h-4 w-4' />}
                 </span>
             </button>
             {isOpen && <div className='mt-1'>{children}</div>}

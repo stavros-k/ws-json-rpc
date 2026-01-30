@@ -39,7 +39,7 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
     const requestJson = operation.request ? getTypeJson(operation.request.type as TypeKeys) : null;
 
     return (
-        <main className='flex-1 p-10 overflow-y-auto'>
+        <div className='flex-1 overflow-y-auto p-10'>
             <Breadcrumbs
                 items={[{ label: "Operations", href: "/api/operations" as Route }, { label: operation.operationID }]}
             />
@@ -50,8 +50,8 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
             />
 
             <div>
-                <div className='flex items-center justify-between gap-3 mb-3'>
-                    <h1 className='text-4xl font-bold text-text-primary'>{operation.operationID}</h1>
+                <div className='mb-3 flex items-center justify-between gap-3'>
+                    <h1 className='font-bold text-4xl text-text-primary'>{operation.operationID}</h1>
                     <Group
                         group={operation.group || ""}
                         size='md'
@@ -63,7 +63,7 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                     itemType='operation'
                 />
 
-                <div className='text-text-tertiary mb-8 pb-6 border-b-2 border-border-primary'>
+                <div className='mb-8 border-border-primary border-b-2 pb-6 text-text-tertiary'>
                     <p className='mb-2'>{operation.summary}</p>
                     {operation.description && operation.description !== operation.summary && (
                         <p className='text-sm'>{operation.description}</p>
@@ -89,11 +89,11 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                         lang='json'
                     />
                     {operation.request.description && (
-                        <p className='text-sm text-text-tertiary mt-3'>{operation.request.description}</p>
+                        <p className='mt-3 text-sm text-text-tertiary'>{operation.request.description}</p>
                     )}
                     {requestJson && (
-                        <div className='mb-4 p-3 bg-bg-tertiary rounded-lg border border-border-secondary'>
-                            <p className='text-xs text-text-muted'>Example representation - actual values may vary</p>
+                        <div className='mb-4 rounded-lg border border-border-secondary bg-bg-tertiary p-3'>
+                            <p className='text-text-muted text-xs'>Example representation - actual values may vary</p>
                         </div>
                     )}
                 </CardBoxWrapper>
@@ -111,11 +111,11 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                                     statusCode={statusCode}
                                     description={resp.description}>
                                     <div className='mb-4'>
-                                        <div className='text-sm font-semibold text-text-tertiary mb-2'>
+                                        <div className='mb-2 font-semibold text-sm text-text-tertiary'>
                                             Type:{" "}
                                             <a
                                                 href={`/api/type/${resp.type}`}
-                                                className='text-accent-blue-hover hover:text-accent-blue-light transition-colors'>
+                                                className='text-accent-blue-hover transition-colors hover:text-accent-blue-light'>
                                                 {resp.type}
                                             </a>
                                         </div>
@@ -136,7 +136,7 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                                             ))}
                                         </div>
                                     ) : (
-                                        <p className='text-sm text-text-tertiary p-4 bg-bg-tertiary rounded-lg border border-border-secondary'>
+                                        <p className='rounded-lg border border-border-secondary bg-bg-tertiary p-4 text-sm text-text-tertiary'>
                                             No examples available for this response.
                                         </p>
                                     )}
@@ -146,6 +146,6 @@ export default async function OperationPage(props: PageProps<"/api/operation/[op
                     </div>
                 </CardBoxWrapper>
             )}
-        </main>
+        </div>
     );
 }

@@ -17,15 +17,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     return (
         <html
             lang='en'
-            className='m-0 p-0 box-border'>
-            <body className='bg-bg-primary'>
+            className='m-0 box-border p-0'>
+            <body className='flex bg-bg-primary'>
                 <div className='fixed top-5 right-5 z-50'>
                     <ThemeToggle />
                 </div>
-                <div className='flex min-h-screen'>
-                    <Sidebar />
-                    {children}
-                </div>
+                <Sidebar />
+                <main className='min-h-screen flex-1'>{children}</main>
             </body>
         </html>
     );

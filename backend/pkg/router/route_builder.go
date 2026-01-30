@@ -6,7 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"ws-json-rpc/backend/pkg/router/generate"
+	"ws-json-rpc/backend/pkg/generate"
+	"ws-json-rpc/backend/pkg/utils"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -34,7 +35,7 @@ func NewRouteBuilder(l *slog.Logger, collector generate.RouteMetadataCollector) 
 // Must terminates the program if an error occurs.
 func (rb *RouteBuilder) Must(err error) {
 	if err != nil {
-		rb.l.Error("Fatal error", slog.Any("error", err))
+		rb.l.Error("Fatal error", utils.ErrAttr(err))
 		os.Exit(1)
 	}
 }
@@ -125,7 +126,7 @@ func (rb *RouteBuilder) MustGet(path string, spec RouteSpec) {
 	spec.method = http.MethodGet
 
 	if err := rb.add(path, spec); err != nil {
-		rb.l.Error("Fatal error", slog.Any("error", err))
+		rb.l.Error("Fatal error", utils.ErrAttr(err))
 		os.Exit(1)
 	}
 }
@@ -142,7 +143,7 @@ func (rb *RouteBuilder) MustPost(path string, spec RouteSpec) {
 	spec.method = http.MethodPost
 
 	if err := rb.add(path, spec); err != nil {
-		rb.l.Error("Fatal error", slog.Any("error", err))
+		rb.l.Error("Fatal error", utils.ErrAttr(err))
 		os.Exit(1)
 	}
 }
@@ -159,7 +160,7 @@ func (rb *RouteBuilder) MustPut(path string, spec RouteSpec) {
 	spec.method = http.MethodPut
 
 	if err := rb.add(path, spec); err != nil {
-		rb.l.Error("Fatal error", slog.Any("error", err))
+		rb.l.Error("Fatal error", utils.ErrAttr(err))
 		os.Exit(1)
 	}
 }
@@ -176,7 +177,7 @@ func (rb *RouteBuilder) MustPatch(path string, spec RouteSpec) {
 	spec.method = http.MethodPatch
 
 	if err := rb.add(path, spec); err != nil {
-		rb.l.Error("Fatal error", slog.Any("error", err))
+		rb.l.Error("Fatal error", utils.ErrAttr(err))
 		os.Exit(1)
 	}
 }
@@ -193,23 +194,28 @@ func (rb *RouteBuilder) MustDelete(path string, spec RouteSpec) {
 	spec.method = http.MethodDelete
 
 	if err := rb.add(path, spec); err != nil {
-		rb.l.Error("Fatal error", slog.Any("error", err))
+		rb.l.Error("Fatal error", utils.ErrAttr(err))
 		os.Exit(1)
 	}
 }
 
 // Router returns the underlying chi.Router.
 //
-//nolint:ireturn
+//nolint:ireturn // we want to return the specific type chi.Router
 func (rb *RouteBuilder) Router() chi.Router {
 	return rb.router
 }
 
 // add adds a new route to the router and collects metadata.
 func (rb *RouteBuilder) add(path string, spec RouteSpec) error {
+	sanitizedPath := generate.SanitizePath(path)
+	if path != sanitizedPath {
+		return fmt.Errorf("invalid path %q; sanitized form would be %q", path, sanitizedPath)
+	}
+
 	spec.localPath = path
 	cleanPath := rb.prefix + spec.localPath
-	cleanPath = sanitizePath(cleanPath)
+	cleanPath = generate.SanitizePath(cleanPath)
 	spec.fullPath = cleanPath
 
 	if _, exists := rb.operationIDs[spec.OperationID]; exists {

@@ -32,7 +32,7 @@ export const ThemeToggle = () => {
         <button
             type='button'
             onClick={toggleTheme}
-            className='w-12 h-12 flex items-center justify-center rounded-xl bg-bg-secondary border-2 border-border-primary hover:border-border-secondary transition-all duration-200 shadow-md hover:shadow-lg hover:scale-110 text-xl'
+            className='flex h-12 w-12 items-center justify-center rounded-xl border-2 border-border-primary bg-bg-secondary text-xl shadow-md transition-all duration-200 hover:scale-110 hover:border-border-secondary hover:shadow-lg'
             aria-label='Toggle theme'>
             {theme === "dark" ? "☀️" : "🌙"}
         </button>

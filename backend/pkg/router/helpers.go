@@ -5,65 +5,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"ws-json-rpc/backend/pkg/router/generate"
+	"ws-json-rpc/backend/pkg/generate"
 )
-
-// extractParamName extracts the parameter name from a path.
-// Currently it does not handle unclosed '{' braces.
-func extractParamName(path string) ([]string, error) {
-	dirtyParams := []string{}
-	cleanParams := []string{}
-
-	openBracket := strings.Count(path, "{")
-
-	closeBracket := strings.Count(path, "}")
-	if openBracket != closeBracket {
-		return nil, errors.New("mismatched number of '{' and '}' in path")
-	}
-	// Find the content between '{' and '}'
-	// Examples:
-	// - {userID} -> userID
-	// - {userID:[0-9]+} -> userID:[0-9]+
-	start := -1
-	for i, ch := range path {
-		if ch == '{' {
-			start = i + 1
-		} else if ch == '}' && start >= 0 {
-			dirtyParams = append(dirtyParams, path[start:i])
-			start = -1
-		}
-	}
-
-	// Now split on ':' to remove any regex matchers
-	// Examples:
-	// - userID -> userID
-	// - userID:[0-9]+ -> userID
-	for _, param := range dirtyParams {
-		parts := strings.Split(param, ":")
-
-		param = parts[0]
-		if param != "" {
-			cleanParams = append(cleanParams, param)
-		}
-	}
-
-	return cleanParams, nil
-}
-
-// sanitizePath removes double slashes and trailing slashes from a path.
-func sanitizePath(path string) string {
-	cleanPath := path
-	for strings.Contains(cleanPath, "//") {
-		cleanPath = strings.ReplaceAll(cleanPath, "//", "/")
-	}
-
-	cleanPath = strings.TrimSuffix(cleanPath, "/")
-	if cleanPath == "" {
-		cleanPath = "/"
-	}
-
-	return cleanPath
-}
 
 // validateRouteSpec validates a RouteSpec.
 func validateRouteSpec(spec RouteSpec) error {
@@ -99,16 +42,20 @@ func generateParameters(spec RouteSpec) ([]generate.ParameterInfo, error) {
 
 	// Extract param names from path
 	for section := range strings.SplitSeq(spec.fullPath, "/") {
-		paramsName, err := extractParamName(section)
+		paramsName, err := generate.ExtractParamName(section)
 		if err != nil {
 			return nil, fmt.Errorf("invalid path %s: %w", spec.fullPath, err)
 		}
 
 		for _, paramName := range paramsName {
+			if !generate.IsValidParameterName(paramName) {
+				return nil, fmt.Errorf("invalid parameter name %s in path %s", paramName, spec.fullPath)
+			}
 			paramsInPath[paramName] = struct{}{}
 		}
 	}
 
+	// For each documented parameter, validate and collect metadata
 	for name, paramSpec := range spec.Parameters {
 		if name == "" {
 			return nil, fmt.Errorf("parameter name required for %s %s", spec.method, spec.fullPath)
@@ -147,11 +94,12 @@ func generateParameters(spec RouteSpec) ([]generate.ParameterInfo, error) {
 			documentedPathParams[name] = struct{}{}
 		}
 
-		// Validate that all path params are documented
-		for name := range paramsInPath {
-			if _, exists := documentedPathParams[name]; !exists {
-				return nil, fmt.Errorf("path parameter %s not documented", name)
-			}
+	}
+
+	// Now go over all discovered path parameters and validate that they are documented
+	for name := range paramsInPath {
+		if _, exists := documentedPathParams[name]; !exists {
+			return nil, fmt.Errorf("path parameter %s not documented", name)
 		}
 	}
 

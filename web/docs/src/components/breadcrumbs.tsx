@@ -13,11 +13,11 @@ type BreadcrumbsProps = {
 
 export function Breadcrumbs({ items }: BreadcrumbsProps) {
     return (
-        <nav className='flex items-center gap-2 text-sm mb-6 text-text-secondary'>
+        <nav className='mb-6 flex items-center gap-2 text-sm text-text-secondary'>
             <Link
                 href='/'
-                className='flex items-center gap-1 hover:text-accent-blue transition-colors'>
-                <IoHome className='w-4 h-4' />
+                className='flex items-center gap-1 transition-colors hover:text-accent-blue'>
+                <IoHome className='h-4 w-4' />
                 <span>Home</span>
             </Link>
             {items.map((item, index) => {
@@ -26,15 +26,15 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
                     <div
                         key={item.label}
                         className='flex items-center gap-2'>
-                        <IoChevronForward className='w-3 h-3' />
+                        <IoChevronForward className='h-3 w-3' />
                         {item.href && !isLast ? (
                             <Link
                                 href={item.href}
-                                className='hover:text-accent-blue transition-colors'>
+                                className='transition-colors hover:text-accent-blue'>
                                 {item.label}
                             </Link>
                         ) : (
-                            <span className={isLast ? "text-text-primary font-semibold" : ""}>{item.label}</span>
+                            <span className={isLast ? "font-semibold text-text-primary" : ""}>{item.label}</span>
                         )}
                     </div>
                 );

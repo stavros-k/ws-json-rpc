@@ -12,11 +12,13 @@ import (
 	"syscall"
 	"time"
 	"ws-json-rpc/backend/internal/api"
-	"ws-json-rpc/backend/internal/app"
+	"ws-json-rpc/backend/internal/config"
 	sqlitegen "ws-json-rpc/backend/internal/database/sqlite/gen"
+	mqttapi "ws-json-rpc/backend/internal/mqtt"
 	"ws-json-rpc/backend/internal/services"
+	"ws-json-rpc/backend/pkg/generate"
+	"ws-json-rpc/backend/pkg/mqtt"
 	"ws-json-rpc/backend/pkg/router"
-	"ws-json-rpc/backend/pkg/router/generate"
 	"ws-json-rpc/backend/pkg/utils"
 	"ws-json-rpc/web"
 
@@ -29,66 +31,63 @@ const (
 )
 
 func main() {
-	config, err := app.NewConfig()
+	config, err := config.New()
 	if err != nil {
 		fatalIfErr(slog.Default(), fmt.Errorf("failed to create config: %w", err))
 	}
 
-	defer func() {
-		if err := config.Close(); err != nil {
-			fatalIfErr(slog.Default(), fmt.Errorf("failed to close config: %w", err))
-		}
-	}()
+	defer utils.LogOnError(slog.Default(), config.Close, "failed to close config")
 
+	// Initialize logger
 	logger := getLogger(config)
-
-	// Create collector for OpenAPI generation
-	collector, err := getCollector(config, logger)
-	fatalIfErr(logger, err)
 
 	// TODO: Pass DB
 	// open sqlite database
 	db, err := sql.Open("sqlite3", config.Database)
 	fatalIfErr(logger, err)
-	defer db.Close()
+
+	defer utils.LogOnError(logger, db.Close, "failed to close database")
+
 	queries := sqlitegen.New(db)
-
 	services := services.NewServices(logger, db, queries)
+	apiHandler := api.NewAPIHandler(logger, services)
+	mqttHandler := mqttapi.NewMQTTHandler(logger, services)
 
-	server := api.NewAPIServer(logger, services)
+	// Create collector for OpenAPI generation
+	collector, err := getCollector(config, logger)
+	fatalIfErr(logger, err)
 
+	// Builders
 	rb, err := router.NewRouteBuilder(logger, collector)
 	fatalIfErr(logger, err)
 
-	rb.Route("/api", func(rb *router.RouteBuilder) {
-		// Add request ID
-		rb.Use(server.RequestIDMiddleware)
-		// Add request logger
-		rb.Use(server.LoggerMiddleware)
-
-		api.RegisterPing("/ping", rb, server)
-		rb.Route("/team", func(rb *router.RouteBuilder) {
-			api.RegisterGetTeam("/{teamID}", rb, server)
-			api.RegisterPutTeam("/", rb, server)
-			api.RegisterCreateTeam("/", rb, server)
-			api.RegisterDeleteTeam("/", rb, server)
-		})
+	mb, err := mqtt.NewMQTTBuilder(logger, collector, mqtt.MQTTClientOptions{
+		BrokerURL: config.MQTTBroker,
+		ClientID:  config.MQTTClientID,
+		Username:  config.MQTTUsername,
+		Password:  config.MQTTPassword,
 	})
+	fatalIfErr(logger, err)
+
+	services.RegisterMQTTClient(mb.Client())
+
+	registerHTTPHandlers(logger, rb, apiHandler)
+	registerMQTTHandlers(logger, mb, mqttHandler)
 
 	if config.Generate {
 		if err := collector.Generate(); err != nil {
 			fatalIfErr(logger, fmt.Errorf("failed to generate API documentation: %w", err))
 		}
 
-		logger.Info("API documentation generated, exiting")
-
 		return
 	}
 
-	web.DocsApp().Register(rb.Router(), logger)
-	rb.Router().HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
-	})
+	go func() {
+		if err := mb.Connect(); err != nil {
+			logger.Error("Failed to connect to MQTT broker", utils.ErrAttr(err))
+		}
+		defer mb.Disconnect()
+	}()
 
 	addr := fmt.Sprintf(":%d", config.Port)
 	httpServer := &http.Server{
@@ -100,7 +99,6 @@ func main() {
 	sigCtx, sigCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer sigCancel()
 
-	// Start HTTP/WS server
 	go func() {
 		logger.Info("http server listening", slog.String("address", addr))
 
@@ -114,20 +112,62 @@ func main() {
 	<-sigCtx.Done()
 	logger.Info("received signal, shutting down...")
 
-	// Shutdown / Cleanup
+	// Shutdown HTTP server
 	logger.Info("http server shutting down...")
-
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
-
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("http server shutdown failed", utils.ErrAttr(err))
 	}
 
-	logger.Info("http server shutdown complete")
+	logger.Info("server exited gracefully")
 }
 
-func getCollector(c *app.Config, l *slog.Logger) (generate.RouteMetadataCollector, error) {
+// registerHTTPHandlers registers all HTTP handlers.
+func registerHTTPHandlers(l *slog.Logger, rb *router.RouteBuilder, h *api.Handler) {
+	l.Info("Registering HTTP handlers...")
+	rb.Route("/api", func(rb *router.RouteBuilder) {
+		// Add request ID
+		rb.Use(h.RequestIDMiddleware)
+		// Add request logger
+		rb.Use(h.LoggerMiddleware)
+
+		h.RegisterPing("/ping", rb)
+		rb.Route("/team", func(rb *router.RouteBuilder) {
+			h.RegisterGetTeam("/{teamID}", rb)
+			h.RegisterPutTeam("/", rb)
+			h.RegisterCreateTeam("/", rb)
+			h.RegisterDeleteTeam("/", rb)
+		})
+	})
+
+	web.DocsApp().Register(rb.Router(), l)
+	rb.Router().HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/docs/", http.StatusMovedPermanently)
+	})
+
+	l.Info("HTTP handlers registered successfully")
+}
+
+// registerMQTTHandlers registers all MQTT handlers.
+func registerMQTTHandlers(l *slog.Logger, mb *mqtt.MQTTBuilder, h *mqttapi.Handler) {
+	l.Info("Registering MQTT handlers...")
+	// Telemetry operations
+	h.RegisterTemperaturePublish(mb)
+	h.RegisterTemperatureSubscribe(mb)
+	h.RegisterSensorTelemetryPublish(mb)
+	h.RegisterSensorTelemetrySubscribe(mb)
+
+	// Control operations
+	h.RegisterDeviceCommandPublish(mb)
+	h.RegisterDeviceCommandSubscribe(mb)
+	h.RegisterDeviceStatusPublish(mb)
+	h.RegisterDeviceStatusSubscribe(mb)
+	l.Info("MQTT handlers registered successfully")
+}
+
+//nolint:ireturn // Returns MetadataCollector interface (OpenAPICollector or NoopCollector)
+func getCollector(c *config.Config, l *slog.Logger) (generate.MetadataCollector, error) {
 	if !c.Generate {
 		return &generate.NoopCollector{}, nil
 	}
@@ -148,7 +188,7 @@ func getCollector(c *app.Config, l *slog.Logger) (generate.RouteMetadataCollecto
 	})
 }
 
-func getLogger(config *app.Config) *slog.Logger {
+func getLogger(config *config.Config) *slog.Logger {
 	logOptions := slog.HandlerOptions{
 		Level:       config.LogLevel,
 		ReplaceAttr: utils.SlogReplacer,
