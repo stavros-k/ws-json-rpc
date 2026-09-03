@@ -12,8 +12,8 @@
         "docs:preview": "npm run preview --workspace=web/docs"
     },
     "devDependencies": {
-        "@types/react": "19.2.9",
-        "@types/react-dom": "19.2.3",
+        "@types/react": "19.2.18",
+        "@types/react-dom": "19.2.7",
         "browserlist": "1.0.2",
         "typescript": "5.9.3"
     },
@@ -22,8 +22,8 @@
         "@tailwindcss/postcss": "4.1.18",
         "@tailwindcss/vite": "4.1.18",
         "@types/node": "25.0.10",
-        "react": "19.2.3",
-        "react-dom": "19.2.3",
+        "react": "19.2.8",
+        "react-dom": "19.2.8",
         "tailwindcss": "4.1.18",
         "uuid": "13.0.0"
     }
