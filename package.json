@@ -19,12 +19,12 @@
     },
     "dependencies": {
         "@biomejs/biome": "2.3.11",
-        "@tailwindcss/postcss": "4.1.18",
-        "@tailwindcss/vite": "4.1.18",
+        "@tailwindcss/postcss": "4.3.3",
+        "@tailwindcss/vite": "4.3.3",
         "@types/node": "25.0.10",
         "react": "19.2.3",
         "react-dom": "19.2.3",
-        "tailwindcss": "4.1.18",
+        "tailwindcss": "4.3.3",
         "uuid": "13.0.0"
     }
 }
