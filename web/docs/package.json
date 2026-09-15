@@ -10,7 +10,7 @@
         "format": "biome check --write"
     },
     "devDependencies": {
-        "shiki": "3.21.0"
+        "shiki": "4.4.3"
     },
     "dependencies": {
         "babel-plugin-react-compiler": "1.0.0",
